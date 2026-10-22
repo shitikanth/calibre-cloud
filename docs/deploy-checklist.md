@@ -13,7 +13,7 @@ Cloudflare dashboard → Workers & Pages → `calibre-cloud` → Settings → Bu
 - [ ] **Build variable:** `SKIP_DEPENDENCY_INSTALL` = `1`. The lockfile is at the repo root, outside the root directory, so the build command installs the workspace itself.
 - [ ] **Build command:** `pnpm install --frozen-lockfile && pnpm run build`
 - [ ] **Deploy command:** `pnpm run release`. It installs headless Chromium, runs `wrangler deploy`, then loads `/` and a deep link on the deployed `workers.dev` URL. The build fails on any console error, uncaught error, CSP violation, missing CSP header, non-2xx response, or empty `#root`.
-- [ ] **Non-production branch builds:** enabled, with the default preview command (`npx wrangler preview`). This builds every PR branch and posts its preview URL on the PR.
+- [ ] **Non-production branch builds:** enabled, with the default preview command (`npx wrangler preview`). It needs the `previews` block in `wrangler.jsonc`, which is empty because Previews need no settings of their own. This builds every PR branch and posts its preview URL on the PR.
 - [ ] **workers.dev route:** enabled (Settings → Domains & Routes). `wrangler.jsonc` sets `workers_dev: true` and `preview_urls: true`.
 
 ## 2. Branch protection on `main`
