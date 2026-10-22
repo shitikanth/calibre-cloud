@@ -29,5 +29,5 @@ A cloud storage service a library can live in: Dropbox, Google Drive, or MEGA.
 _Avoid_: backend, cloud, drive
 
 **Connection**:
-The app's read-only access to one library in one storage provider. Ending it is a disconnect.
+The app's read-only access to one library in one storage provider. Ending it is a disconnect, which also forgets the library on this device.
 _Avoid_: session, account, login, sign-in
