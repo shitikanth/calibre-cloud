@@ -27,3 +27,7 @@ _Avoid_: edition, copy, version
 **Storage provider**:
 A cloud storage service a library can live in: Dropbox, Google Drive, or MEGA.
 _Avoid_: backend, cloud, drive
+
+**Connection**:
+The app's read-only access to one library in one storage provider. Ending it is a disconnect.
+_Avoid_: session, account, login, sign-in
