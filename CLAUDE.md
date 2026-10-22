@@ -2,9 +2,15 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project state
+## Commands
 
-Pre-code: the repo has only docs. No stack, build, lint, or test commands exist yet.
+pnpm workspace: `web/` (the SPA) and `deploy/cloudflare/` (the Worker config and deploy scripts).
+
+- `pnpm lint`, `pnpm typecheck`, `pnpm test`: what CI runs. Tests use Vitest; `web/` runs in browser mode (Playwright Chromium).
+- `pnpm build`: builds the SPA into `deploy/cloudflare/dist`.
+- `pnpm --filter @calibre-cloud/deploy-cloudflare run smoke:local`: smoke-checks the build, CSP included, under `wrangler dev`.
+
+Deployment is Cloudflare Workers Builds; the owner's dashboard settings are in `docs/deploy-checklist.md`.
 
 ## Design
 
