@@ -1,0 +1,129 @@
+<!doctype html>
+<!-- PROTOTYPE, throwaway. Answers "MEGA: large-file decryption speed and quota behaviour" (#14). Never merge. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PROTOTYPE: MEGA download speed</title>
+<style>
+  body { font: 14px/1.4 system-ui, sans-serif; margin: 16px; max-width: 960px; }
+  input[type=text] { width: 100%; box-sizing: border-box; padding: 6px; }
+  button { margin: 6px 6px 6px 0; padding: 6px 10px; }
+  select { width: 100%; padding: 4px; }
+  pre { background: #f4f4f4; padding: 8px; overflow-x: auto; white-space: pre-wrap; }
+  table { border-collapse: collapse; margin-top: 8px; }
+  td, th { border: 1px solid #ccc; padding: 4px 8px; text-align: left; }
+</style>
+<h1>PROTOTYPE: MEGA download + decrypt speed</h1>
+<p>Paste a MEGA <b>folder</b> link (with <code>#key</code>). Each benchmark downloads the selected file twice, which uses your IP's transfer quota.</p>
+<input id="link" type="text" placeholder="https://mega.nz/folder/XXXX#YYYY">
+<button id="load">1. Load tree</button>
+<div id="pick" hidden>
+  <label>File to benchmark (largest first):</label>
+  <select id="file"></select>
+  <button id="bench">2. Benchmark full download</button>
+  <button id="range">3. Ranged read (1 MB from the middle)</button>
+  <button id="meta">4. Fetch metadata.db</button>
+</div>
+<table id="results"><tr><th>Step</th><th>Bytes</th><th>Time (s)</th><th>MB/s</th><th>Note</th></tr></table>
+<h3>State</h3>
+<pre id="state"></pre>
+<script src="https://unpkg.com/megajs@1.3.10/dist/main.browser-umd.js"></script>
+<script>
+const { File } = window.mega;
+const $ = id => document.getElementById(id);
+const state = { userAgent: navigator.userAgent, origin: location.origin };
+let root, files = [], lastPlain = null;
+
+const show = () => { $('state').textContent = JSON.stringify(state, null, 2); };
+const mb = n => (n / 1048576).toFixed(1);
+const row = (step, bytes, ms, note = '') => {
+  const tr = $('results').insertRow();
+  [step, bytes == null ? '' : mb(bytes) + ' MB', ms == null ? '' : (ms / 1000).toFixed(2),
+   bytes && ms ? (bytes / 1048576 / (ms / 1000)).toFixed(1) : '', note].forEach(v => tr.insertCell().textContent = v);
+};
+const hex = async buf => [...new Uint8Array(await crypto.subtle.digest('SHA-256', buf))].slice(0, 8)
+  .map(b => b.toString(16).padStart(2, '0')).join('');
+const timed = async fn => { const t = performance.now(); const r = await fn(); return [r, performance.now() - t]; };
+const fail = (step, e) => { row(step, null, null, 'ERROR: ' + (e && e.message || e)); state.lastError = String(e && e.stack || e); show(); };
+
+function walk(node, prefix, out) {
+  for (const c of node.children || []) {
+    const p = prefix ? prefix + '/' + c.name : c.name;
+    if (c.directory) walk(c, p, out); else out.push({ path: p, node: c });
+  }
+  return out;
+}
+
+async function webcryptoDecrypt(key, cipher) {
+  const k = new Uint8Array(16), counter = new Uint8Array(16);
+  for (let i = 0; i < 16; i++) k[i] = key[i] ^ key[i + 16];
+  counter.set(key.subarray(16, 24), 0);
+  const ck = await crypto.subtle.importKey('raw', k, 'AES-CTR', false, ['decrypt']);
+  return new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-CTR', counter, length: 64 }, ck, cipher));
+}
+
+$('load').onclick = async () => {
+  try {
+    root = File.fromURL($('link').value.trim(), { userAgent: null });
+    const [, ms] = await timed(() => root.loadAttributes());
+    files = walk(root, '', []).sort((a, b) => b.node.size - a.node.size);
+    row('Load tree', null, ms, `${files.length} files`);
+    $('file').innerHTML = files.slice(0, 50).map((f, i) =>
+      `<option value="${i}">${mb(f.node.size)} MB  ${f.path.replace(/</g, '&lt;')}</option>`).join('');
+    const pdf = files.findIndex(f => /\.pdf$/i.test(f.path));
+    if (pdf >= 0 && pdf < 50) $('file').value = pdf;
+    $('pick').hidden = false;
+    Object.assign(state, { treeFiles: files.length, treeLoadMs: Math.round(ms),
+      largest: files.slice(0, 5).map(f => `${mb(f.node.size)} MB ${f.path}`) });
+    show();
+  } catch (e) { fail('Load tree', e); }
+};
+
+$('bench').onclick = async () => {
+  const f = files[$('file').value];
+  try {
+    const [cipher, netMs] = await timed(() => f.node.downloadBuffer({ returnCiphertext: true }));
+    const [wcPlain, wcMs] = await timed(() => webcryptoDecrypt(f.node.key, cipher));
+    row('Network only (ciphertext)', cipher.length, netMs, f.path);
+    row('WebCrypto AES-CTR decrypt', cipher.length, wcMs, 'decrypt only');
+
+    const [jsPlain, jsMs] = await timed(() => f.node.downloadBuffer());
+    row('megajs download + decrypt', jsPlain.length, jsMs, 'what the adapter would do today');
+
+    const [hJs, hWc] = await Promise.all([hex(jsPlain), hex(wcPlain)]);
+    const head = new TextDecoder().decode(jsPlain.subarray(0, 8));
+    row('Plaintext check', null, null, `megajs ${hJs} / webcrypto ${hWc} ${hJs === hWc ? 'MATCH' : 'DIFFER'}; starts "${head}"`);
+    lastPlain = { path: f.path, bytes: jsPlain };
+    Object.assign(state, { file: f.path, sizeMB: +mb(f.node.size), networkMs: Math.round(netMs),
+      webcryptoDecryptMs: Math.round(wcMs), megajsTotalMs: Math.round(jsMs),
+      megajsOverheadMs: Math.round(jsMs - netMs), hashesMatch: hJs === hWc });
+    show();
+  } catch (e) { fail('Benchmark', e); }
+};
+
+$('range').onclick = async () => {
+  const f = files[$('file').value];
+  const start = Math.floor(f.node.size / 2 / 16) * 16, end = Math.min(start + 1048576, f.node.size) - 1;
+  try {
+    const [buf, ms] = await timed(() => f.node.downloadBuffer({ start, end }));
+    let note = `bytes ${start}-${end}`;
+    if (lastPlain && lastPlain.path === f.path) {
+      const [a, b] = await Promise.all([hex(buf), hex(lastPlain.bytes.subarray(start, end + 1))]);
+      note += a === b ? ', matches full download' : ', DIFFERS from full download';
+    }
+    row('Ranged read', buf.length, ms, note);
+    Object.assign(state, { rangeMs: Math.round(ms), rangeBytes: buf.length }); show();
+  } catch (e) { fail('Ranged read', e); }
+};
+
+$('meta').onclick = async () => {
+  try {
+    const node = root.navigate('metadata.db');
+    if (!node) throw new Error('no metadata.db at the link root');
+    const [buf, ms] = await timed(() => node.downloadBuffer());
+    row('metadata.db', buf.length, ms, new TextDecoder().decode(buf.subarray(0, 15)));
+    Object.assign(state, { metadataDbMB: +mb(buf.length), metadataDbMs: Math.round(ms) }); show();
+  } catch (e) { fail('metadata.db', e); }
+};
+
+show();
+</script>
