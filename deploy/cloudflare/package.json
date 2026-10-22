@@ -3,6 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "pnpm --filter @calibre-cloud/web run build && node scripts/assemble.ts",
+    "dev": "wrangler dev",
+    "smoke:local": "node smoke/local.ts",
+    "smoke:deployed": "node smoke/deployed.ts",
+    "release": "node scripts/release.ts",
     "typecheck": "tsc -p tsconfig.json"
   },
   "devDependencies": {

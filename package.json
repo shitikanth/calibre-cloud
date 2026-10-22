@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.json && pnpm -r run typecheck",
     "test": "vitest run",
-    "build": "pnpm -r run build"
+    "build": "pnpm --filter @calibre-cloud/deploy-cloudflare run build"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
