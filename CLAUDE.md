@@ -16,3 +16,17 @@ Ask before breaking any of these, from `docs/hld.md`:
 - Costs scale to zero. Book files and `metadata.db` never go through our backend.
 - Read-only access to the user's library.
 - Storage providers sit behind a common adapter, and nothing above it knows which provider is in use.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in this repo's GitHub Issues, managed with the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five default triage labels are used as-is. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
