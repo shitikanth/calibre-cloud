@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, onTestFinished, test, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { buildCalibreLibrary } from './test/calibre-library.ts';
 import { FakeStorage } from './test/fake-storage.ts';
@@ -21,6 +21,17 @@ async function expectLibraryShown(screen: Screen) {
     .element(screen.getByRole('img', { name: 'Cover of Jane Eyre' }))
     .toHaveAttribute('src', expect.stringMatching(/^blob:/));
 }
+
+test('connecting asks the browser to keep the cached library', async () => {
+  const persist = vi.spyOn(navigator.storage, 'persist').mockResolvedValue(true);
+  onTestFinished(() => persist.mockRestore());
+  const app = await renderApp({ storage: await libraryWithCover() });
+
+  await connect(app.screen);
+
+  await expectLibraryShown(app.screen);
+  expect(persist).toHaveBeenCalledOnce();
+});
 
 test('Disconnect forgets the link, the library and the covers on this device', async () => {
   const storage = await libraryWithCover();

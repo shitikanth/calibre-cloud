@@ -20,6 +20,7 @@ export function ConnectionProvider({ openStorage, children }: { openStorage: Ope
   const connect = useCallback((next: Connection) => {
     saveConnection(next);
     setConnection(next);
+    void navigator.storage?.persist?.().catch(() => false);
   }, []);
   const disconnect = useCallback(() => {
     clearConnection();
