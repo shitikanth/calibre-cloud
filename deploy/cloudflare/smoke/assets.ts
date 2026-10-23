@@ -7,11 +7,16 @@ const expectedTypes: Record<string, string[]> = {
   '.wasm': ['application/wasm'],
 };
 
+function listDir(dir: string, dist: string): string[] {
+  if (!existsSync(dir)) throw new Error(`no ${dir}: run pnpm build first, from the commit under test (${dist} must match the served build)`);
+  return readdirSync(dir);
+}
+
 export function emittedAssets(dist: string): string[] {
-  if (!existsSync(dist)) throw new Error(`no build at ${dist}: run pnpm build first`);
-  const workers = readdirSync(join(dist, 'assets')).filter((name) => /^pdf\.worker\.min-.*\.mjs$/.test(name));
+  const workers = listDir(join(dist, 'assets'), dist).filter((name) => /^pdf\.worker\.min-.*\.mjs$/.test(name));
   if (workers.length !== 1) throw new Error(`expected one pdf.worker.min-*.mjs in ${join(dist, 'assets')}, found ${workers.length}`);
-  const wasm = readdirSync(join(dist, 'pdfjs/wasm')).filter((name) => extname(name) in expectedTypes);
+  const wasm = listDir(join(dist, 'pdfjs/wasm'), dist).filter((name) => extname(name) in expectedTypes);
+  if (wasm.length === 0) throw new Error(`no pdf.js wasm or js files in ${join(dist, 'pdfjs/wasm')}`);
   return [...workers.map((name) => `/assets/${name}`), ...wasm.sort().map((name) => `/pdfjs/wasm/${name}`)];
 }
 
@@ -24,7 +29,7 @@ export async function checkAssets(origin: string, assets: string[]): Promise<str
       problems.push(`${asset}: HTTP ${response.status}`);
       continue;
     }
-    const type = (response.headers.get('content-type') ?? '').split(';')[0]!.trim();
+    const type = (response.headers.get('content-type') ?? '(none)').split(';')[0]!.trim().toLowerCase();
     const expected = expectedTypes[extname(asset)] ?? [];
     if (!expected.includes(type)) problems.push(`${asset}: content-type ${type}, expected ${expected.join(' or ')}`);
   }

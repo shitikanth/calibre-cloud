@@ -14,17 +14,17 @@ export const expectedCsp: Record<string, string[]> = {
   'frame-ancestors': ["'self'"],
 };
 
-export function parseCsp(header: string): Map<string, Set<string>> {
-  const directives = new Map<string, Set<string>>();
+function parseCsp(header: string): Map<string, string[]> {
+  const directives = new Map<string, string[]>();
   for (const clause of header.split(';')) {
     const [name, ...sources] = clause.trim().split(/\s+/).filter(Boolean);
-    if (name) directives.set(name.toLowerCase(), new Set(sources));
+    if (name && !directives.has(name.toLowerCase())) directives.set(name.toLowerCase(), sources);
   }
   return directives;
 }
 
-function sameSources(a: Set<string>, b: string[]): boolean {
-  return a.size === b.length && b.every((source) => a.has(source));
+function sameSources(a: string[], b: string[]): boolean {
+  return a.length === b.length && new Set(a).size === a.length && b.every((source) => a.includes(source));
 }
 
 export function cspProblems(header: string): string[] {
@@ -33,9 +33,7 @@ export function cspProblems(header: string): string[] {
   for (const [directive, expected] of Object.entries(expectedCsp)) {
     const sources = actual.get(directive);
     if (!sources) problems.push(`${directive} is missing`);
-    else if (!sameSources(sources, expected)) {
-      problems.push(`${directive} is ${[...sources].sort().join(' ')}, expected ${expected.join(' ')}`);
-    }
+    else if (!sameSources(sources, expected)) problems.push(`${directive} is ${sources.join(' ')}, expected ${expected.join(' ')}`);
   }
   for (const directive of actual.keys()) {
     if (!(directive in expectedCsp)) problems.push(`${directive} is not expected`);

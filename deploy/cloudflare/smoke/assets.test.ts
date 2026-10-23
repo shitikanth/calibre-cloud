@@ -9,7 +9,7 @@ import { checkAssets, emittedAssets } from './assets.ts';
 const files: Record<string, string> = {
   '/assets/pdf.worker.min-abc123.mjs': 'text/javascript',
   '/pdfjs/wasm/openjpeg.wasm': 'application/wasm',
-  '/pdfjs/wasm/quickjs-eval.js': 'application/javascript; charset=utf-8',
+  '/pdfjs/wasm/quickjs-eval.js': 'Application/JavaScript; charset=utf-8',
   '/pdfjs/wasm/mislabelled.wasm': 'application/octet-stream',
   '/pdfjs/wasm/html.js': 'text/html',
 };
@@ -59,6 +59,15 @@ test('lists the pdf.js worker and wasm files a build emitted', () => {
 
 test('fails clearly when there is no build', () => {
   expect(() => emittedAssets(join(tmpdir(), 'smoke-no-dist'))).toThrow(/run pnpm build first/);
+});
+
+test('fails clearly when the build has no wasm files', () => {
+  const dist = mkdtempSync(join(tmpdir(), 'smoke-dist-'));
+  mkdirSync(join(dist, 'assets'));
+  mkdirSync(join(dist, 'pdfjs/wasm'), { recursive: true });
+  writeFileSync(join(dist, 'assets/pdf.worker.min-Dkey6ZUl.mjs'), '');
+  writeFileSync(join(dist, 'pdfjs/wasm/LICENSE_OPENJPEG'), '');
+  expect(() => emittedAssets(dist)).toThrow(/no pdf\.js wasm/);
 });
 
 test('fails clearly when the build has no pdf.js worker', () => {
