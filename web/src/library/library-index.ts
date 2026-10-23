@@ -1,6 +1,7 @@
 import { LibraryIndexError, libraryIndexError } from './errors.ts';
 import type {
   BookDetail,
+  BookFormatKey,
   BookListQuery,
   BookSummary,
   CoverVersion,
@@ -45,6 +46,10 @@ export class LibraryIndex {
 
   listCoverVersions(): Promise<CoverVersion[]> {
     return this.call('listCoverVersions', {});
+  }
+
+  listBookFormats(): Promise<BookFormatKey[]> {
+    return this.call('listBookFormats', {});
   }
 
   dispose(): void {

@@ -1,5 +1,5 @@
 import { BOOK_SUMMARY_COLUMNS, toBookSummary, type BookSummaryRow } from './book-summary-row.ts';
-import type { BookListQuery, BookSummary, CoverVersion } from './protocol.ts';
+import type { BookFormatKey, BookListQuery, BookSummary, CoverVersion } from './protocol.ts';
 import { fold } from './fold.ts';
 import type { Database } from './sqlite.ts';
 
@@ -24,6 +24,10 @@ export function listBooks(db: Database, { offset, limit, search }: BookListQuery
 
 export function listCoverVersions(db: Database): CoverVersion[] {
   return db.selectObjects('SELECT id AS bookId, last_modified AS version FROM books WHERE has_cover') as CoverVersion[];
+}
+
+export function listBookFormats(db: Database): BookFormatKey[] {
+  return db.selectObjects('SELECT book AS bookId, format FROM data') as BookFormatKey[];
 }
 
 function likePattern(search: string | undefined): string | null {
