@@ -1,4 +1,4 @@
-import { Aborted, type ReadOptions } from '../adapter.ts';
+import { Aborted, QuotaExceeded, type ReadOptions } from '../adapter.ts';
 import { toStorageError } from './errors.ts';
 
 type RetryCallback = (error?: unknown) => void;
@@ -36,7 +36,7 @@ export function downloadToBlob(
     const stream = start({
       forceHttps: true,
       handleRetries: (tries, error, retry) => {
-        if (settled || signal?.aborted || tries > maxRetries) retry(error);
+        if (settled || signal?.aborted || tries > maxRetries || isOverQuota(error)) retry(error);
         else setTimeout(retry, 1000 * 2 ** tries);
       },
     });
@@ -56,4 +56,8 @@ export function downloadToBlob(
     stream.on('end', () => settle(() => resolve(new Blob(chunks))));
     stream.on('error', (error) => settle(() => reject(toStorageError(error))));
   });
+}
+
+function isOverQuota(error: unknown): boolean {
+  return toStorageError(error) instanceof QuotaExceeded;
 }
