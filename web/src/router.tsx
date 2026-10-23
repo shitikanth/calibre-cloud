@@ -9,6 +9,7 @@ import { useConnection } from './connection/context.tsx';
 import { BookScreen } from './screens/book-screen.tsx';
 import { ConnectScreen } from './screens/connect-screen.tsx';
 import { LibraryScreen } from './screens/library-screen.tsx';
+import { PrototypeReaderScreen } from './screens/prototype-reader-screen.tsx';
 
 const rootRoute = createRootRoute({
   component: () => (
@@ -48,7 +49,13 @@ function BookRouteScreen() {
   return connection ? <BookScreen bookId={bookId} /> : <ConnectScreen />;
 }
 
-const routeTree = rootRoute.addChildren([homeRoute, bookRoute]);
+const prototypeReaderRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/prototype/reader',
+  component: PrototypeReaderScreen,
+});
+
+const routeTree = rootRoute.addChildren([homeRoute, bookRoute, prototypeReaderRoute]);
 
 export function createAppRouter(options: { history?: RouterHistory } = {}) {
   return createRouter({ routeTree, ...options });

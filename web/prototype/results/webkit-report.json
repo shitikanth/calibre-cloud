@@ -1,0 +1,143 @@
+{
+  "browser": "webkit",
+  "moby-dick-epub": {
+    "rssBeforeOpen": {
+      "maxRendererRssMB": 131,
+      "rendererCount": 1
+    },
+    "wallMsToOpen": 127,
+    "cfiStart": "epubcfi(/6/2!/4/2,,/2/2)",
+    "cfiAfter3Next": "epubcfi(/6/4!/4,/10,/18/2/22/2/1:24)",
+    "cfiAfterScrolledSwitch": "epubcfi(/6/4!/4,/10/1:0,/18/2/24/2/1:24)",
+    "scrolledKeptPlace": false,
+    "cfiScrolledNext": "epubcfi(/6/4!/4/18/2,/32,/64/2/1:34)",
+    "cfiAfterGoTo": "epubcfi(/6/4!/4,/10,/18/2/20/2/1:23)",
+    "goToRoundTrip": false,
+    "cfiAfterFontUp": "epubcfi(/6/4!/4,/10,/18/2/16/2/1:29)",
+    "tocEntries": 140,
+    "cfiAfterToc": "epubcfi(/6/4!/4,/98[pgepubid00007],/102/1:536)",
+    "iframeSandbox": [
+      null
+    ],
+    "heap": {
+      "maxRendererRssMB": 182,
+      "rendererCount": 1
+    },
+    "state": {
+      "sectionLoaded": 1,
+      "cfi": "epubcfi(/6/4!/4,/98[pgepubid00007],/102/1:536)",
+      "fraction": 0.05490443004075603,
+      "opened": "epub"
+    },
+    "entries": [
+      "615\topen\tmoby-dick.epub (814023 bytes)",
+      "697\tepub\topened in 80 ms; renderer=foliate-paginator; toc=140",
+      "2927\tepub\tflow=scrolled",
+      "5203\tepub\tflow=paginated",
+      "6910\tepub\tgoTo(epubcfi(/6/4!/4,/10,/18/2/22/2/1:24))",
+      "8431\tepub\tfont-size=110%"
+    ],
+    "console": []
+  },
+  "epub-test-scripts": {
+    "rssBeforeOpen": {
+      "maxRendererRssMB": 130,
+      "rendererCount": 1
+    },
+    "wallMsToOpen": 136,
+    "heap": {
+      "maxRendererRssMB": 159,
+      "rendererCount": 1
+    },
+    "state": {
+      "sectionLoaded": 0,
+      "cfi": "epubcfi(/6/2!/4,/2,/16/1:21)",
+      "fraction": 0.2,
+      "opened": "epub"
+    },
+    "entries": [
+      "597\topen\tepub-test.epub (2819 bytes)",
+      "663\tscript\tsection 0: #inline-js = \"N/A\"",
+      "663\tscript\tsection 0: 1 <script> element(s) in document, src=(inline)",
+      "663\tscript\tsection 0: clicked [onclick] element",
+      "710\tepub\topened in 111 ms; renderer=foliate-paginator; toc=0",
+      "710\tcsp\tsection 0: script-src-elem blocked inline",
+      "711\tcsp\tsection 0: frame-src blocked https://example.com",
+      "711\tcsp\tsection 0: script-src-attr blocked inline from http://127.0.0.1:8799/assets/index-Cm2vE4Xj.js:13"
+    ],
+    "console": [
+      "error: Refused to load http://idpf.org/sites/default/files/epub-logo.gif because it does not appear in the img-src directive of the Content Security Policy.",
+      "error: Refused to load http://idpf.org/sites/default/files/epub-logo.gif because it does not appear in the img-src directive of the Content Security Policy.",
+      "error: Refused to load http://idpf.org/sites/default/files/epub-logo.gif because it does not appear in the img-src directive of the Content Security Policy.",
+      "error: Refused to execute a script because its hash, its nonce, or 'unsafe-inline' does not appear in the script-src directive of the Content Security Policy.",
+      "error: Refused to load https://example.com/ because it does not appear in the frame-src directive of the Content Security Policy.",
+      "error: Refused to execute a script for an inline event handler because 'unsafe-inline' does not appear in the script-src directive of the Content Security Policy."
+    ]
+  },
+  "arxiv-pdf-6.8MB": {
+    "rssBeforeOpen": {
+      "maxRendererRssMB": 131,
+      "rendererCount": 1
+    },
+    "wallMsToOpen": 191,
+    "heapAfterFirstPage": {
+      "maxRendererRssMB": 205,
+      "rendererCount": 1
+    },
+    "heap": {
+      "maxRendererRssMB": 413,
+      "rendererCount": 1
+    },
+    "state": {
+      "opened": "pdf",
+      "pages": 75,
+      "page": 6,
+      "rendered": 7
+    },
+    "entries": [
+      "596\topen\tarxiv.pdf (6768044 bytes)",
+      "737\tpdf\timport 45 ms, arrayBuffer 4 ms, getDocument 90 ms; 75 pages; worker=/assets/pdf.worker.min-Dkey6ZUl.mjs",
+      "803\tpdf\tpage 1 @1x rendered in 65 ms",
+      "966\tpdf\tpage 2 @1x rendered in 27 ms",
+      "1265\tpdf\tpage 3 @1x rendered in 196 ms",
+      "1500\tpdf\tpage 4 @1x rendered in 132 ms",
+      "1636\tpdf\tpage 5 @1x rendered in 34 ms",
+      "1737\tpdf\tpage 6 @1x rendered in 36 ms",
+      "1834\tpdf\tpage 6 @1.25x rendered in 32 ms"
+    ],
+    "console": []
+  },
+  "large-pdf-91MB": {
+    "rssBeforeOpen": {
+      "maxRendererRssMB": 130,
+      "rendererCount": 1
+    },
+    "wallMsToOpen": 294,
+    "heapAfterFirstPage": {
+      "maxRendererRssMB": 376,
+      "rendererCount": 1
+    },
+    "heap": {
+      "maxRendererRssMB": 619,
+      "rendererCount": 1
+    },
+    "state": {
+      "opened": "pdf",
+      "pages": 4455,
+      "page": 6,
+      "rendered": 7
+    },
+    "entries": [
+      "601\topen\tlarge.pdf (90975852 bytes)",
+      "861\tpdf\timport 43 ms, arrayBuffer 28 ms, getDocument 187 ms; 4455 pages; worker=/assets/pdf.worker.min-Dkey6ZUl.mjs",
+      "909\tpdf\tpage 1 @1x rendered in 47 ms",
+      "1072\tpdf\tpage 2 @1x rendered in 28 ms",
+      "1374\tpdf\tpage 3 @1x rendered in 202 ms",
+      "1605\tpdf\tpage 4 @1x rendered in 131 ms",
+      "1742\tpdf\tpage 5 @1x rendered in 35 ms",
+      "1874\tpdf\tpage 6 @1x rendered in 34 ms",
+      "2007\tpdf\tpage 6 @1.25x rendered in 32 ms"
+    ],
+    "console": []
+  }
+}

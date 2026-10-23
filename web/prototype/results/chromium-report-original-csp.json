@@ -1,0 +1,127 @@
+{
+  "browser": "chromium",
+  "moby-dick-epub": {
+    "wallMsToOpen": 630,
+    "driverError": "TimeoutError: page.waitForFunction: Timeout 30000ms exceeded.",
+    "state": {},
+    "entries": [
+      "565\topen\tmoby-dick.epub (814023 bytes)",
+      "615\tcsp\ttop: style-src-elem blocked inline from http://127.0.0.1:8799/assets/view-B5KJGXpN.js:2",
+      "625\tcsp\ttop: frame-src blocked blob from http://127.0.0.1:8799/assets/paginator-DaKAamkn.js:1",
+      "627\terror\ttop: Uncaught TypeError: Cannot read properties of null (reading 'head')",
+      "628\terror\ttop: Uncaught TypeError: Cannot read properties of null (reading 'documentElement')"
+    ],
+    "console": [
+      "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-Sz1WKGLvM24279JLTqw+ZwzznUautFgg7stEu8sEF84='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+      "warning: An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.",
+      "error: Framing 'blob:http://127.0.0.1:8799/1c17f54a-eee4-4005-9823-b6384ce04329' violates the following Content Security Policy directive: \"default-src 'self'\". The request has been blocked. Note that 'frame-src' was not explicitly set, so 'default-src' is used as a fallback.\n",
+      "pageerror: Cannot read properties of null (reading 'head')",
+      "pageerror: Cannot read properties of null (reading 'documentElement')"
+    ]
+  },
+  "epub-test-scripts": {
+    "wallMsToOpen": 610,
+    "driverError": "TimeoutError: page.waitForFunction: Timeout 30000ms exceeded.",
+    "state": {},
+    "entries": [
+      "555\topen\tepub-test.epub (2819 bytes)",
+      "592\tcsp\ttop: style-src-elem blocked inline from http://127.0.0.1:8799/assets/view-B5KJGXpN.js:2",
+      "595\tcsp\ttop: style-src-attr blocked inline from http://127.0.0.1:8799/assets/epub-BXFDM7TN.js:1",
+      "595\tcsp\ttop: script-src-attr blocked inline from http://127.0.0.1:8799/assets/epub-BXFDM7TN.js:1",
+      "595\tcsp\ttop: script-src-attr blocked inline from http://127.0.0.1:8799/assets/epub-BXFDM7TN.js:1",
+      "595\tcsp\ttop: script-src-attr blocked inline from http://127.0.0.1:8799/assets/epub-BXFDM7TN.js:1",
+      "595\tcsp\ttop: script-src-attr blocked inline from http://127.0.0.1:8799/assets/epub-BXFDM7TN.js:1",
+      "595\tcsp\ttop: script-src-attr blocked inline from http://127.0.0.1:8799/assets/epub-BXFDM7TN.js:1",
+      "595\tcsp\ttop: script-src-attr blocked inline from http://127.0.0.1:8799/assets/epub-BXFDM7TN.js:1",
+      "595\tcsp\ttop: script-src-attr blocked inline from http://127.0.0.1:8799/assets/epub-BXFDM7TN.js:1",
+      "595\tcsp\ttop: script-src-attr blocked inline from http://127.0.0.1:8799/assets/epub-BXFDM7TN.js:1",
+      "595\tcsp\ttop: script-src-attr blocked inline from http://127.0.0.1:8799/assets/epub-BXFDM7TN.js:1",
+      "595\tcsp\ttop: script-src-attr blocked inline from http://127.0.0.1:8799/assets/epub-BXFDM7TN.js:1",
+      "595\tcsp\ttop: script-src-attr blocked inline from http://127.0.0.1:8799/assets/epub-BXFDM7TN.js:1",
+      "595\tcsp\ttop: script-src-attr blocked inline from http://127.0.0.1:8799/assets/epub-BXFDM7TN.js:1",
+      "595\tcsp\ttop: script-src-attr blocked inline from http://127.0.0.1:8799/assets/epub-BXFDM7TN.js:1",
+      "599\tcsp\ttop: style-src-attr blocked inline from http://127.0.0.1:8799/assets/epub-BXFDM7TN.js:1",
+      "600\terror\ttop: Uncaught TypeError: Cannot read properties of null (reading 'head')",
+      "601\tcsp\ttop: frame-src blocked blob from http://127.0.0.1:8799/assets/paginator-DaKAamkn.js:1"
+    ],
+    "console": [
+      "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-Sz1WKGLvM24279JLTqw+ZwzznUautFgg7stEu8sEF84='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+      "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-zvcfF6mxjpqfFQVJaEHO5gX23hyzKelXFMi4gUpPuTg='), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.",
+      "error: Executing inline event handler violates the following Content Security Policy directive 'script-src 'self' 'wasm-unsafe-eval''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.",
+      "error: Executing inline event handler violates the following Content Security Policy directive 'script-src 'self' 'wasm-unsafe-eval''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.",
+      "error: Executing inline event handler violates the following Content Security Policy directive 'script-src 'self' 'wasm-unsafe-eval''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.",
+      "error: Executing inline event handler violates the following Content Security Policy directive 'script-src 'self' 'wasm-unsafe-eval''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.",
+      "error: Executing inline event handler violates the following Content Security Policy directive 'script-src 'self' 'wasm-unsafe-eval''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.",
+      "error: Executing inline event handler violates the following Content Security Policy directive 'script-src 'self' 'wasm-unsafe-eval''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.",
+      "error: Executing inline event handler violates the following Content Security Policy directive 'script-src 'self' 'wasm-unsafe-eval''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.",
+      "error: Executing inline event handler violates the following Content Security Policy directive 'script-src 'self' 'wasm-unsafe-eval''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.",
+      "error: Executing inline event handler violates the following Content Security Policy directive 'script-src 'self' 'wasm-unsafe-eval''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.",
+      "error: Executing inline event handler violates the following Content Security Policy directive 'script-src 'self' 'wasm-unsafe-eval''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.",
+      "error: Executing inline event handler violates the following Content Security Policy directive 'script-src 'self' 'wasm-unsafe-eval''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.",
+      "error: Executing inline event handler violates the following Content Security Policy directive 'script-src 'self' 'wasm-unsafe-eval''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.",
+      "error: Executing inline event handler violates the following Content Security Policy directive 'script-src 'self' 'wasm-unsafe-eval''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.",
+      "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-VdDSUs4KRcspyN7ScxX5JS0t2r46YNVHBFsitIlIZEM='), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.",
+      "warning: An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.",
+      "error: Framing 'blob:http://127.0.0.1:8799/ea7f8844-27d4-4819-b627-05332ebcc7a8' violates the following Content Security Policy directive: \"default-src 'self'\". The request has been blocked. Note that 'frame-src' was not explicitly set, so 'default-src' is used as a fallback.\n",
+      "pageerror: Cannot read properties of null (reading 'head')"
+    ]
+  },
+  "arxiv-pdf-6.8MB": {
+    "wallMsToOpen": 711,
+    "heapAfterFirstPage": {
+      "jsHeapUsedMB": null,
+      "jsHeapTotalMB": null
+    },
+    "heap": {
+      "jsHeapUsedMB": null,
+      "jsHeapTotalMB": null
+    },
+    "state": {
+      "opened": "pdf",
+      "pages": 75,
+      "page": 6,
+      "rendered": 7
+    },
+    "entries": [
+      "559\topen\tarxiv.pdf (6768044 bytes)",
+      "697\tpdf\timport 41 ms, arrayBuffer 5 ms, getDocument 91 ms; 75 pages; worker=/assets/pdf.worker.min-Dkey6ZUl.mjs",
+      "731\tpdf\tpage 1 @1x rendered in 34 ms",
+      "845\tpdf\tpage 2 @1x rendered in 64 ms",
+      "1040\tpdf\tpage 3 @1x rendered in 146 ms",
+      "1172\tpdf\tpage 4 @1x rendered in 94 ms",
+      "1246\tpdf\tpage 5 @1x rendered in 35 ms",
+      "1329\tpdf\tpage 6 @1x rendered in 36 ms",
+      "1394\tpdf\tpage 6 @1.25x rendered in 16 ms"
+    ],
+    "console": []
+  },
+  "large-pdf-91MB": {
+    "wallMsToOpen": 862,
+    "heapAfterFirstPage": {
+      "jsHeapUsedMB": null,
+      "jsHeapTotalMB": null
+    },
+    "heap": {
+      "jsHeapUsedMB": null,
+      "jsHeapTotalMB": null
+    },
+    "state": {
+      "opened": "pdf",
+      "pages": 4455,
+      "page": 6,
+      "rendered": 7
+    },
+    "entries": [
+      "553\topen\tlarge.pdf (90975852 bytes)",
+      "847\tpdf\timport 39 ms, arrayBuffer 44 ms, getDocument 210 ms; 4455 pages; worker=/assets/pdf.worker.min-Dkey6ZUl.mjs",
+      "880\tpdf\tpage 1 @1x rendered in 33 ms",
+      "995\tpdf\tpage 2 @1x rendered in 67 ms",
+      "1192\tpdf\tpage 3 @1x rendered in 147 ms",
+      "1320\tpdf\tpage 4 @1x rendered in 91 ms",
+      "1396\tpdf\tpage 5 @1x rendered in 35 ms",
+      "1478\tpdf\tpage 6 @1x rendered in 33 ms",
+      "1546\tpdf\tpage 6 @1.25x rendered in 18 ms"
+    ],
+    "console": []
+  }
+}
