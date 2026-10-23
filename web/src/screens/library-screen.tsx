@@ -1,5 +1,6 @@
 import { useBookCount, useBooks, useOpenLibrary, type DownloadProgress } from '../library/use-library.ts';
 import { BookGrid } from './book-grid.tsx';
+import { LoadMore } from './load-more.tsx';
 import { StorageErrorScreen } from './storage-error-screen.tsx';
 
 export function LibraryScreen() {
@@ -17,6 +18,13 @@ export function LibraryScreen() {
       <h1 className="text-3xl font-semibold">Library</h1>
       {count.isSuccess && <p className="mt-2 text-neutral-600">{formatBookCount(count.data)}</p>}
       {books.isSuccess && <BookGrid books={books.data} />}
+      {books.hasNextPage && (
+        <LoadMore
+          loaded={books.data?.length ?? 0}
+          loading={books.isFetchingNextPage}
+          loadMore={books.fetchNextPage}
+        />
+      )}
     </section>
   );
 }

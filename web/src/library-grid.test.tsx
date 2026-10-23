@@ -65,3 +65,20 @@ test('covers load from the library as tiles scroll into view', async () => {
   await expect.element(oldest).toHaveAttribute('src', expect.stringMatching(/^blob:/));
   expect(coverReads(1)).toHaveLength(1);
 });
+
+test('more books load as the owner scrolls to the end of the grid', async () => {
+  const storage = new FakeStorage(await buildCalibreLibrary(numberedBooks(150)));
+  const app = await renderApp({ storage, connected: true });
+
+  await expect.element(app.screen.getByRole('heading', { name: 'Book 150', exact: true })).toBeVisible();
+  await expect.element(app.screen.getByText('150 books')).toBeVisible();
+  expect(app.screen.getByRole('heading', { name: 'Book 1', exact: true }).query()).toBeNull();
+
+  await expect
+    .poll(() => {
+      window.scrollTo(0, document.documentElement.scrollHeight);
+      return app.screen.getByRole('heading', { name: 'Book 1', exact: true }).query();
+    })
+    .not.toBeNull();
+  expect(tileTitles(app.screen)).toEqual(numberedBooks(150).map(({ title }) => title).reverse());
+});
