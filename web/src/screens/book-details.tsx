@@ -1,7 +1,8 @@
 import type { BookDetail } from '../library/protocol.ts';
 import { BookCover } from './book-cover.tsx';
 import { BookDescription } from './book-description.tsx';
-import { BookFields, BookTags } from './book-fields.tsx';
+import { BookFields } from './book-fields.tsx';
+import { BookTags } from './book-tags.tsx';
 import { FormatList } from './format-list.tsx';
 
 export function BookDetails({ book }: { book: BookDetail }) {
