@@ -14,7 +14,7 @@ export type BookSummaryRow = {
   authors: string;
 };
 
-export function authorName(stored: string): string {
+function authorName(stored: string): string {
   return stored.replaceAll('|', ',');
 }
 

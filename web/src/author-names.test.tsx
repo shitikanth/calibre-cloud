@@ -15,7 +15,7 @@ async function principlesLibrary() {
   );
 }
 
-async function expectTitles(screen: Screen, titles: string[]) {
+async function expectBooks(screen: Screen, titles: string[]) {
   await expect
     .poll(() =>
       screen
@@ -46,9 +46,9 @@ test('search finds the author by surname and by the restored spelling', async ()
   const box = app.screen.getByRole('searchbox', { name: 'Search books' });
 
   await userEvent.type(box, 'dalio');
-  await expectTitles(app.screen, ['Principles']);
+  await expectBooks(app.screen, ['Principles']);
 
   await userEvent.clear(box);
   await userEvent.type(box, 'dalio, ray');
-  await expectTitles(app.screen, ['Principles']);
+  await expectBooks(app.screen, ['Principles']);
 });
