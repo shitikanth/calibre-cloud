@@ -7,7 +7,7 @@
     "dev": "wrangler dev",
     "smoke:local": "node smoke/local.ts",
     "smoke:deployed": "node smoke/deployed.ts",
-    "release": "node scripts/release.ts",
+    "release": "wrangler deploy",
     "typecheck": "tsc -p tsconfig.json"
   },
   "devDependencies": {
