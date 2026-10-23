@@ -1,7 +1,12 @@
-import { expect, test } from 'vitest';
+import { afterEach, expect, test } from 'vitest';
+import { page } from 'vitest/browser';
 import { buildCalibreLibrary, type BookSpec } from './test/calibre-library.ts';
 import { FakeStorage } from './test/fake-storage.ts';
 import { renderApp } from './test/render-app.tsx';
+
+afterEach(async () => {
+  await page.viewport(414, 896);
+});
 
 function tileTitles(screen: Awaited<ReturnType<typeof renderApp>>['screen']) {
   return screen
@@ -64,6 +69,25 @@ test('covers load from the library as tiles scroll into view', async () => {
   await expect.element(oldest).toBeVisible();
   await expect.element(oldest).toHaveAttribute('src', expect.stringMatching(/^blob:/));
   expect(coverReads(1)).toHaveLength(1);
+});
+
+test('the grid fits a narrow phone screen in two columns', async () => {
+  await page.viewport(320, 640);
+  const storage = new FakeStorage(
+    await buildCalibreLibrary([
+      { title: 'Supercalifragilisticexpialidociousnessbookwithnospaces', authors: ['Ursula K. Le Guin'] },
+      { title: 'Jane Eyre', authors: ['Charlotte Brontë'] },
+      { title: 'Poems', authors: ['Emily Brontë'] },
+    ]),
+  );
+  const app = await renderApp({ storage, connected: true });
+
+  const tiles = app.screen.getByRole('listitem');
+  await expect.element(tiles.first()).toBeVisible();
+  const [first, second, third] = tiles.elements().map((tile) => tile.getBoundingClientRect());
+  expect(second!.top).toBe(first!.top);
+  expect(third!.top).toBeGreaterThan(first!.bottom);
+  expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(320);
 });
 
 test('more books load as the owner scrolls to the end of the grid', async () => {
