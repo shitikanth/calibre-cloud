@@ -43,5 +43,6 @@ GitHub → Settings → Branches (or Rules → Rulesets) → `main`.
 - `pnpm lint`, `pnpm typecheck`, `pnpm test`: what CI runs.
 - `pnpm build`: builds the SPA into `deploy/cloudflare/dist` with `_headers`.
 - `pnpm --filter @calibre-cloud/deploy-cloudflare run smoke:local`: serves `dist` with `wrangler dev` and runs the smoke check against it, including the CSP.
+- MEGA adapter smoke test: put `MEGA_SMOKE_LINK="<shared folder link to a test library>"` in `.env.local` at the repo root (gitignored). Keep the quotes: unquoted, everything from `#` on is read as a comment and the key is lost. `pnpm test` then also runs `web/src/storage/mega/adapter.smoke.test.ts` against real MEGA. It's skipped when the variable is missing and always skipped when `CI` is set. Never commit or paste the link anywhere else.
 - `pnpm --filter @calibre-cloud/deploy-cloudflare run smoke:deployed <origin>`: runs the smoke check by hand against a deployed preview or production URL.
 - `wrangler login` is needed only to deploy from a laptop with `pnpm --filter @calibre-cloud/deploy-cloudflare run release`. Workers Builds doesn't need it.

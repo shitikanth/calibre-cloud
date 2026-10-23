@@ -5,28 +5,50 @@ import {
   createRouter,
   type RouterHistory,
 } from '@tanstack/react-router';
+import { useConnection } from './connection/context.tsx';
+import { BookScreen } from './screens/book-screen.tsx';
+import { ConnectScreen } from './screens/connect-screen.tsx';
+import { LibraryScreen } from './screens/library-screen.tsx';
 
 const rootRoute = createRootRoute({
   component: () => (
-    <main className="mx-auto max-w-3xl p-6">
+    <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
       <Outlet />
     </main>
   ),
   notFoundComponent: () => <p>Page not found.</p>,
 });
 
+type LibrarySearch = { q?: string };
+
 const homeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
-  component: () => (
-    <>
-      <h1 className="text-3xl font-semibold">calibre-cloud</h1>
-      <p className="mt-2 text-neutral-600">Browse your Calibre library from the cloud.</p>
-    </>
-  ),
+  validateSearch: (search: Record<string, unknown>): LibrarySearch => {
+    const q = search['q'];
+    return typeof q === 'string' || typeof q === 'number' ? { q: String(q) } : {};
+  },
+  component: HomeScreen,
 });
 
-const routeTree = rootRoute.addChildren([homeRoute]);
+function HomeScreen() {
+  const { connection } = useConnection();
+  return connection ? <LibraryScreen /> : <ConnectScreen />;
+}
+
+const bookRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/books/$bookId',
+  component: BookRouteScreen,
+});
+
+function BookRouteScreen() {
+  const { connection } = useConnection();
+  const { bookId } = bookRoute.useParams();
+  return connection ? <BookScreen bookId={bookId} /> : <ConnectScreen />;
+}
+
+const routeTree = rootRoute.addChildren([homeRoute, bookRoute]);
 
 export function createAppRouter(options: { history?: RouterHistory } = {}) {
   return createRouter({ routeTree, ...options });
