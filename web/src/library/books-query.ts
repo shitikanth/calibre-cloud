@@ -11,6 +11,8 @@ SELECT b.id, b.title, b.path, b.has_cover, b.last_modified,
     OR b.title LIKE $pattern ESCAPE '\\'
     OR EXISTS (SELECT 1 FROM books_authors_link bal JOIN authors a ON a.id = bal.author
                 WHERE bal.book = b.id AND a.name LIKE $pattern ESCAPE '\\')
+    OR EXISTS (SELECT 1 FROM books_series_link bsl JOIN series s ON s.id = bsl.series
+                WHERE bsl.book = b.id AND s.name LIKE $pattern ESCAPE '\\')
  ORDER BY b.timestamp DESC, b.id DESC
  LIMIT $limit OFFSET $offset`;
 

@@ -50,3 +50,18 @@ test('search matches author names', async () => {
 
   await expectTitles(app.screen, ['A Wizard of Earthsea']);
 });
+
+test('search matches series names', async () => {
+  const storage = new FakeStorage(
+    await buildCalibreLibrary([
+      { title: 'A Wizard of Earthsea', authors: ['Ursula K. Le Guin'], series: 'Earthsea Cycle' },
+      { title: 'The Tombs of Atuan', authors: ['Ursula K. Le Guin'], series: 'Earthsea Cycle' },
+      { title: 'The Dispossessed', authors: ['Ursula K. Le Guin'], series: 'Hainish Cycle' },
+    ]),
+  );
+  const app = await renderApp({ storage, connected: true });
+
+  await search(app.screen, 'earthsea cycle');
+
+  await expectTitles(app.screen, ['A Wizard of Earthsea', 'The Tombs of Atuan']);
+});
