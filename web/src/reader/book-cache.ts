@@ -75,19 +75,22 @@ async function rememberOpened(cache: Cache, entry: Entry): Promise<void> {
   await writeRecent(cache, [entry, ...others.slice(0, KEEP - 1)]);
 }
 
-function quietly(task: () => Promise<void>): void {
+function inBackground(task: () => Promise<void>): void {
   void task().catch(() => undefined);
+}
+
+function readEntry(cache: Cache, entry: Entry): Promise<Blob | undefined> {
+  return cache
+    .match(entryKey(entry))
+    .then((response) => response?.blob())
+    .catch(() => undefined);
 }
 
 async function cachedCopy(cache: Cache, key: BookFormatKey): Promise<BookFile | undefined> {
   const entry = (await readRecent(cache)).find((candidate) => sameFormat(candidate, key));
-  if (!entry) return undefined;
-  const blob = await cache
-    .match(entryKey(entry))
-    .then((response) => response?.blob())
-    .catch(() => undefined);
-  if (!blob) return undefined;
-  quietly(() => rememberOpened(cache, entry));
+  const blob = entry && (await readEntry(cache, entry));
+  if (!entry || !blob) return undefined;
+  inBackground(() => rememberOpened(cache, entry));
   return { blob, version: entry.version };
 }
 
@@ -106,10 +109,13 @@ export async function openBookFile(
     return copy;
   }
   const entry = { bookId, format, version };
-  const hit = cache && (await cachedCopy(cache, entry));
-  if (hit && hit.version === version) return hit;
+  const hit = cache && (await readEntry(cache, entry));
+  if (cache && hit) {
+    inBackground(() => rememberOpened(cache, entry));
+    return { blob: hit, version };
+  }
   const blob = await storage.read(path, options);
-  if (cache) quietly(() => store(cache, entry, blob));
+  if (cache) inBackground(() => store(cache, entry, blob));
   return { blob, version };
 }
 
