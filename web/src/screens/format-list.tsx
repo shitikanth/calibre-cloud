@@ -6,9 +6,9 @@ import { formatSize } from './format.ts';
 import { ProgressBar } from './progress-bar.tsx';
 
 export function FormatList({ book }: { book: BookDetail }) {
-  if (book.formats.length === 0) return <p className="mt-6 text-sm text-neutral-600">No files for this book.</p>;
+  if (book.formats.length === 0) return <p className="text-sm text-neutral-600">No files for this book.</p>;
   return (
-    <ul aria-label="Formats" className="mt-6 flex flex-col gap-3">
+    <ul aria-label="Formats" className="flex flex-col gap-3">
       {book.formats.map((format) => (
         <FormatItem key={format.format} format={format} filename={bookFilename(book.title, book.authors, format.format)} />
       ))}

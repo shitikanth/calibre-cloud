@@ -23,6 +23,14 @@ function shownFields(screen: Awaited<ReturnType<typeof renderApp>>['screen']) {
   return Object.fromEntries(terms.map((term, index) => [term.textContent, definitions[index]?.textContent]));
 }
 
+function shownTags(screen: Awaited<ReturnType<typeof renderApp>>['screen']) {
+  return screen
+    .getByRole('list', { name: 'Tags' })
+    .getByRole('listitem')
+    .elements()
+    .map((tag) => tag.textContent);
+}
+
 test('clicking a book opens its detail page, which survives a reload', async () => {
   const storage = await janeEyreLibrary();
   const app = await renderApp({ storage, connected: true });
@@ -65,11 +73,11 @@ test('the detail page shows the metadata Calibre holds for the book', async () =
   await expect.element(app.screen.getByText('Ursula K. Le Guin')).toBeVisible();
   expect(shownFields(app.screen)).toEqual({
     Series: 'Book 1.5 of Earthsea',
-    Tags: 'Fantasy, Classics',
     Publisher: 'Parnassus Press',
     Language: 'English',
     Published: expect.stringMatching(/1968/),
   });
+  expect(shownTags(app.screen)).toEqual(['Fantasy', 'Classics']);
   await expect.element(app.screen.getByRole('img', { name: 'No cover for A Wizard of Earthsea' })).toBeVisible();
   await expect.element(app.screen.getByText('Sparrowhawk')).toBeVisible();
 });
@@ -130,4 +138,5 @@ test('fields the book doesn’t have are left out', async () => {
 
   await expect.element(app.screen.getByRole('heading', { level: 1, name: 'Poems' })).toBeVisible();
   expect(shownFields(app.screen)).toEqual({});
+  expect(app.screen.getByRole('list', { name: 'Tags' }).query()).toBeNull();
 });
