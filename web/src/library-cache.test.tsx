@@ -117,6 +117,20 @@ test('a failed download of a changed library keeps the cached one browsable with
   await expect.element(again.getByText('3 books')).toBeVisible();
 });
 
+test('an unreachable library keeps the cached one browsable with a banner saying why', async () => {
+  const storage = await libraryOf(brontës);
+  const app = await renderApp({ storage, connected: true });
+  await expect.element(app.screen.getByText('3 books')).toBeVisible();
+  storage.failWith('metadata.db', new Network(), 'stat');
+
+  const reloaded = await app.reload();
+
+  await expect.element(reloaded.getByRole('alert')).toMatchTextContent(/Couldn’t reach your library/);
+  await expect.element(reloaded.getByText('3 books')).toBeVisible();
+  await userEvent.click(reloaded.getByRole('link', { name: /Wuthering Heights/ }));
+  await expect.element(reloaded.getByRole('heading', { level: 1, name: 'Wuthering Heights' })).toBeVisible();
+});
+
 test('MEGA over quota keeps the cached library browsable with a banner saying why', async () => {
   const storage = await libraryOf(brontës);
   const app = await renderApp({ storage, connected: true });
