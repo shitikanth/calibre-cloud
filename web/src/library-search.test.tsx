@@ -121,6 +121,24 @@ test('a search that matches nothing says so, and clearing it brings the books ba
   expect(app.url).toBe('/');
 });
 
+test('percent signs and underscores in a search are matched literally', async () => {
+  const storage = new FakeStorage(
+    await buildCalibreLibrary([
+      { title: '50% Off', authors: ['A. Writer'] },
+      { title: '500 Days', authors: ['A. Writer'] },
+      { title: 'snake_case', authors: ['A. Writer'] },
+      { title: 'snakescase', authors: ['A. Writer'] },
+    ]),
+  );
+  const app = await renderApp({ storage, connected: true });
+
+  await search(app.screen, '50%');
+  await expectTitles(app.screen, ['50% Off']);
+
+  await search(app.screen, 'e_c');
+  await expectTitles(app.screen, ['snake_case']);
+});
+
 test('search ignores case and accents on both sides', async () => {
   const storage = new FakeStorage(
     await buildCalibreLibrary([
