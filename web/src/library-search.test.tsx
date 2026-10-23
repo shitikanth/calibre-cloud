@@ -65,3 +65,18 @@ test('search matches series names', async () => {
 
   await expectTitles(app.screen, ['A Wizard of Earthsea', 'The Tombs of Atuan']);
 });
+
+test('search matches tag names', async () => {
+  const storage = new FakeStorage(
+    await buildCalibreLibrary([
+      { title: 'Jane Eyre', authors: ['Charlotte Brontë'], tags: ['Classics', 'Gothic Fiction'] },
+      { title: 'Dracula', authors: ['Bram Stoker'], tags: ['Horror', 'Gothic Fiction'] },
+      { title: 'A Wizard of Earthsea', authors: ['Ursula K. Le Guin'], tags: ['Fantasy'] },
+    ]),
+  );
+  const app = await renderApp({ storage, connected: true });
+
+  await search(app.screen, 'gothic');
+
+  await expectTitles(app.screen, ['Jane Eyre', 'Dracula']);
+});
