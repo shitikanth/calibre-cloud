@@ -2,19 +2,27 @@
 
 CD runs on Cloudflare Workers Builds, connected to the `calibre-cloud` Worker. CI runs on GitHub Actions (`.github/workflows/ci.yml`). Neither needs a Cloudflare API token or GitHub secrets.
 
-These steps need the owner's Cloudflare and GitHub access. Agents don't do them.
+These steps need the owner's Cloudflare and GitHub access.
 
 ## 1. Workers Builds settings
 
-Cloudflare dashboard → Workers & Pages → `calibre-cloud` → Settings → Build.
+Production and preview builds both run from the repo root, so Workers Builds' own `pnpm install --frozen-lockfile` installs the whole workspace.
 
-- [ ] **Git repository:** `shitikanth/calibre-cloud`, production branch `main`.
-- [ ] **Root directory:** `deploy/cloudflare`. Workers Builds requires the `name` in the Wrangler config in this directory to match the Worker name, and `deploy/cloudflare/wrangler.jsonc` has `name: calibre-cloud`.
-- [ ] **Build variable:** `SKIP_DEPENDENCY_INSTALL` = `1`. The lockfile is at the repo root, outside the root directory, so the build command installs the workspace itself.
-- [ ] **Build command:** `pnpm install --frozen-lockfile && pnpm run build`
-- [ ] **Deploy command:** `pnpm run release`. It installs headless Chromium, runs `wrangler deploy`, then loads `/` and a deep link on the deployed `workers.dev` URL. The build fails on any console error, uncaught error, CSP violation, missing CSP header, non-2xx response, or empty `#root`.
-- [ ] **Non-production branch builds:** enabled, with the default preview command (`npx wrangler preview`). It needs the `previews` block in `wrangler.jsonc`, which is empty because Previews need no settings of their own. This builds every PR branch and posts its preview URL on the PR.
-- [ ] **workers.dev route:** enabled (Settings → Domains & Routes). `wrangler.jsonc` sets `workers_dev: true` and `preview_urls: true`.
+| Setting | Production (`main`) | Previews (other branches) |
+|---|---|---|
+| Root directory | `/` | `/` |
+| Build command | `pnpm run build` | `pnpm run build` |
+| Deploy command | `pnpm --filter @calibre-cloud/deploy-cloudflare run release` | `pnpm --filter @calibre-cloud/deploy-cloudflare exec wrangler preview` |
+
+- `release` installs headless Chromium, runs `wrangler deploy`, then loads `/` and a deep link on the deployed `workers.dev` URL. The build fails on any console error, uncaught error, CSP violation, missing CSP header, non-2xx response, or empty `#root`.
+- `wrangler preview` needs the `previews` block in `wrangler.jsonc`. It is empty because Previews need no settings of their own.
+- The Worker needs workers.dev and preview URLs enabled. `wrangler.jsonc` sets `workers_dev: true` and `preview_urls: true`, but they only take effect on a production deploy, so enable them on the Worker before the first one.
+
+Check or change the settings with the Cloudflare CLI (`npx cf`):
+
+- `npx cf builds workers get <worker-tag>` shows both columns of the table.
+- `npx cf builds workers update <worker-tag> --production-settings-build-command ... --previews-base-config-deploy-command ...` changes them.
+- `npx cf builds logs get <build-uuid>` prints a build's log. The build UUID is in the Workers Builds check on the commit.
 
 ## 2. Branch protection on `main`
 
