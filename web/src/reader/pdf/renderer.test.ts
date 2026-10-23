@@ -110,16 +110,39 @@ test('page 1 is cleaned up once page 2 replaces it', async () => {
   expect(cleanup.mock.contexts.map((page) => (page as PDFPageProxy).pageNumber)).toEqual([1]);
 });
 
-test('a page that fails to load is reported as a render error and the document stays open', async () => {
+test('a page that fails to load or render is reported as a render error, and paging on from it still works', async () => {
   const { renderer, relocations, errors } = await openFixture();
-  vi.spyOn((await pdfjsPrototypes()).document, 'getPage').mockRejectedValueOnce(new Error('Bad page'));
+  const prototypes = await pdfjsPrototypes();
 
+  vi.spyOn(prototypes.document, 'getPage').mockRejectedValueOnce(new Error('Bad page'));
   await renderer.next();
   expect(errors.map((error) => error.message)).toEqual(['Bad page']);
   expect(relocations).toHaveLength(1);
+  await renderer.previous();
+  expect(relocations.at(-1)?.page).toEqual({ current: 1, total: 2 });
 
+  vi.spyOn(prototypes.page, 'render').mockImplementationOnce(() => {
+    throw new Error('Bad render');
+  });
   await renderer.next();
-  expect(relocations.at(-1)?.page).toEqual({ current: 2, total: 2 });
+  expect(errors.map((error) => error.message)).toEqual(['Bad page', 'Bad render']);
+  await renderer.previous();
+  expect(relocations.map((relocation) => relocation.page?.current)).toEqual([1, 1, 1]);
+});
+
+test('destroy during open leaves nothing behind', async () => {
+  const blob = await fetch(fixtureUrl).then((response) => response.blob());
+  const container = document.createElement('div');
+  document.body.append(container);
+  const renderer = await createPdfRenderer();
+  opened.push({ renderer, container });
+
+  const opening = renderer.open(blob, container, {});
+  renderer.destroy();
+  await opening;
+
+  expect(container.childElementCount).toBe(0);
+  expect(renderer.toc).toEqual([]);
 });
 
 test('destroy empties the container', async () => {

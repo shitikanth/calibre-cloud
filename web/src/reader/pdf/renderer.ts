@@ -21,17 +21,21 @@ class PdfRenderer implements BookRenderer {
   private scroller: HTMLElement | undefined;
   private canvas: HTMLCanvasElement | undefined;
   private page: PDFPageProxy | undefined;
-  private current = 1;
+  private currentPage = 1;
   private zoom = 1;
   private renderTask: RenderTask | undefined;
-  private requests = 0;
+  private generation = 0;
   private readonly relocateListeners = new Set<(relocation: Relocation) => void>();
   private readonly errorListeners = new Set<(error: Error) => void>();
 
   async open(blob: Blob, container: HTMLElement, { location }: { location?: string }): Promise<void> {
+    const generation = this.generation;
     const data = await blob.arrayBuffer();
-    this.loadingTask = pdfjs.getDocument({ data, wasmUrl });
-    const doc = await this.loadingTask.promise;
+    if (generation !== this.generation) return;
+    const loadingTask = pdfjs.getDocument({ data, wasmUrl });
+    this.loadingTask = loadingTask;
+    const doc = await loadingTask.promise;
+    if (generation !== this.generation) return;
     this.doc = doc;
     this.container = container;
     this.scroller = document.createElement('div');
@@ -40,7 +44,8 @@ class PdfRenderer implements BookRenderer {
     this.canvas.style.display = 'block';
     this.scroller.append(this.canvas);
     container.replaceChildren(this.scroller);
-    this.toc = await readOutline(doc);
+    this.toc = await mapOutline(doc, (await doc.getOutline()) ?? []);
+    if (generation !== this.generation) return;
     this.zoom = 1;
     await this.show(this.resolve(location));
   }
@@ -61,20 +66,20 @@ class PdfRenderer implements BookRenderer {
   }
 
   async next(): Promise<void> {
-    if (this.doc && this.current < this.doc.numPages) await this.show(this.current + 1);
+    if (this.doc && this.currentPage < this.doc.numPages) await this.show(this.currentPage + 1);
   }
 
   async previous(): Promise<void> {
-    if (this.current > 1) await this.show(this.current - 1);
+    if (this.currentPage > 1) await this.show(this.currentPage - 1);
   }
 
   setZoom(zoom: number): void {
     this.zoom = zoom;
-    void this.show(this.current);
+    void this.show(this.currentPage);
   }
 
   destroy(): void {
-    this.requests += 1;
+    this.generation += 1;
     this.renderTask?.cancel();
     this.renderTask = undefined;
     void this.loadingTask?.destroy();
@@ -101,17 +106,18 @@ class PdfRenderer implements BookRenderer {
   private async show(pageNumber: number): Promise<void> {
     const { doc, scroller, canvas } = this;
     if (!doc || !scroller || !canvas) return;
-    const request = ++this.requests;
+    const generation = ++this.generation;
     const inFlight = this.renderTask;
-    this.renderTask = undefined;
     inFlight?.cancel();
     await inFlight?.promise.catch(() => undefined);
+    if (this.renderTask === inFlight) this.renderTask = undefined;
+    if (generation !== this.generation) return;
+    this.currentPage = pageNumber;
     try {
       const page = await doc.getPage(pageNumber);
-      if (request !== this.requests) return;
+      if (generation !== this.generation) return;
       if (this.page && this.page !== page) this.page.cleanup();
       this.page = page;
-      this.current = pageNumber;
       const base = page.getViewport({ scale: 1 });
       const fitWidth = (scroller.clientWidth || base.width) / base.width;
       const viewport = page.getViewport({ scale: fitWidth * this.zoom });
@@ -123,12 +129,12 @@ class PdfRenderer implements BookRenderer {
       const task = page.render({ canvas, viewport, transform: ratio === 1 ? undefined : [ratio, 0, 0, ratio, 0, 0] });
       this.renderTask = task;
       await task.promise;
-      if (request !== this.requests) return;
+      if (generation !== this.generation) return;
       this.renderTask = undefined;
       scroller.scrollTop = 0;
       this.emitRelocation(pageNumber, doc.numPages);
     } catch (error) {
-      if (request !== this.requests || error instanceof pdfjs.RenderingCancelledException) return;
+      if (generation !== this.generation || error instanceof pdfjs.RenderingCancelledException) return;
       for (const listener of this.errorListeners) listener(error instanceof Error ? error : new Error(String(error)));
     }
   }
@@ -141,10 +147,6 @@ class PdfRenderer implements BookRenderer {
     };
     for (const listener of this.relocateListeners) listener(relocation);
   }
-}
-
-async function readOutline(doc: PDFDocumentProxy): Promise<TocEntry[]> {
-  return mapOutline(doc, (await doc.getOutline()) ?? []);
 }
 
 async function mapOutline(doc: PDFDocumentProxy, items: OutlineItem[]): Promise<TocEntry[]> {
