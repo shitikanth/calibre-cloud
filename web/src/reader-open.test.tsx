@@ -1,9 +1,14 @@
 import { userEvent } from 'vitest/browser';
-import { expect, test } from 'vitest';
+import { afterEach, expect, test, vi } from 'vitest';
+import { NotFound, QuotaExceeded } from './storage/adapter.ts';
 import { buildCalibreLibrary } from './test/calibre-library.ts';
 import { fakeRenderers } from './test/fake-renderer.ts';
 import { FakeStorage } from './test/fake-storage.ts';
 import { renderApp } from './test/render-app.tsx';
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 const epub = ['# Chapter 1', 'Reader, I married him.', '# Chapter II', 'The end.'].join('\n');
 
@@ -115,4 +120,64 @@ test('the reader route asks to connect first when there is no connection', async
 
   await expect.element(app.screen.getByRole('textbox', { name: 'MEGA folder link' })).toBeVisible();
   expect(app.url).toBe('/books/1/read/EPUB');
+});
+
+test('a fetch that fails says why, offers Retry when that can work, and always offers Back to book', async () => {
+  const storage = await janeEyreLibrary();
+  storage.failWith(epubPath, new QuotaExceeded());
+  const fake = fakeRenderers(['EPUB', 'PDF']);
+  const app = await renderApp({ storage, connected: true, path: '/books/1/read/EPUB', renderers: fake.renderers });
+
+  const alert = app.screen.getByRole('alert');
+  await expect.element(alert).toMatchTextContent(/Download quota exceeded.*Try later/);
+  await expect.element(alert.getByRole('link', { name: 'Back to book' })).toBeVisible();
+  expect(app.screen.getByRole('progressbar').query()).toBeNull();
+
+  storage.heal(epubPath);
+  await userEvent.click(alert.getByRole('button', { name: 'Retry' }));
+
+  await expect.element(app.screen.getByText('# Chapter 1')).toBeVisible();
+  expect(app.screen.getByRole('alert').query()).toBeNull();
+});
+
+test('a missing file cannot be retried', async () => {
+  const storage = await janeEyreLibrary();
+  storage.failWith(epubPath, new NotFound(epubPath));
+  const fake = fakeRenderers(['EPUB', 'PDF']);
+  const app = await renderApp({ storage, connected: true, path: '/books/1/read/EPUB', renderers: fake.renderers });
+
+  const alert = app.screen.getByRole('alert');
+  await expect.element(alert).toMatchTextContent(/File missing/);
+  await expect.element(alert.getByRole('link', { name: 'Back to book' })).toBeVisible();
+  expect(alert.getByRole('button', { name: 'Retry' }).query()).toBeNull();
+});
+
+test('a file the renderer cannot open offers Download instead of Retry', async () => {
+  const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+  const fake = fakeRenderers(['EPUB', 'PDF'], (renderer) => (renderer.failOpen = true));
+  const app = await renderApp({ storage: await janeEyreLibrary(), connected: true, path: '/books/1/read/EPUB', renderers: fake.renderers });
+
+  const alert = app.screen.getByRole('alert');
+  await expect.element(alert).toMatchTextContent(/Couldn’t open this book/);
+  await expect.element(alert.getByRole('link', { name: 'Back to book' })).toBeVisible();
+  expect(alert.getByRole('button', { name: 'Retry' }).query()).toBeNull();
+  expect(app.screen.getByRole('button', { name: 'Next' }).query()).toBeNull();
+
+  await userEvent.click(alert.getByRole('button', { name: 'Download EPUB' }));
+
+  await expect.poll(() => click.mock.contexts).toHaveLength(1);
+  expect((click.mock.contexts[0] as HTMLAnchorElement).download).toBe('Jane Eyre - Charlotte Brontë.epub');
+});
+
+test('a page that fails to render shows a notice while the book stays open', async () => {
+  const fake = fakeRenderers(['EPUB', 'PDF']);
+  const app = await renderApp({ storage: await janeEyreLibrary(), connected: true, path: '/books/1/read/EPUB', renderers: fake.renderers });
+  await expect.element(app.screen.getByText('# Chapter 1')).toBeVisible();
+
+  fake.latest.emitRenderError(new Error('Bad section'));
+
+  await expect.element(app.screen.getByRole('alert')).toMatchTextContent(/couldn’t be shown/);
+  await userEvent.click(app.screen.getByRole('button', { name: 'Next' }));
+  await expect.element(app.screen.getByText('Reader, I married him.')).toBeVisible();
+  expect(app.screen.getByRole('alert').query()).toBeNull();
 });

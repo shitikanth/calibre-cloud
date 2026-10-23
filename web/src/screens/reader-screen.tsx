@@ -204,7 +204,13 @@ function OpenedBook({ book, format, blob }: { book: BookDetail; format: BookForm
           return;
         }
         opened = created;
-        unsubscribe.push(created.onRelocate(setRelocation), created.onRenderError(setRenderError));
+        unsubscribe.push(
+          created.onRelocate((next) => {
+            setRelocation(next);
+            setRenderError(undefined);
+          }),
+          created.onRenderError(setRenderError),
+        );
         await created.open(blob, host, {});
         if (cancelled) return;
         setRenderer(created);
