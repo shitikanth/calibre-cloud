@@ -9,7 +9,7 @@
   "scripts": {
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.json && pnpm -r run typecheck",
-    "test": "vitest run",
+    "test": "vitest run --project web --project tooling && vitest run --project deploy-cloudflare",
     "build": "pnpm --filter @calibre-cloud/deploy-cloudflare run build"
   },
   "devDependencies": {
