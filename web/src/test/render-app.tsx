@@ -45,6 +45,9 @@ export async function renderApp({ storage, path = '/', connected = false, render
     back() {
       history.back();
     },
+    navigate(to: string) {
+      history.push(to);
+    },
     async reload({ whileClosed }: { whileClosed?: () => Promise<void> } = {}) {
       await screen.unmount();
       mounted.delete(screen);

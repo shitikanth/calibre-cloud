@@ -32,7 +32,7 @@ function ReaderForFormat({ book, formatName }: { book: BookDetail; formatName: s
   const format = book.formats.find((candidate) => candidate.format === formatName);
   if (!format || !renderers[format.format])
     return inShell(<NotFound title="Format not found" detail="This book has no such format to read." />);
-  return <Reader book={book} format={format} />;
+  return <Reader key={`${book.id}/${format.format}`} book={book} format={format} />;
 }
 
 function Reader({ book, format }: { book: BookDetail; format: BookFormat }) {
@@ -76,7 +76,6 @@ function Reader({ book, format }: { book: BookDetail; format: BookFormat }) {
   }
   return (
     <OpenedBook
-      key={`${book.id}/${format.format}`}
       book={book}
       format={format}
       blob={state.result.blob}
