@@ -1,13 +1,7 @@
 declare module 'foliate-js/view.js' {
   export type TocItem = { label: string; href: string; subitems?: TocItem[] };
 
-  export type Location = {
-    cfi: string;
-    fraction: number;
-    range?: Range;
-    section?: { current: number; total: number };
-    tocItem?: TocItem;
-  };
+  export type Location = { cfi: string; fraction: number };
 
   export type ResourceLoad = { type: string; isScript: boolean; allow: boolean | Promise<boolean> };
 
@@ -28,12 +22,10 @@ declare module 'foliate-js/view.js' {
   export interface FoliateView extends HTMLElement {
     book: Book;
     renderer: HTMLElement & { setStyles(css: string): void };
-    lastLocation?: Location;
-    open(book: Blob): Promise<void>;
+    open(book: File): Promise<void>;
     close(): void;
     init(options: { lastLocation?: string; showTextStart?: boolean }): Promise<void>;
-    goToTextStart(): Promise<unknown>;
-    resolveNavigation(target: string | number): NavigationTarget | undefined;
+    resolveNavigation(target: string | number): NavigationTarget | null | undefined;
     goTo(target: string | number): Promise<NavigationTarget | undefined>;
     prev(): Promise<void>;
     next(): Promise<void>;
