@@ -23,11 +23,15 @@ function OpenBook({ id }: { id: number }) {
   return <BookDetails book={book.data} />;
 }
 
-function BookNotFound() {
+export function BookNotFound() {
+  return <NotFound title="Book not found" detail="This book isn’t in your library any more." />;
+}
+
+export function NotFound({ title, detail }: { title: string; detail: string }) {
   return (
     <section>
-      <h1 className="text-xl font-semibold">Book not found</h1>
-      <p className="mt-2 text-neutral-700">This book isn’t in your library any more.</p>
+      <h1 className="text-xl font-semibold">{title}</h1>
+      <p className="mt-2 text-neutral-700">{detail}</p>
     </section>
   );
 }
