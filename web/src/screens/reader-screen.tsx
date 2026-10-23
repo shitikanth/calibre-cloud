@@ -10,6 +10,7 @@ import { NotFound, OpenBook } from './book-screen.tsx';
 import { ConnectedShell } from './connected-shell.tsx';
 import { describeError } from './describe-error.ts';
 import { ProgressBar } from './progress-bar.tsx';
+import { TocTool } from './reader-toc.tsx';
 
 export function ReaderScreen({ bookId, format }: { bookId: string; format: string }) {
   return (
@@ -202,7 +203,7 @@ function OpenedBook({ book, format, blob }: { book: BookDetail; format: BookForm
   }, [renderer]);
 
   return (
-    <ReaderShell book={book}>
+    <ReaderShell book={book} tools={status === 'open' && renderer && <TocTool renderer={renderer} />}>
       {status === 'unopenable' && <Unopenable book={book} format={format} />}
       {renderError && status === 'open' && (
         <p role="alert" className="bg-amber-50 px-4 py-2 text-sm text-amber-900">
