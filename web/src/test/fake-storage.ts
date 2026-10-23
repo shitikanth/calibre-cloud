@@ -20,7 +20,7 @@ export type FakeStorageCall = { op: 'stat' | 'read'; path: LibraryPath };
 export class FakeStorage implements StorageAdapter {
   readonly calls: FakeStorageCall[] = [];
   private readonly files = new Map<LibraryPath, StoredFile>();
-  private readonly failures = new Map<LibraryPath, StorageError>();
+  private readonly failures = new Map<LibraryPath, { error: StorageError; only?: FakeStorageCall['op'] }>();
   private readonly holds = new Map<string, { started: () => void; released: Promise<void> }>();
 
   constructor(files: Record<LibraryPath, Uint8Array<ArrayBuffer> | string> = {}) {
@@ -32,8 +32,8 @@ export class FakeStorage implements StorageAdapter {
     this.files.set(path, { bytes, version });
   }
 
-  failWith(path: LibraryPath, error: StorageError): void {
-    this.failures.set(path, error);
+  failWith(path: LibraryPath, error: StorageError, only?: FakeStorageCall['op']): void {
+    this.failures.set(path, only ? { error, only } : { error });
   }
 
   heal(path: LibraryPath): void {
@@ -60,14 +60,14 @@ export class FakeStorage implements StorageAdapter {
   async stat(path: LibraryPath): Promise<FileStat> {
     this.calls.push({ op: 'stat', path });
     await this.waitIfHeld('stat', path);
-    const file = this.lookup(path);
+    const file = this.lookup('stat', path);
     return { size: file.bytes.byteLength, version: file.version };
   }
 
   async read(path: LibraryPath, { signal, onProgress }: ReadOptions = {}): Promise<Blob> {
     this.calls.push({ op: 'read', path });
     throwIfAborted(signal);
-    const file = this.lookup(path);
+    const file = this.lookup('read', path);
     const total = file.bytes.byteLength;
     onProgress?.(Math.floor(total / 2), total);
 
@@ -85,9 +85,9 @@ export class FakeStorage implements StorageAdapter {
     await Promise.race([hold.released, abortion(signal)]);
   }
 
-  private lookup(path: LibraryPath): StoredFile {
+  private lookup(op: FakeStorageCall['op'], path: LibraryPath): StoredFile {
     const failure = this.failures.get(path);
-    if (failure) throw failure;
+    if (failure && (failure.only ?? op) === op) throw failure.error;
     const file = this.files.get(path);
     if (!file) throw new NotFound(path);
     return file;

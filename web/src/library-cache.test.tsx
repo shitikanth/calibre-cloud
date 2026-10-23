@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest';
+import { Network, QuotaExceeded } from './storage/adapter.ts';
 import { buildCalibreLibrary, type BookSpec } from './test/calibre-library.ts';
 import { FakeStorage } from './test/fake-storage.ts';
 import { renderApp } from './test/render-app.tsx';
@@ -62,4 +63,35 @@ test('a changed library downloads in the background, swaps in, and says so', asy
   await expect.element(again.getByText('4 books')).toBeVisible();
   await expect.poll(() => metadataCalls(storage)).toEqual([{ op: 'stat', path: 'metadata.db' }]);
   expect(again.getByRole('status').query()).toBeNull();
+});
+
+test('a failed download of a changed library keeps the cached one browsable with a banner', async () => {
+  const storage = await libraryOf(brontës);
+  const app = await renderApp({ storage, connected: true });
+  await expect.element(app.screen.getByText('3 books')).toBeVisible();
+  await withNewBook(storage, '2');
+  storage.failWith('metadata.db', new Network(), 'read');
+
+  const reloaded = await app.reload();
+
+  await expect.element(reloaded.getByRole('alert')).toMatchTextContent(/Couldn’t reach your library/);
+  await expect.element(reloaded.getByText('3 books')).toBeVisible();
+  await expect.element(reloaded.getByRole('heading', { level: 2, name: 'Agnes Grey' })).toBeVisible();
+
+  const again = await app.reload();
+  await expect.element(again.getByRole('alert')).toMatchTextContent(/Couldn’t reach your library/);
+  await expect.element(again.getByText('3 books')).toBeVisible();
+});
+
+test('MEGA over quota keeps the cached library browsable with a banner saying why', async () => {
+  const storage = await libraryOf(brontës);
+  const app = await renderApp({ storage, connected: true });
+  await expect.element(app.screen.getByText('3 books')).toBeVisible();
+  storage.failWith('metadata.db', new QuotaExceeded());
+
+  const reloaded = await app.reload();
+
+  await expect.element(reloaded.getByRole('alert')).toMatchTextContent(/Download quota exceeded/);
+  await expect.element(reloaded.getByText('3 books')).toBeVisible();
+  await expect.element(reloaded.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
 });

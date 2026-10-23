@@ -3,7 +3,7 @@ import { Aborted, Network, NotFound, QuotaExceeded, ReconnectRequired } from '..
 
 type ErrorCopy = { title: string; detail: string; canRetry: boolean };
 
-function describe(error: Error): ErrorCopy {
+export function describeStorageError(error: Error): ErrorCopy {
   if (error instanceof NotFound)
     return {
       title: 'Wrong folder',
@@ -31,7 +31,7 @@ function describe(error: Error): ErrorCopy {
 
 export function StorageErrorScreen({ error, retry }: { error: Error; retry: () => void }) {
   const { disconnect } = useConnection();
-  const { title, detail, canRetry } = describe(error);
+  const { title, detail, canRetry } = describeStorageError(error);
   return (
     <section role="alert">
       <h1 className="text-xl font-semibold">{title}</h1>
