@@ -3,8 +3,6 @@ import { useConnection } from '../connection/context.tsx';
 import { useFetch, type FetchOptions } from '../download/use-fetch.ts';
 import { openBookFile, type BookFile, type BookFileKey } from './book-cache.ts';
 
-export type { BookFile } from './book-cache.ts';
-
 export function useBookFile({ bookId, format, path }: BookFileKey) {
   const { storage } = useConnection();
   const run = useCallback(

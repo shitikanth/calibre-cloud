@@ -76,18 +76,40 @@ async function openReader(storage: FakeStorage, fake: ReturnType<typeof fakeRend
   return app;
 }
 
+const [janeEyreEpubReader, janeEyrePdfReader, wutheringEpubReader, wutheringPdfReader] = opened as [Opened, Opened, Opened, Opened];
+
 test('opening a fourth book file evicts the least recently opened one', async () => {
   const storage = await library();
   const fake = fakeRenderers(['EPUB', 'PDF']);
-  for (const book of opened) await openReader(storage, fake, book);
+  for (const book of [janeEyreEpubReader, janeEyrePdfReader, wutheringEpubReader]) await openReader(storage, fake, book);
+  await openReader(storage, fake, janeEyreEpubReader);
+  await openReader(storage, fake, wutheringPdfReader);
   storage.calls.length = 0;
 
-  for (const book of [...opened].reverse()) await openReader(storage, fake, book);
+  for (const book of [wutheringPdfReader, wutheringEpubReader, janeEyreEpubReader, janeEyrePdfReader])
+    await openReader(storage, fake, book);
 
-  expect(bookFileCalls(storage, wutheringPdfPath)).toEqual(['stat']);
+  expect(bookFileCalls(storage, janeEyreEpubPath)).toEqual(['stat']);
+  expect(bookFileCalls(storage, janeEyrePdfPath)).toEqual(['stat', 'read']);
   expect(bookFileCalls(storage, wutheringEpubPath)).toEqual(['stat']);
-  expect(bookFileCalls(storage, janeEyrePdfPath)).toEqual(['stat']);
-  expect(bookFileCalls(storage, janeEyreEpubPath)).toEqual(['stat', 'read']);
+  expect(bookFileCalls(storage, wutheringPdfPath)).toEqual(['stat']);
+});
+
+test('a book opened while the library cannot be reached counts as recently opened', async () => {
+  const storage = await library();
+  const fake = fakeRenderers(['EPUB', 'PDF']);
+  for (const book of [janeEyreEpubReader, janeEyrePdfReader, wutheringEpubReader]) await openReader(storage, fake, book);
+  storage.failWith(janeEyreEpubPath, new Network(), 'stat');
+  await openReader(storage, fake, janeEyreEpubReader);
+  storage.heal(janeEyreEpubPath);
+  await openReader(storage, fake, wutheringPdfReader);
+  storage.calls.length = 0;
+
+  await openReader(storage, fake, janeEyreEpubReader);
+  await openReader(storage, fake, janeEyrePdfReader);
+
+  expect(bookFileCalls(storage, janeEyreEpubPath)).toEqual(['stat']);
+  expect(bookFileCalls(storage, janeEyrePdfPath)).toEqual(['stat', 'read']);
 });
 
 test('a cached book still opens when the library cannot be reached', async () => {
@@ -103,6 +125,22 @@ test('a cached book still opens when the library cannot be reached', async () =>
   await expect.element(reloaded.getByText('# Chapter 1')).toBeVisible();
   expect(reloaded.getByRole('alert').query()).toBeNull();
   expect(bookFileCalls(storage, janeEyreEpubPath)).toEqual(['stat']);
+});
+
+test('a book still opens when the device refuses to keep it, and downloads again next time', async () => {
+  const put = vi.spyOn(Cache.prototype, 'put').mockRejectedValue(new DOMException('Quota exceeded', 'QuotaExceededError'));
+  onTestFinished(() => put.mockRestore());
+  const storage = await library();
+  const fake = fakeRenderers(['EPUB', 'PDF']);
+  const app = await renderApp({ storage, connected: true, path: '/books/1/read/EPUB', renderers: fake.renderers });
+  await expect.element(app.screen.getByText('# Chapter 1')).toBeVisible();
+  storage.calls.length = 0;
+
+  const reloaded = await app.reload();
+
+  await expect.element(reloaded.getByText('# Chapter 1')).toBeVisible();
+  expect(reloaded.getByRole('alert').query()).toBeNull();
+  expect(bookFileCalls(storage, janeEyreEpubPath)).toEqual(['stat', 'read']);
 });
 
 test('a file the renderer cannot open is downloaded afresh next time', async () => {

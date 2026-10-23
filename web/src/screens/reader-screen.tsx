@@ -212,7 +212,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
       } catch {
         if (cancelled) return;
         setStatus('unopenable');
-        void forgetBookFile(book.id, format.format);
+        if (opened) void forgetBookFile(book.id, format.format);
       }
     })();
     return () => {
