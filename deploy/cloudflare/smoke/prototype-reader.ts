@@ -1,5 +1,5 @@
 // PROTOTYPE driver: opens fixtures in the reader prototype under wrangler's CSP and prints what happened.
-// usage: node web/prototype/drive-reader.ts <chromium|webkit> <origin> <fixtures-dir> <out-dir>
+// usage: node deploy/cloudflare/smoke/prototype-reader.ts <chromium|webkit> <origin> <fixtures-dir> <out-dir>
 import { chromium, webkit, type Page } from 'playwright';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
