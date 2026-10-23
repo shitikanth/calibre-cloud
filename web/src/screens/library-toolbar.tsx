@@ -1,7 +1,5 @@
 import { useDisconnect } from '../library/use-disconnect.ts';
-import type { useLibraryUpdate } from '../library/use-library-update.ts';
-
-type LibraryUpdate = ReturnType<typeof useLibraryUpdate>;
+import type { LibraryUpdate } from '../library/use-library-update.ts';
 
 export function LibraryToolbar({ update }: { update: LibraryUpdate }) {
   const disconnect = useDisconnect();

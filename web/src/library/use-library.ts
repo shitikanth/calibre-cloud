@@ -25,6 +25,8 @@ export function useOpenLibrary() {
   return { ...query, progress };
 }
 
+export type OpenLibraryQuery = ReturnType<typeof useOpenLibrary>;
+
 const PAGE_SIZE = 60;
 
 export function useBooks(enabled: boolean, search: string) {

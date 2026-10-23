@@ -25,3 +25,5 @@ export function useLibraryUpdate(checkOnLoad: boolean) {
     },
   });
 }
+
+export type LibraryUpdate = ReturnType<typeof useLibraryUpdate>;

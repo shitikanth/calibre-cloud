@@ -1,7 +1,5 @@
-import type { useLibraryUpdate } from '../library/use-library-update.ts';
+import type { LibraryUpdate } from '../library/use-library-update.ts';
 import { describeStorageError } from './storage-error-screen.tsx';
-
-type LibraryUpdate = ReturnType<typeof useLibraryUpdate>;
 
 export function LibraryNotices({ update }: { update: LibraryUpdate }) {
   if (update.isFetching) return null;

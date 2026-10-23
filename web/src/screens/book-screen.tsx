@@ -1,13 +1,13 @@
 import { Link } from '@tanstack/react-router';
 import { useBook } from '../library/use-book.ts';
-import { useOpenLibrary } from '../library/use-library.ts';
+import { useLibrarySession } from '../library/session.tsx';
 import { BookDetails } from './book-details.tsx';
 import { LoadingLibrary } from './library-screen.tsx';
 import { StorageErrorScreen } from './storage-error-screen.tsx';
 
 export function BookScreen({ bookId }: { bookId: string }) {
   const id = /^\d+$/.test(bookId) ? Number(bookId) : undefined;
-  const library = useOpenLibrary();
+  const { library } = useLibrarySession();
   const book = useBook(id ?? 0, library.isSuccess && id !== undefined);
 
   if (library.isError) return <StorageErrorScreen error={library.error} retry={() => void library.refetch()} />;

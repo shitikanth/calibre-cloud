@@ -1,5 +1,5 @@
-import { useBookCount, useBooks, useOpenLibrary, type DownloadProgress } from '../library/use-library.ts';
-import { useLibraryUpdate } from '../library/use-library-update.ts';
+import { useLibrarySession } from '../library/session.tsx';
+import { useBookCount, useBooks, type DownloadProgress } from '../library/use-library.ts';
 import { useSearch } from '@tanstack/react-router';
 import { BookGrid } from './book-grid.tsx';
 import { LibraryNotices } from './library-notices.tsx';
@@ -9,11 +9,10 @@ import { SearchBox } from './search-box.tsx';
 import { StorageErrorScreen } from './storage-error-screen.tsx';
 
 export function LibraryScreen() {
-  const library = useOpenLibrary();
+  const { library, update } = useLibrarySession();
   const count = useBookCount(library.isSuccess);
   const { q: search = '' } = useSearch({ from: '/' });
   const books = useBooks(library.isSuccess, search);
-  const update = useLibraryUpdate(library.data?.fromCache === true);
 
   if (library.isError) return <StorageErrorScreen error={library.error} retry={() => void library.refetch()} />;
   if (count.isError) return <StorageErrorScreen error={count.error} retry={() => void count.refetch()} />;

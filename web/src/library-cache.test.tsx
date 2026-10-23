@@ -35,6 +35,42 @@ test('a returning owner sees the cached library without waiting on the network',
   expect(metadataCalls(storage)).toEqual([{ op: 'stat', path: 'metadata.db' }]);
 });
 
+function metadataStats(storage: FakeStorage) {
+  return metadataCalls(storage).filter(({ op }) => op === 'stat');
+}
+
+test('loading a book page directly checks the library for changes once', async () => {
+  const storage = await libraryOf(brontës);
+  const app = await renderApp({ storage, connected: true, path: '/books/2' });
+  await expect.element(app.screen.getByRole('heading', { level: 1, name: 'Wuthering Heights' })).toBeVisible();
+  storage.calls.length = 0;
+
+  const reloaded = await app.reload();
+
+  await expect.element(reloaded.getByRole('heading', { level: 1, name: 'Wuthering Heights' })).toBeVisible();
+  await expect.poll(() => metadataStats(storage)).toHaveLength(1);
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  expect(metadataStats(storage)).toHaveLength(1);
+});
+
+test('going from the grid to a book and back does not check the library again', async () => {
+  const storage = await libraryOf(brontës);
+  const app = await renderApp({ storage, connected: true });
+  await expect.element(app.screen.getByText('3 books')).toBeVisible();
+  storage.calls.length = 0;
+  const reloaded = await app.reload();
+  await expect.element(reloaded.getByText('3 books')).toBeVisible();
+  await expect.poll(() => metadataStats(storage)).toHaveLength(1);
+
+  await userEvent.click(reloaded.getByRole('link', { name: /Jane Eyre/ }));
+  await expect.element(reloaded.getByRole('heading', { level: 1, name: 'Jane Eyre' })).toBeVisible();
+  await userEvent.click(reloaded.getByRole('link', { name: '← Library' }));
+  await expect.element(reloaded.getByText('3 books')).toBeVisible();
+  await new Promise((resolve) => setTimeout(resolve, 300));
+
+  expect(metadataStats(storage)).toHaveLength(1);
+});
+
 async function withNewBook(storage: FakeStorage, version: string) {
   const { 'metadata.db': updated } = await buildCalibreLibrary([
     ...brontës,
