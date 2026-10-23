@@ -8,6 +8,7 @@ import type { BookDetail } from './protocol.ts';
 function bookQuery(index: LibraryIndex, connection: Connection | undefined, bookId: number) {
   return queryOptions({
     queryKey: ['library', connection, 'book', bookId],
+    networkMode: 'always',
     queryFn: () => index.getBook(bookId),
   });
 }

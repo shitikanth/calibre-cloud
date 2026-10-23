@@ -1,4 +1,5 @@
-import { expect, test } from 'vitest';
+import { onlineManager } from '@tanstack/react-query';
+import { expect, onTestFinished, test } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { Network, QuotaExceeded } from './storage/adapter.ts';
 import { chooseFromMenu } from './test/app-bar.ts';
@@ -183,4 +184,20 @@ test('MEGA over quota keeps the cached library browsable with a banner saying wh
 
   await expect.element(reloaded.getByRole('alert')).toMatchTextContent(/Download quota exceeded/);
   await expect.element(reloaded.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
+});
+
+test('the cached library and a book page still show while the device is offline', async () => {
+  const storage = await libraryOf([{ title: 'Jane Eyre', authors: ['Charlotte Brontë'], formats: { EPUB: 'epub' } }]);
+  const app = await renderApp({ storage, connected: true });
+  await expect.element(app.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
+  storage.failWith('metadata.db', new Network(), 'stat');
+  onlineManager.setOnline(false);
+  onTestFinished(() => onlineManager.setOnline(true));
+
+  const reloaded = await app.reload();
+
+  await expect.element(reloaded.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
+  await userEvent.click(reloaded.getByRole('link', { name: /Jane Eyre/ }));
+  await expect.element(reloaded.getByRole('heading', { level: 1, name: 'Jane Eyre' })).toBeVisible();
+  await expect.element(reloaded.getByRole('link', { name: 'Read EPUB' })).toBeVisible();
 });

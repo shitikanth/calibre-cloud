@@ -14,6 +14,7 @@ export function useOpenLibrary() {
   const query = useQuery({
     queryKey: ['library-db', connection],
     enabled: storage !== undefined,
+    networkMode: 'always',
     retry: false,
     staleTime: Infinity,
     gcTime: 0,
@@ -35,6 +36,7 @@ export function useBooks(enabled: boolean, search: string) {
   return useInfiniteQuery({
     queryKey: ['library', connection, 'books', search],
     enabled,
+    networkMode: 'always',
     initialPageParam: 0,
     placeholderData: keepPreviousData,
     queryFn: ({ pageParam }) => index.listBooks({ offset: pageParam, limit: PAGE_SIZE, search }),
