@@ -17,7 +17,7 @@ declare module 'foliate-js/view.js' {
     transformTarget?: EventTarget;
   };
 
-  export type NavigationTarget = { index: number; anchor?: unknown };
+  export type NavigationTarget = { index: number };
 
   export interface FoliateView extends HTMLElement {
     book: Book;

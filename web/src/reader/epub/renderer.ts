@@ -55,11 +55,11 @@ export async function createEpubRenderer(): Promise<EpubRenderer> {
     for (const listener of relocateListeners) listener(relocation);
   };
 
-  const navigate = async (failure: string, action: () => Promise<unknown> | undefined) => {
+  const navigate = async (failureMessage: string, action: () => Promise<unknown> | undefined) => {
     try {
-      if ((await action()) === false) renderError(new Error(failure));
+      if ((await action()) === false) renderError(new Error(failureMessage));
     } catch (cause) {
-      renderError(new Error(failure, { cause }));
+      renderError(new Error(failureMessage, { cause }));
     }
   };
 
@@ -105,13 +105,14 @@ export async function createEpubRenderer(): Promise<EpubRenderer> {
       view = created;
       await created.open(new File([blob], 'book.epub', { type: blob.type || 'application/epub+zip' }));
       await laidOut(created);
-      created.book.transformTarget?.addEventListener('load', refuseScripts);
-      created.book.transformTarget?.addEventListener('data', transformResource);
+      const transforms = created.book.transformTarget;
+      transforms?.addEventListener('load', refuseScripts);
+      transforms?.addEventListener('data', transformResource);
       created.renderer.setAttribute('flow', 'paginated');
       toc = (created.book.toc ?? []).map(toTocEntry);
       const resumed =
         location !== undefined &&
-        resolves(created, location) &&
+        isResolvable(created, location) &&
         (await created.init({ lastLocation: location }).then(() => true, () => false));
       if (!resumed) await created.init({ showTextStart: true });
     },
@@ -162,7 +163,7 @@ function laidOut(element: Element): Promise<void> {
   });
 }
 
-function resolves(view: FoliateView, location: string): boolean {
+function isResolvable(view: FoliateView, location: string): boolean {
   const target = view.resolveNavigation(location);
   return !!target && target.index >= 0 && target.index < view.book.sections.length;
 }
