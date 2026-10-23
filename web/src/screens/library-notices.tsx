@@ -1,10 +1,10 @@
 import type { LibraryUpdate } from '../library/use-library-update.ts';
-import { describeStorageError } from './storage-error-screen.tsx';
+import { describeError } from './describe-error.ts';
 
 export function LibraryNotices({ update }: { update: LibraryUpdate }) {
   if (update.isFetching) return null;
   if (update.isError) {
-    const { title, detail } = describeStorageError(update.error);
+    const { title, detail } = describeError(update.error, 'library');
     return (
       <div role="alert" className="mt-4 rounded bg-amber-50 px-3 py-2 text-amber-900">
         <p className="font-medium">{title}</p>
