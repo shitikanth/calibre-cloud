@@ -68,8 +68,8 @@ A Calibre library can be many GB, but only `metadata.db` is needed to list the w
 - If the check fails, the cached library stays browsable with a banner saying why.
 - Only one tab can hold the OPFS pool, so a second tab asks the user to close the first.
 - Where OPFS is unavailable, the library is held in memory and downloaded on every visit.
-- Covers are cached in the Cache API, keyed by book and its `last_modified`. Whenever a downloaded `metadata.db` is opened, cached covers it no longer refers to are deleted.
-- Book files and full-size covers on the detail page are never cached.
+- Covers are cached in the Cache API, keyed by book and its `last_modified`. The grid and the detail page share this one cache, since Calibre stores a single `cover.jpg` per book. Whenever a downloaded `metadata.db` is opened, cached covers it no longer refers to are deleted.
+- Book files are never cached.
 - After connecting, the app asks for persistent storage. Disconnect deletes the saved connection, the cached library, and the covers.
 
 ## Stack and hosting
