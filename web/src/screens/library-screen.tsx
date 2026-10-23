@@ -1,35 +1,25 @@
 import { useLibrarySession } from '../library/session.tsx';
-import { useBookCount, useBooks, type LoadProgress } from '../library/use-library.ts';
+import { useBooks, type LoadProgress } from '../library/use-library.ts';
 import { useSearch } from '@tanstack/react-router';
 import { BookGrid } from './book-grid.tsx';
-import { LibraryNotices } from './library-notices.tsx';
-import { LibraryToolbar } from './library-toolbar.tsx';
 import { LoadMore } from './load-more.tsx';
 import { ProgressBar } from './progress-bar.tsx';
-import { SearchBox } from './search-box.tsx';
 import { StorageErrorScreen } from './storage-error-screen.tsx';
 
 export function LibraryScreen() {
-  const { library, update } = useLibrarySession();
-  const count = useBookCount(library.isSuccess);
+  const { library } = useLibrarySession();
   const { q: search = '' } = useSearch({ from: '/' });
   const books = useBooks(library.isSuccess, search);
 
   if (library.isError) return <StorageErrorScreen error={library.error} retry={() => void library.refetch()} />;
-  if (count.isError) return <StorageErrorScreen error={count.error} retry={() => void count.refetch()} />;
   if (books.isError) return <StorageErrorScreen error={books.error} retry={() => void books.refetch()} />;
   if (!library.isSuccess) return <LoadingLibrary progress={library.progress} />;
 
   return (
     <section>
-      <h1 className="text-3xl font-semibold">Library</h1>
-      {count.isSuccess && <p className="mt-2 text-neutral-600">{formatBookCount(count.data)}</p>}
-      <LibraryToolbar update={update} />
-      <LibraryNotices update={update} />
-      <SearchBox term={search} />
       {books.isSuccess &&
         (books.data.length === 0 && search.trim() ? (
-          <p className="mt-6 text-neutral-600">No books match “{search.trim()}”.</p>
+          <p className="text-neutral-600">No books match “{search.trim()}”.</p>
         ) : (
           <BookGrid books={books.data} />
         ))}
@@ -56,8 +46,4 @@ export function LoadingLibrary({ progress }: { progress: LoadProgress | undefine
       />
     </section>
   );
-}
-
-function formatBookCount(count: number): string {
-  return count === 1 ? '1 book' : `${count.toLocaleString()} books`;
 }
