@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest';
+import { userEvent } from 'vitest/browser';
 import { Network, QuotaExceeded } from './storage/adapter.ts';
 import { buildCalibreLibrary, type BookSpec } from './test/calibre-library.ts';
 import { FakeStorage } from './test/fake-storage.ts';
@@ -63,6 +64,21 @@ test('a changed library downloads in the background, swaps in, and says so', asy
   await expect.element(again.getByText('4 books')).toBeVisible();
   await expect.poll(() => metadataCalls(storage)).toEqual([{ op: 'stat', path: 'metadata.db' }]);
   expect(again.getByRole('status').query()).toBeNull();
+});
+
+test('Refresh library picks up a change made after the page loaded', async () => {
+  const storage = await libraryOf(brontës);
+  const app = await renderApp({ storage, connected: true });
+  await expect.element(app.screen.getByText('3 books')).toBeVisible();
+  await withNewBook(storage, '2');
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  expect(metadataCalls(storage).filter(({ op }) => op === 'stat')).toHaveLength(1);
+
+  await userEvent.click(app.screen.getByRole('button', { name: 'Refresh library' }));
+
+  await expect.element(app.screen.getByText('4 books')).toBeVisible();
+  await expect.element(app.screen.getByRole('status')).toHaveTextContent('Library updated');
+  expect(metadataCalls(storage).filter(({ op }) => op === 'stat')).toHaveLength(2);
 });
 
 test('a failed download of a changed library keeps the cached one browsable with a banner', async () => {
