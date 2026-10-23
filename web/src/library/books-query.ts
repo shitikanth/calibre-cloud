@@ -1,4 +1,4 @@
-import type { BookListQuery, BookSummary } from './protocol.ts';
+import type { BookListQuery, BookSummary, CoverVersion } from './protocol.ts';
 import { fold } from './fold.ts';
 import type { Database } from './sqlite.ts';
 
@@ -29,6 +29,10 @@ export function listBooks(db: Database, { offset, limit, search }: BookListQuery
     authors: JSON.parse(row.authors) as string[],
     cover: row.has_cover ? { path: `${row.path}/cover.jpg`, version: row.last_modified } : null,
   }));
+}
+
+export function listCoverVersions(db: Database): CoverVersion[] {
+  return db.selectObjects('SELECT id AS bookId, last_modified AS version FROM books WHERE has_cover') as CoverVersion[];
 }
 
 function likePattern(search: string | undefined): string | null {

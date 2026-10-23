@@ -1,9 +1,16 @@
-import { useConnection } from '../connection/context.tsx';
+import { LibraryInUse } from '../library/errors.ts';
+import { useDisconnect } from '../library/use-disconnect.ts';
 import { Aborted, Network, NotFound, QuotaExceeded, ReconnectRequired } from '../storage/adapter.ts';
 
 type ErrorCopy = { title: string; detail: string; canRetry: boolean };
 
-function describe(error: Error): ErrorCopy {
+export function describeStorageError(error: Error): ErrorCopy {
+  if (error instanceof LibraryInUse)
+    return {
+      title: 'Library is open in another tab',
+      detail: 'This browser can show the library in one tab at a time. Close the other tab, then try again.',
+      canRetry: true,
+    };
   if (error instanceof NotFound)
     return {
       title: 'Wrong folder',
@@ -30,8 +37,8 @@ function describe(error: Error): ErrorCopy {
 }
 
 export function StorageErrorScreen({ error, retry }: { error: Error; retry: () => void }) {
-  const { disconnect } = useConnection();
-  const { title, detail, canRetry } = describe(error);
+  const disconnect = useDisconnect();
+  const { title, detail, canRetry } = describeStorageError(error);
   return (
     <section role="alert">
       <h1 className="text-xl font-semibold">{title}</h1>

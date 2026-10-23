@@ -32,7 +32,7 @@ test('clicking a book opens its detail page, which survives a reload', async () 
   await expect.element(app.screen.getByRole('heading', { level: 1, name: 'Jane Eyre' })).toBeVisible();
   await expect.element(app.screen.getByText('Charlotte Brontë & Emily Brontë')).toBeVisible();
   expect(app.url).toBe('/books/1');
-  expect(storage.calls.filter(({ path }) => path === 'metadata.db')).toHaveLength(1);
+  expect(storage.calls.filter(({ op, path }) => op === 'read' && path === 'metadata.db')).toHaveLength(1);
 
   const reloaded = await app.reload();
 

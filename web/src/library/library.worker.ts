@@ -1,8 +1,8 @@
 import type { LibraryOperations, LibraryRequest, LibraryResponse, Operation } from './protocol.ts';
 import { getBook } from './book-query.ts';
-import { listBooks } from './books-query.ts';
-import { registerFold } from './fold.ts';
-import { loadSqlite, type Database } from './sqlite.ts';
+import { listBooks, listCoverVersions } from './books-query.ts';
+import { forgetOtherDatabases, importDatabase, openStoredDatabase, releasePool, wipeDatabases } from './db-store.ts';
+import type { Database } from './sqlite.ts';
 
 let db: Database | undefined;
 
@@ -12,31 +12,25 @@ type Handlers = {
 
 const handlers: Handlers = {
   async open({ bytes }) {
-    const sqlite3 = await loadSqlite();
-    db?.close();
-    db = undefined;
-    const data = new Uint8Array(bytes);
-    const pointer = sqlite3.wasm.allocFromTypedArray(data);
-    const opened = new sqlite3.oo1.DB();
-    const { capi } = sqlite3;
-    const rc = capi.sqlite3_deserialize(
-      opened,
-      'main',
-      pointer,
-      data.byteLength,
-      data.byteLength,
-      capi.SQLITE_DESERIALIZE_FREEONCLOSE | capi.SQLITE_DESERIALIZE_READONLY,
-    );
-    try {
-      opened.checkRc(rc);
-      opened.exec('PRAGMA query_only = ON');
-      registerFold(opened);
-      opened.selectValue('SELECT count(*) FROM sqlite_schema');
-    } catch (error) {
-      opened.close();
-      throw error;
-    }
-    db = opened;
+    const imported = await importDatabase(bytes);
+    replaceDb(imported.db);
+    await forgetOtherDatabases(imported.file);
+    return imported.file ?? null;
+  },
+  async openStored({ file }) {
+    const stored = await openStoredDatabase(file);
+    await forgetOtherDatabases(stored && file);
+    if (!stored) return false;
+    replaceDb(stored);
+    return true;
+  },
+  async clear() {
+    replaceDb(undefined);
+    await wipeDatabases();
+  },
+  async close() {
+    replaceDb(undefined);
+    await releasePool();
   },
   countBooks() {
     return Number(requireDb().selectValue('SELECT count(*) FROM books'));
@@ -47,21 +41,33 @@ const handlers: Handlers = {
   getBook({ bookId }) {
     return getBook(requireDb(), bookId);
   },
+  listCoverVersions() {
+    return listCoverVersions(requireDb());
+  },
 };
+
+function replaceDb(next: Database | undefined) {
+  db?.close();
+  db = next;
+}
 
 function requireDb(): Database {
   if (!db) throw new Error('No library is open');
   return db;
 }
 
-self.onmessage = async ({ data: request }: MessageEvent<LibraryRequest>) => {
-  let response: LibraryResponse;
+async function handle(request: LibraryRequest): Promise<LibraryResponse> {
   try {
     const handler = handlers[request.op] as (args: LibraryRequest) => unknown;
-    response = { id: request.id, ok: true, result: await handler(request) };
+    return { id: request.id, ok: true, result: await handler(request) };
   } catch (error) {
     const { name, message } = error instanceof Error ? error : new Error(String(error));
-    response = { id: request.id, ok: false, error: { name, message } };
+    return { id: request.id, ok: false, error: { name, message } };
   }
-  self.postMessage(response);
+}
+
+let queue = Promise.resolve();
+
+self.onmessage = ({ data: request }: MessageEvent<LibraryRequest>) => {
+  queue = queue.then(async () => self.postMessage(await handle(request)));
 };

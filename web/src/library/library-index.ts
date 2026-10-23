@@ -1,16 +1,34 @@
-import type { BookDetail, BookListQuery, BookSummary, LibraryOperations, LibraryRequest, LibraryResponse, Operation } from './protocol.ts';
+import { LibraryIndexError, libraryIndexError } from './errors.ts';
+import type {
+  BookDetail,
+  BookListQuery,
+  BookSummary,
+  CoverVersion,
+  LibraryOperations,
+  LibraryRequest,
+  LibraryResponse,
+  Operation,
+} from './protocol.ts';
 
 type Pending = { resolve(result: unknown): void; reject(error: Error): void };
 
-export class LibraryIndexError extends Error {}
+const CLOSE_TIMEOUT_MS = 5_000;
 
 export class LibraryIndex {
   private worker: Worker | undefined;
   private nextId = 1;
   private readonly pending = new Map<number, Pending>();
 
-  open(bytes: ArrayBuffer): Promise<void> {
+  open(bytes: ArrayBuffer): Promise<string | null> {
     return this.call('open', { bytes }, [bytes]);
+  }
+
+  openStored(file: string): Promise<boolean> {
+    return this.call('openStored', { file });
+  }
+
+  clear(): Promise<void> {
+    return this.call('clear', {});
   }
 
   countBooks(): Promise<number> {
@@ -25,8 +43,25 @@ export class LibraryIndex {
     return this.call('getBook', { bookId });
   }
 
-  dispose(reason = 'The library index was closed'): void {
-    this.worker?.terminate();
+  listCoverVersions(): Promise<CoverVersion[]> {
+    return this.call('listCoverVersions', {});
+  }
+
+  dispose(): void {
+    const worker = this.worker;
+    this.abandon('The library index was closed');
+    if (!worker) return;
+    const close = { id: this.nextId++, op: 'close' } as LibraryRequest;
+    const timeout = setTimeout(() => worker.terminate(), CLOSE_TIMEOUT_MS);
+    worker.onmessage = ({ data }: MessageEvent<LibraryResponse>) => {
+      if (data.id !== close.id) return;
+      clearTimeout(timeout);
+      worker.terminate();
+    };
+    worker.postMessage(close);
+  }
+
+  private abandon(reason: string): void {
     this.worker = undefined;
     for (const { reject } of this.pending.values()) reject(new LibraryIndexError(reason));
     this.pending.clear();
@@ -53,11 +88,12 @@ export class LibraryIndex {
       if (!pending) return;
       this.pending.delete(data.id);
       if (data.ok) pending.resolve(data.result);
-      else pending.reject(new LibraryIndexError(data.error.message));
+      else pending.reject(libraryIndexError(data.error));
     };
     worker.onerror = (event) => {
       event.preventDefault();
-      this.dispose(event.message || 'The library index stopped');
+      worker.terminate();
+      if (this.worker === worker) this.abandon(event.message || 'The library index stopped');
     };
     this.worker = worker;
     return worker;

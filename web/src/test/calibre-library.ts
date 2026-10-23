@@ -33,6 +33,7 @@ export type BookSpec = {
   title: string;
   authors?: string[];
   added?: string;
+  modified?: string;
   hasCover?: boolean;
   series?: string;
   tags?: string[];
@@ -72,7 +73,7 @@ export async function buildCalibreLibrary(books: BookSpec[]): Promise<FakeLibrar
           path,
           `uuid-${id}`,
           book.hasCover ? 1 : 0,
-          added,
+          book.modified ?? added,
         ],
       });
       insertMetadata(db, id, book);

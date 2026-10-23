@@ -20,8 +20,8 @@ export type FakeStorageCall = { op: 'stat' | 'read'; path: LibraryPath };
 export class FakeStorage implements StorageAdapter {
   readonly calls: FakeStorageCall[] = [];
   private readonly files = new Map<LibraryPath, StoredFile>();
-  private readonly failures = new Map<LibraryPath, StorageError>();
-  private readonly holds = new Map<LibraryPath, { started: () => void; released: Promise<void> }>();
+  private readonly failures = new Map<LibraryPath, { error: StorageError; only?: FakeStorageCall['op'] }>();
+  private readonly holds = new Map<string, { started: () => void; released: Promise<void> }>();
 
   constructor(files: Record<LibraryPath, Uint8Array<ArrayBuffer> | string> = {}) {
     for (const [path, content] of Object.entries(files)) this.put(path, content);
@@ -32,8 +32,8 @@ export class FakeStorage implements StorageAdapter {
     this.files.set(path, { bytes, version });
   }
 
-  failWith(path: LibraryPath, error: StorageError): void {
-    this.failures.set(path, error);
+  failWith(path: LibraryPath, error: StorageError, only?: FakeStorageCall['op']): void {
+    this.failures.set(path, only ? { error, only } : { error });
   }
 
   heal(path: LibraryPath): void {
@@ -41,42 +41,53 @@ export class FakeStorage implements StorageAdapter {
   }
 
   holdNextRead(path: LibraryPath): HeldRead {
+    return this.holdNext('read', path);
+  }
+
+  holdNextStat(path: LibraryPath): HeldRead {
+    return this.holdNext('stat', path);
+  }
+
+  private holdNext(op: FakeStorageCall['op'], path: LibraryPath): HeldRead {
     let started!: () => void;
     let release!: () => void;
     const startedPromise = new Promise<void>((resolve) => (started = resolve));
     const released = new Promise<void>((resolve) => (release = resolve));
-    this.holds.set(path, { started, released });
+    this.holds.set(`${op}:${path}`, { started, released });
     return { started: startedPromise, release };
   }
 
   async stat(path: LibraryPath): Promise<FileStat> {
     this.calls.push({ op: 'stat', path });
-    const file = this.lookup(path);
+    await this.waitIfHeld('stat', path);
+    const file = this.lookup('stat', path);
     return { size: file.bytes.byteLength, version: file.version };
   }
 
   async read(path: LibraryPath, { signal, onProgress }: ReadOptions = {}): Promise<Blob> {
     this.calls.push({ op: 'read', path });
     throwIfAborted(signal);
-    const file = this.lookup(path);
+    const file = this.lookup('read', path);
     const total = file.bytes.byteLength;
     onProgress?.(Math.floor(total / 2), total);
 
-    const hold = this.holds.get(path);
-    if (hold) {
-      this.holds.delete(path);
-      hold.started();
-      await Promise.race([hold.released, abortion(signal)]);
-    }
-
+    await this.waitIfHeld('read', path, signal);
     throwIfAborted(signal);
     onProgress?.(total, total);
     return new Blob([file.bytes]);
   }
 
-  private lookup(path: LibraryPath): StoredFile {
+  private async waitIfHeld(op: FakeStorageCall['op'], path: LibraryPath, signal?: AbortSignal) {
+    const hold = this.holds.get(`${op}:${path}`);
+    if (!hold) return;
+    this.holds.delete(`${op}:${path}`);
+    hold.started();
+    await Promise.race([hold.released, abortion(signal)]);
+  }
+
+  private lookup(op: FakeStorageCall['op'], path: LibraryPath): StoredFile {
     const failure = this.failures.get(path);
-    if (failure) throw failure;
+    if (failure && (failure.only ?? op) === op) throw failure.error;
     const file = this.files.get(path);
     if (!file) throw new NotFound(path);
     return file;
