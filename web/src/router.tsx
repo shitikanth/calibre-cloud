@@ -3,15 +3,15 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  useMatch,
   type RouterHistory,
 } from '@tanstack/react-router';
 import { useConnection } from './connection/context.tsx';
-import { useLibrarySession } from './library/session.tsx';
-import { AppBar } from './screens/app-bar.tsx';
 import { BookScreen } from './screens/book-screen.tsx';
 import { ConnectScreen } from './screens/connect-screen.tsx';
-import { LibraryNotices } from './screens/library-notices.tsx';
+import { ConnectedShell } from './screens/connected-shell.tsx';
 import { LibraryScreen } from './screens/library-screen.tsx';
+import { ReaderScreen } from './screens/reader-screen.tsx';
 
 const rootRoute = createRootRoute({
   component: RootLayout,
@@ -20,20 +20,20 @@ const rootRoute = createRootRoute({
 
 function RootLayout() {
   const { connection } = useConnection();
-  return (
-    <>
-      {connection && <AppBar />}
+  const reading = useMatch({ from: '/books/$bookId/read/$format', shouldThrow: false }) !== undefined;
+  if (!connection) {
+    return (
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-        {connection && <SessionNotices />}
         <Outlet />
       </main>
-    </>
+    );
+  }
+  if (reading) return <Outlet />;
+  return (
+    <ConnectedShell>
+      <Outlet />
+    </ConnectedShell>
   );
-}
-
-function SessionNotices() {
-  const { update } = useLibrarySession();
-  return <LibraryNotices update={update} />;
 }
 
 type LibrarySearch = { q?: string };
@@ -65,7 +65,19 @@ function BookRouteScreen() {
   return connection ? <BookScreen bookId={bookId} /> : <ConnectScreen />;
 }
 
-const routeTree = rootRoute.addChildren([homeRoute, bookRoute]);
+const readerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/books/$bookId/read/$format',
+  component: ReaderRouteScreen,
+});
+
+function ReaderRouteScreen() {
+  const { connection } = useConnection();
+  const { bookId, format } = readerRoute.useParams();
+  return connection ? <ReaderScreen bookId={bookId} format={format} /> : <ConnectScreen />;
+}
+
+const routeTree = rootRoute.addChildren([homeRoute, bookRoute, readerRoute]);
 
 export function createAppRouter(options: { history?: RouterHistory } = {}) {
   return createRouter({ routeTree, ...options });

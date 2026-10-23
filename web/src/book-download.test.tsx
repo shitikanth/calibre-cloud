@@ -35,8 +35,8 @@ test('each format is listed with its size and downloads straight to the device',
 
   await expect.element(formats.first()).toBeVisible();
   expect(formats.elements().map((format) => format.textContent)).toEqual([
-    'EPUB15 BDownload EPUB',
-    'PDF2.0 KBDownload PDF',
+    'EPUB15 BRead EPUBDownload EPUB',
+    'PDF2.0 KBRead PDFDownload PDF',
   ]);
 
   await userEvent.click(app.screen.getByRole('button', { name: 'Download EPUB' }));

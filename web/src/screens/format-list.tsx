@@ -1,6 +1,8 @@
+import { Link } from '@tanstack/react-router';
 import { bookFilename } from '../download/save-blob.ts';
 import { useDownload, type DownloadState } from '../download/use-download.ts';
 import type { BookDetail, BookFormat } from '../library/protocol.ts';
+import { useRenderers } from '../reader/context.tsx';
 import { describeError } from './describe-error.ts';
 import { formatSize } from './format.ts';
 import { ProgressBar } from './progress-bar.tsx';
@@ -10,30 +12,43 @@ export function FormatList({ book }: { book: BookDetail }) {
   return (
     <ul aria-label="Formats" className="flex flex-col gap-3">
       {book.formats.map((format) => (
-        <FormatItem key={format.format} format={format} filename={bookFilename(book.title, book.authors, format.format)} />
+        <FormatItem
+          key={format.format}
+          bookId={book.id}
+          format={format}
+          filename={bookFilename(book.title, book.authors, format.format)}
+        />
       ))}
     </ul>
   );
 }
 
-function FormatItem({ format, filename }: { format: BookFormat; filename: string }) {
+function FormatItem({ bookId, format, filename }: { bookId: number; format: BookFormat; filename: string }) {
+  const renderers = useRenderers();
   const download = useDownload(format.path, filename);
   const { state } = download;
   return (
     <li className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded border border-neutral-300 px-3 py-2">
       <span className="font-medium">{format.format}</span>
       <span className="text-sm text-neutral-600">{formatSize(format.size)}</span>
-      {state.status === 'downloading' ? (
-        <DownloadingFormat format={format.format} state={state} cancel={download.cancel} />
-      ) : (
-        <button
-          type="button"
-          className="ml-auto rounded bg-neutral-900 px-3 py-1 text-sm text-white"
-          onClick={() => void download.start()}
-        >
-          Download {format.format}
-        </button>
-      )}
+      <span className="ml-auto flex items-center gap-2">
+        {renderers[format.format] && (
+          <Link
+            to="/books/$bookId/read/$format"
+            params={{ bookId: String(bookId), format: format.format }}
+            className="rounded border border-neutral-900 px-3 py-1 text-sm"
+          >
+            Read {format.format}
+          </Link>
+        )}
+        {state.status === 'fetching' ? (
+          <DownloadingFormat format={format.format} state={state} cancel={download.cancel} />
+        ) : (
+          <button type="button" className="rounded bg-neutral-900 px-3 py-1 text-sm text-white" onClick={() => void download.start()}>
+            Download {format.format}
+          </button>
+        )}
+      </span>
       {state.status === 'failed' && (
         <p role="alert" className="w-full text-sm text-red-700">
           <DownloadError error={state.error} />
@@ -43,11 +58,11 @@ function FormatItem({ format, filename }: { format: BookFormat; filename: string
   );
 }
 
-type Downloading = Extract<DownloadState, { status: 'downloading' }>;
+type Downloading = Extract<DownloadState, { status: 'fetching' }>;
 
 function DownloadingFormat({ format, state, cancel }: { format: string; state: Downloading; cancel: () => void }) {
   return (
-    <span className="ml-auto flex items-center gap-2">
+    <span className="flex items-center gap-2">
       <ProgressBar label={`Downloading ${format}`} loaded={state.loaded} total={state.total} className="w-36" />
       <button type="button" className="rounded border border-neutral-400 px-3 py-1 text-sm" onClick={cancel}>
         Cancel
