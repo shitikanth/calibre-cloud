@@ -34,7 +34,7 @@ test('the table of contents lists the chapters and jumps to the one tapped', asy
   await userEvent.click(toc.getByRole('button', { name: 'Chapter two' }));
 
   await expect.element(app.screen.getByText('# Chapter two')).toBeVisible();
-  expect(app.screen.getByRole('navigation', { name: 'Table of contents' }).query()).toBeNull();
+  await expect.poll(() => app.screen.getByRole('navigation', { name: 'Table of contents' }).query()).toBeNull();
   expect(fake.latest.calls).toContainEqual({ op: 'goTo', location: '3' });
 });
 
@@ -45,7 +45,7 @@ test('a book without a table of contents says so, and Escape closes the list', a
   await expect.element(app.screen.getByRole('navigation', { name: 'Table of contents' })).toMatchTextContent(/No table of contents/);
 
   await userEvent.keyboard('{Escape}');
-  expect(app.screen.getByRole('navigation', { name: 'Table of contents' }).query()).toBeNull();
+  await expect.poll(() => app.screen.getByRole('navigation', { name: 'Table of contents' }).query()).toBeNull();
 });
 
 test('nested entries are listed under their parent, and a tap outside closes the list', async () => {
@@ -57,16 +57,17 @@ test('nested entries are listed under their parent, and a tap outside closes the
 
   await userEvent.click(app.screen.getByRole('button', { name: 'Table of contents' }));
   const toc = app.screen.getByRole('navigation', { name: 'Table of contents' });
+  await expect.element(toc).toBeVisible();
   expect(toc.getByRole('button').elements().map((entry) => entry.textContent)).toEqual([
     'Part one',
     'Chapter one',
     'Chapter two',
     'Part two',
   ]);
-  const nested = toc.getByRole('button', { name: 'Chapter two' }).element();
-  expect(nested.closest('li')?.parentElement?.closest('li')?.querySelector('button')?.textContent).toBe('Part one');
+  const nested = toc.getByRole('list').getByRole('list').getByRole('button');
+  expect(nested.elements().map((entry) => entry.textContent)).toEqual(['Chapter one', 'Chapter two']);
 
   await userEvent.click(app.screen.getByRole('heading', { level: 1, name: 'Jane Eyre' }));
-  expect(app.screen.getByRole('navigation', { name: 'Table of contents' }).query()).toBeNull();
+  await expect.poll(() => app.screen.getByRole('navigation', { name: 'Table of contents' }).query()).toBeNull();
   expect(fake.latest.calls.filter(({ op }) => op === 'goTo')).toEqual([]);
 });

@@ -41,7 +41,7 @@ async function openSettings(screen: Screen) {
 }
 
 function readerRoot(screen: Screen) {
-  return screen.getByRole('heading', { level: 1, name: 'Jane Eyre' }).element().closest('[data-theme]');
+  return screen.container.querySelector<HTMLElement>('[data-theme]');
 }
 
 test('Larger and Smaller text step the font size and tell the renderer', async () => {
@@ -151,4 +151,16 @@ test('Zoom in and out step the zoom for the open book only; a reload starts at f
   await expect.element(reloaded.getByRole('button', { name: 'Settings' })).toBeVisible();
   expect(zoomCalls(fake.latest).filter((zoom) => zoom !== 1)).toEqual([]);
   await expect.element(await openSettings(reloaded)).toMatchTextContent(/100%/);
+});
+
+test('zoom stops at its bounds', async () => {
+  const { app } = await openReader('/books/1/read/PDF');
+  const settings = await openSettings(app.screen);
+  const zoomIn = settings.getByRole('button', { name: 'Zoom in' });
+
+  for (let step = 0; step < 7; step += 1) await userEvent.click(zoomIn);
+
+  await expect.element(settings).toMatchTextContent(/477%/);
+  await expect.element(zoomIn).toBeDisabled();
+  await expect.element(settings.getByRole('button', { name: 'Zoom out' })).toBeEnabled();
 });

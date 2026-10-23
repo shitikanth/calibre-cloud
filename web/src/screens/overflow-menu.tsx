@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useLibrarySession } from '../library/session.tsx';
 import type { Disconnect } from '../library/use-disconnect.ts';
+import { useDismiss } from './use-dismiss.ts';
 
 const menuId = 'app-menu';
 const itemClass = 'block w-full px-4 py-2 text-left text-sm hover:bg-neutral-100 disabled:opacity-60 disabled:hover:bg-transparent';
@@ -9,22 +10,7 @@ export function OverflowMenu({ disconnect }: { disconnect: Disconnect }) {
   const { library, update } = useLibrarySession();
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const closeOnOutsidePress = (event: PointerEvent) => {
-      if (!root.current?.contains(event.target as Node)) setOpen(false);
-    };
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('pointerdown', closeOnOutsidePress);
-    document.addEventListener('keydown', closeOnEscape);
-    return () => {
-      document.removeEventListener('pointerdown', closeOnOutsidePress);
-      document.removeEventListener('keydown', closeOnEscape);
-    };
-  }, [open]);
+  useDismiss(open, setOpen, root);
 
   const choose = (action: () => void) => {
     setOpen(false);
