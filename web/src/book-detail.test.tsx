@@ -23,6 +23,14 @@ function shownFields(screen: Awaited<ReturnType<typeof renderApp>>['screen']) {
   return Object.fromEntries(terms.map((term, index) => [term.textContent, definitions[index]?.textContent]));
 }
 
+function shownTags(screen: Awaited<ReturnType<typeof renderApp>>['screen']) {
+  return screen
+    .getByRole('list', { name: 'Tags' })
+    .getByRole('listitem')
+    .elements()
+    .map((tag) => tag.textContent);
+}
+
 test('clicking a book opens its detail page, which survives a reload', async () => {
   const storage = await janeEyreLibrary();
   const app = await renderApp({ storage, connected: true });
@@ -65,11 +73,11 @@ test('the detail page shows the metadata Calibre holds for the book', async () =
   await expect.element(app.screen.getByText('Ursula K. Le Guin')).toBeVisible();
   expect(shownFields(app.screen)).toEqual({
     Series: 'Book 1.5 of Earthsea',
-    Tags: 'Fantasy, Classics',
     Publisher: 'Parnassus Press',
     Language: 'English',
     Published: expect.stringMatching(/1968/),
   });
+  expect(shownTags(app.screen)).toEqual(['Fantasy', 'Classics']);
   await expect.element(app.screen.getByRole('img', { name: 'No cover for A Wizard of Earthsea' })).toBeVisible();
   await expect.element(app.screen.getByText('Sparrowhawk')).toBeVisible();
 });
@@ -124,10 +132,66 @@ test('the detail page fits a narrow phone screen', async () => {
   expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(320);
 });
 
+function longDescription(paragraphs: number) {
+  return Array.from({ length: paragraphs }, (_, index) => `<p>Paragraph ${index + 1} of a very long description.</p>`).join('');
+}
+
+test('on a desktop the cover column is about 20rem and stays below the app bar while the description scrolls', async () => {
+  await page.viewport(1280, 800);
+  const storage = new FakeStorage(
+    await buildCalibreLibrary([{ title: 'Jane Eyre', authors: ['Charlotte Brontë'], description: longDescription(80) }]),
+  );
+  const app = await renderApp({ storage, connected: true, path: '/books/1' });
+  const cover = app.screen.getByRole('img', { name: 'No cover for Jane Eyre' });
+  await expect.element(cover).toBeVisible();
+  await expect.element(app.screen.getByText('Paragraph 80 of a very long description.')).toBeInTheDocument();
+  expect(cover.element().getBoundingClientRect().width).toBeCloseTo(320, -1);
+
+  window.scrollTo(0, document.documentElement.scrollHeight);
+  await expect.element(app.screen.getByText('Paragraph 80 of a very long description.')).toBeVisible();
+
+  const bar = app.screen.getByRole('banner').element().getBoundingClientRect();
+  const stuck = cover.element().getBoundingClientRect();
+  expect(bar.top).toBe(0);
+  expect(stuck.top).toBeGreaterThanOrEqual(bar.bottom);
+  expect(stuck.bottom).toBeLessThanOrEqual(800);
+});
+
+test('on a phone the cover, title, fields, formats and description stack in that order', async () => {
+  await page.viewport(390, 844);
+  const storage = new FakeStorage(
+    await buildCalibreLibrary([
+      {
+        title: 'Jane Eyre',
+        authors: ['Charlotte Brontë'],
+        series: 'Brontë novels',
+        seriesIndex: 1,
+        tags: ['Classics', 'Gothic Fiction'],
+        formats: { EPUB: 'epub' },
+        description: '<p>An orphan governess.</p>',
+      },
+    ]),
+  );
+  const app = await renderApp({ storage, connected: true, path: '/books/1' });
+  await expect.element(app.screen.getByRole('button', { name: 'Download EPUB' })).toBeVisible();
+
+  const top = (element: Element) => element.getBoundingClientRect().top;
+  const cover = top(app.screen.getByRole('img', { name: 'No cover for Jane Eyre' }).element());
+  const title = top(app.screen.getByRole('heading', { level: 1, name: 'Jane Eyre' }).element());
+  const fields = top(app.screen.getByRole('term').first().element());
+  const tags = top(app.screen.getByRole('list', { name: 'Tags' }).element());
+  const formats = top(app.screen.getByRole('list', { name: 'Formats' }).element());
+  const description = top(app.screen.getByRole('region', { name: 'Description' }).element());
+  expect([cover, title, fields, tags, formats, description]).toEqual([cover, title, fields, tags, formats, description].toSorted((a, b) => a - b));
+  expect(new Set([cover, title, fields, tags, formats, description]).size).toBe(6);
+  expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
+});
+
 test('fields the book doesn’t have are left out', async () => {
   const storage = new FakeStorage(await buildCalibreLibrary([{ title: 'Poems', authors: ['Emily Brontë'] }]));
   const app = await renderApp({ storage, connected: true, path: '/books/1' });
 
   await expect.element(app.screen.getByRole('heading', { level: 1, name: 'Poems' })).toBeVisible();
   expect(shownFields(app.screen)).toEqual({});
+  expect(app.screen.getByRole('list', { name: 'Tags' }).query()).toBeNull();
 });
