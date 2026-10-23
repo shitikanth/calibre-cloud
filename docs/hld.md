@@ -71,7 +71,9 @@ A Calibre library can be many GB, but only `metadata.db` is needed to list the w
 - Covers are cached in the Cache API, keyed by book and its `last_modified`. The grid and the detail page share this one cache, since Calibre stores a single `cover.jpg` per book. Whenever a downloaded `metadata.db` is opened, cached covers it no longer refers to are deleted.
 - The reader keeps the last 3 opened book files in the Cache API, keyed by book, format, and the version `stat` reports. Opening a book calls `stat` first and skips the download when the version matches; if `stat` fails with `Network` and a cached copy exists, that copy opens. Opening a 4th book evicts the least recently opened. A failed cache write is ignored and the book opens from the downloaded Blob. Entries for books no longer in the library are deleted on a library refresh.
 - The Download button never reads or writes that cache.
-- After connecting, the app asks for persistent storage. Disconnect deletes the saved connection, the cached library, the covers, and the reader's book files.
+- The reader saves a reading position per book and format in localStorage (EPUB: the CFI at the start of the visible range; PDF: the page number, each with a progress fraction and timestamp), on every relocation and when the reader closes. A changed book file keeps its position. Reader settings (font size, theme) are device-wide; PDF zoom is not saved and every open starts at fit-width.
+- The home view's Continue reading row lists the 6 most recently opened formats from those positions and opens the reader at the saved position. A library refresh deletes positions whose book or format is gone.
+- After connecting, the app asks for persistent storage. Disconnect deletes the saved connection, the cached library, the covers, the reader's book files, and reading positions. Reader settings stay.
 
 ## Stack and hosting
 

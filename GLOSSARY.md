@@ -31,3 +31,11 @@ _Avoid_: backend, cloud, drive
 **Connection**:
 The app's read-only access to one library in one storage provider. Ending it is a disconnect, which also forgets the library on this device.
 _Avoid_: session, account, login, sign-in
+
+**Reading position**:
+Where a reader last left off in one format of a book, remembered on that device only.
+_Avoid_: bookmark, progress, last page
+
+**Continue reading**:
+The home view's row of the books most recently read on this device, each resuming at its reading position.
+_Avoid_: recent books, history, currently reading
