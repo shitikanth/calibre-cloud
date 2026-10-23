@@ -47,6 +47,10 @@ export default defineConfig([
     rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, megaSdk, megaProvider, foliate, pdfjs] }] },
   },
   {
+    files: ['web/vite.config.ts'],
+    rules: { 'no-restricted-imports': ['error', { patterns: [megaSdk, megaProvider, foliate, pdfjs] }] },
+  },
+  {
     files: ['web/src/storage/**'],
     rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, megaSdk, foliate, pdfjs] }] },
   },
