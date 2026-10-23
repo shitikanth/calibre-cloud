@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLibrarySession } from '../library/session.tsx';
-import type { useDisconnect } from '../library/use-disconnect.ts';
+import type { Disconnect } from '../library/use-disconnect.ts';
 
 const menuId = 'app-menu';
 const itemClass = 'block w-full px-4 py-2 text-left text-sm hover:bg-neutral-100 disabled:opacity-60 disabled:hover:bg-transparent';
 
-export function OverflowMenu({ disconnect }: { disconnect: ReturnType<typeof useDisconnect> }) {
+export function OverflowMenu({ disconnect }: { disconnect: Disconnect }) {
   const { library, update } = useLibrarySession();
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);

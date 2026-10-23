@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import { useDisconnect } from '../library/use-disconnect.ts';
+import { DisconnectFailure } from './disconnect-button.tsx';
 import { OverflowMenu } from './overflow-menu.tsx';
 import { SearchBox } from './search-box.tsx';
 
@@ -14,11 +15,7 @@ export function AppBar() {
         <SearchBox />
         <OverflowMenu disconnect={disconnect} />
       </div>
-      {disconnect.isError && (
-        <p role="alert" className="mx-auto max-w-6xl px-4 pb-2 text-sm text-red-700 sm:px-6">
-          Couldn’t disconnect: {disconnect.error.message}
-        </p>
-      )}
+      <DisconnectFailure disconnect={disconnect} className="mx-auto max-w-6xl px-4 pb-2 sm:px-6" />
     </header>
   );
 }

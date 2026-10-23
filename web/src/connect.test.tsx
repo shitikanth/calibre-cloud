@@ -19,7 +19,7 @@ async function connect(screen: Awaited<ReturnType<typeof renderApp>>['screen'], 
   await userEvent.click(screen.getByRole('button', { name: 'Connect' }));
 }
 
-test('connecting a MEGA folder link shows the book count', async () => {
+test('connecting a MEGA folder link shows the library', async () => {
   const app = await renderApp({ storage: await threeBookLibrary() });
 
   await connect(app.screen, link);

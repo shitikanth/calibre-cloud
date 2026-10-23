@@ -7,13 +7,18 @@ export function SearchBox() {
   const { q } = useSearch({ strict: false });
   const term = typeof q === 'string' ? q : '';
   const input = useRef<HTMLInputElement>(null);
+  const onLibrary = pathname === '/';
+  const leftForLibrary = useRef(false);
 
   useEffect(() => {
-    if (input.current && document.activeElement !== input.current) input.current.value = term;
-  }, [term, pathname]);
+    if (!onLibrary) leftForLibrary.current = false;
+    if (input.current && (!onLibrary || document.activeElement !== input.current)) input.current.value = term;
+  }, [term, onLibrary]);
 
   const change = (value: string) => {
-    void navigate({ to: '/', search: value.trim() ? { q: value } : {}, replace: pathname === '/' });
+    const replace = onLibrary || leftForLibrary.current;
+    leftForLibrary.current = true;
+    void navigate({ to: '/', search: value.trim() ? { q: value } : {}, replace });
   };
 
   return (

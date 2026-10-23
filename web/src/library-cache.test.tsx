@@ -30,7 +30,6 @@ test('a returning owner sees the cached library without waiting on the network',
   const reloaded = await app.reload();
 
   await expect.element(reloaded.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
-  await expect.element(reloaded.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
   await check.started;
   check.release();
   expect(metadataCalls(storage)).toEqual([{ op: 'stat', path: 'metadata.db' }]);
@@ -120,7 +119,7 @@ test('a changed library downloads in the background, swaps in, and says so', asy
   const again = await app.reload();
   await expect.element(again.getByRole('heading', { level: 2, name: 'Shirley' })).toBeVisible();
   await expect.poll(() => metadataCalls(storage)).toEqual([{ op: 'stat', path: 'metadata.db' }]);
-  expect(again.getByRole('status').query()).toBeNull();
+  expect(again.getByText('Library updated').query()).toBeNull();
 });
 
 test('Refresh library picks up a change made after the page loaded', async () => {
@@ -131,8 +130,12 @@ test('Refresh library picks up a change made after the page loaded', async () =>
   await new Promise((resolve) => setTimeout(resolve, 300));
   expect(metadataCalls(storage).filter(({ op }) => op === 'stat')).toHaveLength(1);
 
+  const check = storage.holdNextStat('metadata.db');
   await chooseFromMenu(app.screen, 'Refresh library');
 
+  await check.started;
+  await expect.element(app.screen.getByRole('status')).toHaveTextContent('Checking for changes…');
+  check.release();
   await expect.element(app.screen.getByRole('heading', { level: 2, name: 'Shirley' })).toBeVisible();
   await expect.element(app.screen.getByRole('status')).toHaveTextContent('Library updated');
   expect(metadataCalls(storage).filter(({ op }) => op === 'stat')).toHaveLength(2);
@@ -179,6 +182,5 @@ test('MEGA over quota keeps the cached library browsable with a banner saying wh
   const reloaded = await app.reload();
 
   await expect.element(reloaded.getByRole('alert')).toMatchTextContent(/Download quota exceeded/);
-  await expect.element(reloaded.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
   await expect.element(reloaded.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
 });
