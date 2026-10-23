@@ -75,13 +75,23 @@ async function rememberOpened(cache: Cache, entry: Entry): Promise<void> {
   await writeRecent(cache, [entry, ...others.slice(0, KEEP - 1)]);
 }
 
+function inBackground(task: () => Promise<void>): void {
+  void task().catch(() => undefined);
+}
+
+function readEntry(cache: Cache, entry: Entry): Promise<Blob | undefined> {
+  return cache
+    .match(entryKey(entry))
+    .then((response) => response?.blob())
+    .catch(() => undefined);
+}
+
 async function cachedCopy(cache: Cache, key: BookFormatKey): Promise<BookFile | undefined> {
   const entry = (await readRecent(cache)).find((candidate) => sameFormat(candidate, key));
-  if (!entry) return undefined;
-  const response = await cache.match(entryKey(entry));
-  if (!response) return undefined;
-  await rememberOpened(cache, entry);
-  return { blob: await response.blob(), version: entry.version };
+  const blob = entry && (await readEntry(cache, entry));
+  if (!entry || !blob) return undefined;
+  inBackground(() => rememberOpened(cache, entry));
+  return { blob, version: entry.version };
 }
 
 export async function openBookFile(
@@ -99,29 +109,28 @@ export async function openBookFile(
     return copy;
   }
   const entry = { bookId, format, version };
-  const hit = await cache?.match(entryKey(entry));
-  if (hit && cache) {
-    await rememberOpened(cache, entry);
-    return { blob: await hit.blob(), version };
+  const hit = cache && (await readEntry(cache, entry));
+  if (cache && hit) {
+    inBackground(() => rememberOpened(cache, entry));
+    return { blob: hit, version };
   }
   const blob = await storage.read(path, options);
-  if (cache) await store(cache, entry, blob);
+  if (cache) inBackground(() => store(cache, entry, blob));
   return { blob, version };
 }
 
 async function store(cache: Cache, entry: Entry, blob: Blob): Promise<void> {
   try {
     await cache.put(entryKey(entry), new Response(blob));
+    await rememberOpened(cache, entry);
   } catch {
     await dropEntries(cache, (other) => sameFormat(other, entry));
-    return;
   }
-  await rememberOpened(cache, entry);
 }
 
 async function forgetWhere(drop: (entry: BookFormatKey) => boolean): Promise<void> {
   const cache = await existingCache();
-  if (cache) await dropEntries(cache, drop);
+  if (cache) await dropEntries(cache, drop).catch(() => undefined);
 }
 
 export function forgetBookFile(bookId: number, format: string): Promise<void> {

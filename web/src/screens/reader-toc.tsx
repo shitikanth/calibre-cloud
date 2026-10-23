@@ -30,7 +30,7 @@ function TocList({ entries, jump }: { entries: TocEntry[]; jump: (entry: TocEntr
         <li key={`${entry.location}-${index}`}>
           <button
             type="button"
-            className="block w-full px-4 py-2 text-left text-sm hover:bg-(--reader-hover)"
+            className="flex min-h-11 w-full items-center px-4 py-2 text-left text-sm hover:bg-(--reader-hover)"
             onClick={() => jump(entry)}
           >
             {entry.label}

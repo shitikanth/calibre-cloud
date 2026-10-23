@@ -1,5 +1,5 @@
 import { Link, useNavigate } from '@tanstack/react-router';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type Ref } from 'react';
 import { bookFilename } from '../download/save-blob.ts';
 import { useDownload } from '../download/use-download.ts';
 import type { BookDetail, BookFormat } from '../library/protocol.ts';
@@ -68,7 +68,7 @@ function Reader({ book, format }: { book: BookDetail; format: BookFormat }) {
             total={state.status === 'fetching' ? state.total : 0}
             className="w-full"
           />
-          <button type="button" className="rounded border border-(--reader-line) px-3 py-1 text-sm" onClick={cancel}>
+          <button type="button" className="min-h-11 rounded border border-(--reader-line) px-3 py-1 text-sm" onClick={cancel}>
             Cancel
           </button>
         </section>
@@ -86,17 +86,23 @@ function Reader({ book, format }: { book: BookDetail; format: BookFormat }) {
   );
 }
 
-type ReaderShellProps = { book: BookDetail; theme: ReaderTheme; tools?: ReactNode; children: ReactNode };
+type ReaderShellProps = {
+  book: BookDetail;
+  theme: ReaderTheme;
+  tools?: ReactNode;
+  children: ReactNode;
+  ref?: Ref<HTMLDivElement>;
+};
 
-function ReaderShell({ book, theme, tools, children }: ReaderShellProps) {
+function ReaderShell({ book, theme, tools, children, ref }: ReaderShellProps) {
   return (
-    <div className="reader flex h-dvh flex-col" data-theme={theme}>
+    <div ref={ref} className="reader flex h-dvh flex-col" data-theme={theme}>
       <header className="flex items-center gap-2 border-b border-(--reader-line) px-2 py-1">
         <Link
           to="/books/$bookId"
           params={{ bookId: String(book.id) }}
           aria-label="Back to book"
-          className="rounded p-2 hover:bg-(--reader-hover)"
+          className="flex min-h-11 min-w-11 items-center justify-center rounded hover:bg-(--reader-hover)"
         >
           <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 fill-none stroke-current stroke-2">
             <path d="M15 5l-7 7 7 7" />
@@ -164,7 +170,22 @@ function Unopenable({ book, format }: { book: BookDetail; format: BookFormat }) 
   );
 }
 
-type OpenStatus = 'opening' | 'open' | 'unopenable';
+function RendererUnavailable({ book, retry }: { book: BookDetail; retry: () => void }) {
+  return (
+    <section role="alert" className="mx-auto w-full max-w-md px-4 py-12">
+      <h2 className="text-xl font-semibold">Couldn’t load the reader</h2>
+      <p className="mt-2 text-(--reader-muted)">Check your internet connection and try again.</p>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <button type="button" className="rounded bg-(--reader-fg) px-4 py-2 text-(--reader-bg)" onClick={retry}>
+          Retry
+        </button>
+        <BackToBook book={book} />
+      </div>
+    </section>
+  );
+}
+
+type OpenStatus = 'opening' | 'open' | 'unopenable' | 'renderer-unavailable';
 
 type OpenedBookProps = {
   book: BookDetail;
@@ -176,12 +197,14 @@ type OpenedBookProps = {
 
 function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBookProps) {
   const renderers = useRenderers();
+  const shell = useRef<HTMLDivElement>(null);
   const container = useRef<HTMLDivElement>(null);
   const [renderer, setRenderer] = useState<BookRenderer | undefined>(undefined);
   const [status, setStatus] = useState<OpenStatus>('opening');
   const [relocation, setRelocation] = useState<Relocation | undefined>(undefined);
   const [renderError, setRenderError] = useState<Error | undefined>(undefined);
   const [zoom, setZoom] = useState(1);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     const factory = renderers[format.format];
@@ -194,12 +217,18 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
     const position = trackPosition(key);
     const saved = loadPosition(key);
     void (async () => {
+      let created: BookRenderer;
       try {
-        const created = await factory();
-        if (cancelled) {
-          created.destroy();
-          return;
-        }
+        created = await factory();
+      } catch {
+        if (!cancelled) setStatus('renderer-unavailable');
+        return;
+      }
+      if (cancelled) {
+        created.destroy();
+        return;
+      }
+      try {
         opened = created;
         unsubscribe.push(
           created.onRelocate((next) => {
@@ -216,7 +245,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
       } catch {
         if (cancelled) return;
         setStatus('unopenable');
-        if (opened) void forgetBookFile(book.id, format.format);
+        void forgetBookFile(book.id, format.format);
       }
     })();
     return () => {
@@ -226,11 +255,16 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
       opened?.destroy();
       host.replaceChildren();
     };
-  }, [renderers, book.id, format.format, blob]);
+  }, [renderers, book.id, format.format, blob, attempt]);
 
   useEffect(() => {
     renderer?.setStyles?.(settings);
   }, [renderer, settings]);
+
+  const retryLoading = () => {
+    setStatus('opening');
+    setAttempt((count) => count + 1);
+  };
 
   const changeZoom = (next: number) => {
     setZoom(next);
@@ -240,6 +274,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
   useEffect(() => {
     if (!renderer) return;
     const turnPage = (event: KeyboardEvent) => {
+      if (shell.current?.querySelector('[aria-expanded="true"]')) return;
       if (event.key === 'ArrowRight') void renderer.next();
       else if (event.key === 'ArrowLeft') void renderer.previous();
     };
@@ -249,6 +284,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
 
   return (
     <ReaderShell
+      ref={shell}
       book={book}
       theme={settings.theme}
       tools={
@@ -268,19 +304,20 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
       }
     >
       {status === 'unopenable' && <Unopenable book={book} format={format} />}
+      {status === 'renderer-unavailable' && <RendererUnavailable book={book} retry={retryLoading} />}
       {renderError && status === 'open' && (
         <p role="alert" className="bg-amber-50 px-4 py-2 text-sm text-amber-900">
           This page couldn’t be shown. Keep reading from the next one.
         </p>
       )}
-      <div ref={container} className="min-h-0 flex-1 overflow-hidden" hidden={status === 'unopenable'} />
+      <div ref={container} className="min-h-0 flex-1 overflow-hidden" hidden={status === 'unopenable' || status === 'renderer-unavailable'} />
       {status === 'open' && renderer && (
         <nav aria-label="Pages" className="flex items-center justify-between gap-2 border-t border-(--reader-line) px-2 py-1">
-          <button type="button" className="rounded px-3 py-1 hover:bg-(--reader-hover)" onClick={() => void renderer.previous()}>
+          <button type="button" className="min-h-11 rounded px-3 py-1 hover:bg-(--reader-hover)" onClick={() => void renderer.previous()}>
             Previous
           </button>
           <span className="text-sm text-(--reader-muted)">{progressText(relocation)}</span>
-          <button type="button" className="rounded px-3 py-1 hover:bg-(--reader-hover)" onClick={() => void renderer.next()}>
+          <button type="button" className="min-h-11 rounded px-3 py-1 hover:bg-(--reader-hover)" onClick={() => void renderer.next()}>
             Next
           </button>
         </nav>

@@ -6,12 +6,16 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, expect, test } from 'vitest';
 import { checkAssets, emittedAssets } from './assets.ts';
 
-const files: Record<string, string> = {
-  '/assets/pdf.worker.min-abc123.mjs': 'text/javascript',
-  '/pdfjs/wasm/openjpeg.wasm': 'application/wasm',
-  '/pdfjs/wasm/quickjs-eval.js': 'Application/JavaScript; charset=utf-8',
-  '/pdfjs/wasm/mislabelled.wasm': 'application/octet-stream',
-  '/pdfjs/wasm/html.js': 'text/html',
+const immutable = 'public, max-age=31536000, immutable';
+
+const files: Record<string, { type: string; cacheControl?: string }> = {
+  '/assets/pdf.worker.min-abc123.mjs': { type: 'text/javascript', cacheControl: immutable },
+  '/assets/revalidated-def456.js': { type: 'text/javascript', cacheControl: 'public, max-age=0, must-revalidate' },
+  '/assets/uncached-ghi789.js': { type: 'text/javascript' },
+  '/pdfjs/wasm/openjpeg.wasm': { type: 'application/wasm' },
+  '/pdfjs/wasm/quickjs-eval.js': { type: 'Application/JavaScript; charset=utf-8' },
+  '/pdfjs/wasm/mislabelled.wasm': { type: 'application/octet-stream' },
+  '/pdfjs/wasm/html.js': { type: 'text/html' },
 };
 
 let server: Server;
@@ -19,9 +23,9 @@ let origin: string;
 
 beforeAll(async () => {
   server = createServer((req, res) => {
-    const type = files[req.url ?? ''];
-    res.writeHead(type ? 200 : 404, { 'content-type': type ?? 'text/html' });
-    res.end(type ? 'bytes' : 'not found');
+    const file = files[req.url ?? ''];
+    res.writeHead(file ? 200 : 404, { 'content-type': file?.type ?? 'text/html', ...(file?.cacheControl ? { 'cache-control': file.cacheControl } : {}) });
+    res.end(file ? 'bytes' : 'not found');
   });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
@@ -38,6 +42,13 @@ test('passes assets served with 200 and the right content type', async () => {
 
 test('reports a missing asset', async () => {
   expect(await checkAssets(origin, ['/pdfjs/wasm/gone.wasm'])).toEqual(['/pdfjs/wasm/gone.wasm: HTTP 404']);
+});
+
+test('reports a hashed /assets/ file served without an immutable Cache-Control', async () => {
+  expect(await checkAssets(origin, ['/assets/revalidated-def456.js', '/assets/uncached-ghi789.js'])).toEqual([
+    `/assets/revalidated-def456.js: cache-control public, max-age=0, must-revalidate, expected ${immutable}`,
+    `/assets/uncached-ghi789.js: cache-control (none), expected ${immutable}`,
+  ]);
 });
 
 test('reports an asset served with the wrong content type', async () => {

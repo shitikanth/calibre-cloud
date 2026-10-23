@@ -1,6 +1,8 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { extname, join } from 'node:path';
 
+const immutableCacheControl = 'public, max-age=31536000, immutable';
+
 const expectedTypes: Record<string, string[]> = {
   '.mjs': ['text/javascript', 'application/javascript'],
   '.js': ['text/javascript', 'application/javascript'],
@@ -32,6 +34,9 @@ export async function checkAssets(origin: string, assets: string[]): Promise<str
     const type = (response.headers.get('content-type') ?? '(none)').split(';')[0]!.trim().toLowerCase();
     const expected = expectedTypes[extname(asset)] ?? [];
     if (!expected.includes(type)) problems.push(`${asset}: content-type ${type}, expected ${expected.join(' or ')}`);
+    const cacheControl = response.headers.get('cache-control') ?? '(none)';
+    if (asset.startsWith('/assets/') && cacheControl !== immutableCacheControl)
+      problems.push(`${asset}: cache-control ${cacheControl}, expected ${immutableCacheControl}`);
   }
   return problems;
 }

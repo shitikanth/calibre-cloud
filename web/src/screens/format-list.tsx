@@ -36,7 +36,7 @@ function FormatItem({ bookId, format, filename }: { bookId: number; format: Book
           <Link
             to="/books/$bookId/read/$format"
             params={{ bookId: String(bookId), format: format.format }}
-            className="rounded border border-neutral-900 px-3 py-1 text-sm"
+            className="inline-flex min-h-11 items-center rounded border border-neutral-900 px-3 py-1 text-sm sm:min-h-0"
           >
             Read {format.format}
           </Link>
@@ -44,7 +44,7 @@ function FormatItem({ bookId, format, filename }: { bookId: number; format: Book
         {state.status === 'fetching' ? (
           <DownloadingFormat format={format.format} state={state} cancel={download.cancel} />
         ) : (
-          <button type="button" className="rounded bg-neutral-900 px-3 py-1 text-sm text-white" onClick={() => void download.start()}>
+          <button type="button" className="min-h-11 rounded bg-neutral-900 px-3 py-1 text-sm text-white sm:min-h-0" onClick={() => void download.start()}>
             Download {format.format}
           </button>
         )}
@@ -64,7 +64,7 @@ function DownloadingFormat({ format, state, cancel }: { format: string; state: D
   return (
     <span className="flex items-center gap-2">
       <ProgressBar label={`Downloading ${format}`} loaded={state.loaded} total={state.total} className="w-36" />
-      <button type="button" className="rounded border border-neutral-400 px-3 py-1 text-sm" onClick={cancel}>
+      <button type="button" className="min-h-11 rounded border border-neutral-400 px-3 py-1 text-sm sm:min-h-0" onClick={cancel}>
         Cancel
       </button>
     </span>

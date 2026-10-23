@@ -89,6 +89,32 @@ test('Previous, Next and the arrow keys turn pages, and the chrome shows how far
   expect(fake.latest.calls.at(-1)).toEqual({ op: 'destroy' });
 });
 
+test('the arrow keys leave the page alone while the table of contents or Settings is open', async () => {
+  const fake = fakeRenderers(['EPUB', 'PDF']);
+  const app = await renderApp({ storage: await janeEyreLibrary(), connected: true, path: '/books/1/read/EPUB', renderers: fake.renderers });
+  await expect.element(app.screen.getByText('# Chapter 1')).toBeVisible();
+  const turns = () => fake.latest.calls.filter(({ op }) => op === 'next' || op === 'previous');
+
+  await userEvent.click(app.screen.getByRole('button', { name: 'Table of contents' }));
+  await expect.element(app.screen.getByRole('navigation', { name: 'Table of contents' })).toBeVisible();
+  await userEvent.keyboard('{ArrowRight}');
+  await userEvent.keyboard('{Escape}');
+
+  await userEvent.click(app.screen.getByRole('button', { name: 'Settings' }));
+  const settings = app.screen.getByRole('dialog', { name: 'Settings' });
+  await expect.element(settings).toBeVisible();
+  await userEvent.click(settings.getByRole('radio', { name: 'Light' }));
+  await userEvent.keyboard('{ArrowRight}');
+  await expect.element(settings.getByRole('radio', { name: 'Sepia' })).toBeChecked();
+  await userEvent.keyboard('{ArrowLeft}');
+  await expect.element(settings.getByRole('radio', { name: 'Light' })).toBeChecked();
+  await userEvent.keyboard('{Escape}');
+
+  expect(turns()).toEqual([]);
+  await userEvent.keyboard('{ArrowRight}');
+  await expect.element(app.screen.getByText('Reader, I married him.')).toBeVisible();
+});
+
 test('a PDF shows its page count instead of a percentage', async () => {
   const fake = fakeRenderers(['EPUB', 'PDF']);
   const app = await renderApp({ storage: await janeEyreLibrary(), connected: true, path: '/books/1/read/PDF', renderers: fake.renderers });
@@ -167,6 +193,23 @@ test('a file the renderer cannot open offers Download instead of Retry', async (
 
   await expect.poll(() => click.mock.contexts).toHaveLength(1);
   expect((click.mock.contexts[0] as HTMLAnchorElement).download).toBe('Jane Eyre - Charlotte Brontë.epub');
+});
+
+test('a renderer that fails to load offers Retry and Back to book, and Retry opens the book', async () => {
+  const fake = fakeRenderers(['EPUB', 'PDF']);
+  fake.failCreate = new TypeError('Failed to fetch dynamically imported module');
+  const app = await renderApp({ storage: await janeEyreLibrary(), connected: true, path: '/books/1/read/EPUB', renderers: fake.renderers });
+
+  const alert = app.screen.getByRole('alert');
+  await expect.element(alert).toMatchTextContent(/Couldn’t load the reader/);
+  await expect.element(alert.getByRole('link', { name: 'Back to book' })).toBeVisible();
+  expect(alert.getByRole('button', { name: 'Download EPUB' }).query()).toBeNull();
+
+  fake.failCreate = undefined;
+  await userEvent.click(alert.getByRole('button', { name: 'Retry' }));
+
+  await expect.element(app.screen.getByText('# Chapter 1')).toBeVisible();
+  expect(app.screen.getByRole('alert').query()).toBeNull();
 });
 
 test('a page that fails to render shows a notice while the book stays open', async () => {

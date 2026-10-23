@@ -40,6 +40,8 @@ export async function createEpubRenderer(): Promise<EpubRenderer> {
   const relocateListeners = new Set<(relocation: Relocation) => void>();
   const errorListeners = new Set<(error: Error) => void>();
   let view: FoliateView | undefined;
+  let opening = false;
+  const destroyed = new AbortController();
   let toc: TocEntry[] = [];
   let sectionDocument: Document | undefined;
   const refusedResources: string[] = [];
@@ -49,6 +51,7 @@ export async function createEpubRenderer(): Promise<EpubRenderer> {
   };
 
   const relocate = (event: Event) => {
+    if (destroyed.signal.aborted) return;
     const { cfi: rangeCfi, fraction } = (event as CustomEvent<Location>).detail;
     if (!Number.isFinite(fraction)) return;
     const relocation = { location: cfi.collapse(rangeCfi), fraction };
@@ -63,8 +66,26 @@ export async function createEpubRenderer(): Promise<EpubRenderer> {
     }
   };
 
+  const turnPage = (event: Event) => {
+    const { key } = event as KeyboardEvent;
+    if (key === 'ArrowRight') void renderer.next();
+    else if (key === 'ArrowLeft') void renderer.previous();
+  };
+
   const sectionLoaded = (event: Event) => {
+    if (destroyed.signal.aborted) return;
     sectionDocument = (event as CustomEvent<SectionLoad>).detail.doc;
+    sectionDocument.addEventListener('keydown', turnPage);
+  };
+
+  const teardown = (created: FoliateView) => {
+    try {
+      created.close();
+    } catch {
+      // foliate's close throws when no section was ever displayed; there is nothing to unload then
+    }
+    created.book?.destroy?.();
+    created.remove();
   };
 
   const refuseScripts = (event: Event) => {
@@ -86,7 +107,7 @@ export async function createEpubRenderer(): Promise<EpubRenderer> {
       });
   };
 
-  return {
+  const renderer: EpubRenderer = {
     get toc() {
       return toc;
     },
@@ -103,18 +124,29 @@ export async function createEpubRenderer(): Promise<EpubRenderer> {
       created.addEventListener('load', sectionLoaded);
       container.replaceChildren(created);
       view = created;
-      await created.open(new File([blob], 'book.epub', { type: blob.type || 'application/epub+zip' }));
-      await laidOut(created);
-      const transforms = created.book.transformTarget;
-      transforms?.addEventListener('load', refuseScripts);
-      transforms?.addEventListener('data', transformResource);
-      created.renderer.setAttribute('flow', 'paginated');
-      toc = (created.book.toc ?? []).map(toTocEntry);
-      const resumed =
-        location !== undefined &&
-        isResolvable(created, location) &&
-        (await created.init({ lastLocation: location }).then(() => true, () => false));
-      if (!resumed) await created.init({ showTextStart: true });
+      opening = true;
+      try {
+        await created.open(new File([blob], 'book.epub', { type: blob.type || 'application/epub+zip' }));
+        if (destroyed.signal.aborted) return;
+        await laidOut(created, destroyed.signal);
+        if (destroyed.signal.aborted) return;
+        const transforms = created.book.transformTarget;
+        transforms?.addEventListener('load', refuseScripts);
+        transforms?.addEventListener('data', transformResource);
+        created.renderer.setAttribute('flow', 'paginated');
+        toc = (created.book.toc ?? []).map(toTocEntry);
+        const resumed =
+          location !== undefined &&
+          isResolvable(created, location) &&
+          (await created.init({ lastLocation: location }).then(() => true, () => false));
+        if (destroyed.signal.aborted) return;
+        if (!resumed) await created.init({ showTextStart: true });
+      } catch (error) {
+        if (!destroyed.signal.aborted) throw error;
+      } finally {
+        opening = false;
+        if (destroyed.signal.aborted) teardown(created);
+      }
     },
     onRelocate(listener) {
       relocateListeners.add(listener);
@@ -137,29 +169,38 @@ export async function createEpubRenderer(): Promise<EpubRenderer> {
       view?.renderer.setStyles(stylesheet(styles));
     },
     destroy() {
-      try {
-        view?.close();
-      } catch {
-        // foliate's close throws when no section was ever displayed; there is nothing to unload then
+      destroyed.abort();
+      if (view) {
+        if (opening) view.remove();
+        else teardown(view);
       }
-      view?.parentElement?.replaceChildren();
       view = undefined;
+      toc = [];
       sectionDocument = undefined;
       relocateListeners.clear();
       errorListeners.clear();
     },
   };
+  return renderer;
 }
 
 // The paginator re-renders on the first notification from its own ResizeObserver. If that lands
 // while the first section's iframe is still parsing, it reads a document with no root element.
-function laidOut(element: Element): Promise<void> {
+function laidOut(element: Element, signal: AbortSignal): Promise<void> {
   return new Promise((resolve) => {
     const observer = new ResizeObserver(() => {
       observer.disconnect();
       setTimeout(resolve);
     });
     observer.observe(element);
+    signal.addEventListener(
+      'abort',
+      () => {
+        observer.disconnect();
+        resolve();
+      },
+      { once: true },
+    );
   });
 }
 
