@@ -3,16 +3,18 @@ import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, expect, test } from 'vitest';
 import { smokeCheck } from './check.ts';
 
-const csp = "default-src 'self'; script-src 'self'";
+const csp =
+  "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' blob:; img-src 'self' blob: data:; font-src 'self' blob: data:; media-src 'self' blob:; frame-src blob:; connect-src 'self' https://g.api.mega.co.nz https://*.userstorage.mega.co.nz; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'";
 
-const pages: Record<string, { body: string; type?: string; noCsp?: true }> = {
+const pages: Record<string, { body: string; type?: string; csp?: string }> = {
   '/clean': { body: '<div id="root"></div><script src="/app.js"></script>' },
   '/app.js': { type: 'text/javascript', body: "document.getElementById('root').textContent = 'hello';" },
   '/inline-script': { body: '<div id="root">hi</div><script>console.log("inline")</script>' },
   '/throws': { body: '<div id="root">hi</div><script src="/throw.js"></script>' },
   '/throw.js': { type: 'text/javascript', body: "throw new TypeError('boom');" },
   '/blank': { body: '<div id="root"></div>' },
-  '/no-csp': { body: '<div id="root">hi</div>', noCsp: true },
+  '/no-csp': { body: '<div id="root">hi</div>', csp: '' },
+  '/loose-csp': { body: '<div id="root">hi</div>', csp: "default-src 'self'; script-src 'self' 'unsafe-eval'; sandbox" },
 };
 
 let server: Server;
@@ -23,7 +25,7 @@ beforeAll(async () => {
     const page = pages[req.url ?? ''];
     res.writeHead(page ? 200 : 404, {
       'content-type': page?.type ?? 'text/html',
-      ...(page?.noCsp ? {} : { 'content-security-policy': csp }),
+      ...(page?.csp === '' ? {} : { 'content-security-policy': page?.csp ?? csp }),
     });
     res.end(page?.body ?? 'not found');
   });
@@ -58,4 +60,12 @@ test('reports an app that renders nothing', async () => {
 
 test('reports a page served without a CSP', async () => {
   expect(await smokeCheck(origin, ['/no-csp'])).toEqual(['/no-csp: no Content-Security-Policy header']);
+});
+
+test('reports every directive that differs from the expected CSP', async () => {
+  const problems = await smokeCheck(origin, ['/loose-csp']);
+  expect(problems).toContain("/loose-csp: CSP script-src is 'self' 'unsafe-eval', expected 'self' 'wasm-unsafe-eval'");
+  expect(problems).toContain('/loose-csp: CSP style-src is missing');
+  expect(problems).toContain('/loose-csp: CSP sandbox is not expected');
+  expect(problems).not.toContain('/loose-csp: CSP default-src is missing');
 });
