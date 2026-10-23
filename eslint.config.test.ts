@@ -23,3 +23,23 @@ describe('platform import ban', () => {
     expect(await platformImportErrors('deploy/cloudflare/src/example.ts', source)).toHaveLength(0);
   });
 });
+
+describe('storage provider SDK boundary', () => {
+  const source = "import { File } from 'megajs';\nconsole.log(File);\n";
+
+  test.each(['web/src/library/example.ts', 'web/src/screens/example.tsx', 'web/src/storage/example.ts'])(
+    'rejects megajs in %s',
+    async (filePath) => {
+      expect(await platformImportErrors(filePath, source)).toHaveLength(1);
+    },
+  );
+
+  test('allows megajs inside the MEGA adapter', async () => {
+    expect(await platformImportErrors('web/src/storage/mega/adapter.ts', source)).toHaveLength(0);
+  });
+
+  test('still rejects node:* inside the MEGA adapter', async () => {
+    const nodeSource = "import { readFileSync } from 'node:fs';\nreadFileSync('x');\n";
+    expect(await platformImportErrors('web/src/storage/mega/adapter.ts', nodeSource)).toHaveLength(1);
+  });
+});

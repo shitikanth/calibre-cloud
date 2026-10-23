@@ -5,6 +5,7 @@ import { playwright } from '@vitest/browser-playwright';
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  worker: { format: 'es' },
   optimizeDeps: {
     include: [
       'react',
@@ -15,9 +16,12 @@ export default defineConfig({
       '@tanstack/react-query',
       'vitest-browser-react',
     ],
+    exclude: ['@sqlite.org/sqlite-wasm'],
   },
   test: {
     name: 'web',
+    setupFiles: ['./src/test/setup.ts'],
+    expect: { poll: { timeout: 5_000 } },
     browser: {
       enabled: true,
       headless: true,

@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'vitest';
 import { resolveLibraryPath, type FolderTreeNode } from './resolve.ts';
 
-type Node = FolderTreeNode<Node> & { id: string };
+interface Node extends FolderTreeNode<Node> {
+  id: string;
+}
 
 function file(id: string, name: string | null, timestamp = 1): Node {
   return { id, name, directory: false, timestamp };
