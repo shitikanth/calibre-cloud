@@ -4,6 +4,7 @@ import { bookFilename } from '../download/save-blob.ts';
 import { useDownload } from '../download/use-download.ts';
 import type { BookDetail, BookFormat } from '../library/protocol.ts';
 import { useRenderers } from '../reader/context.tsx';
+import { loadPosition, trackPosition } from '../reader/positions.ts';
 import { loadReaderSettings, saveReaderSettings, type ReaderSettings } from '../reader/reader-settings.ts';
 import type { BookRenderer, ReaderTheme, Relocation } from '../reader/renderer.ts';
 import { useBookFile } from '../reader/use-book-file.ts';
@@ -189,6 +190,8 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
     let cancelled = false;
     let opened: BookRenderer | undefined;
     const unsubscribe: (() => void)[] = [];
+    const position = trackPosition(book.id, format.format);
+    const saved = loadPosition(book.id, format.format);
     void (async () => {
       try {
         const created = await factory();
@@ -199,12 +202,13 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
         opened = created;
         unsubscribe.push(
           created.onRelocate((next) => {
+            position.relocate(next);
             setRelocation(next);
             setRenderError(undefined);
           }),
           created.onRenderError(setRenderError),
         );
-        await created.open(blob, host, {});
+        await created.open(blob, host, saved ? { location: saved.location } : {});
         if (cancelled) return;
         setRenderer(created);
         setStatus('open');
@@ -215,10 +219,11 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
     return () => {
       cancelled = true;
       for (const off of unsubscribe) off();
+      position.close();
       opened?.destroy();
       host.replaceChildren();
     };
-  }, [renderers, format.format, blob]);
+  }, [renderers, book.id, format.format, blob]);
 
   useEffect(() => {
     renderer?.setStyles?.(settings);
