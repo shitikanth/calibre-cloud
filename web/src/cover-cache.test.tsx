@@ -35,3 +35,23 @@ test('covers seen before come from the device on the next visit', async () => {
   expect(await coverText(reloaded, 'Wuthering Heights')).toBe('cover of Wuthering Heights');
   expect(coverReads(storage)).toEqual([]);
 });
+
+test('a cover changed in Calibre shows the new image after the library updates', async () => {
+  const storage = new FakeStorage(await buildCalibreLibrary(books));
+  const app = await renderApp({ storage, connected: true });
+  expect(await coverText(app.screen, 'Jane Eyre')).toBe('cover of Jane Eyre');
+  expect(await coverText(app.screen, 'Wuthering Heights')).toBe('cover of Wuthering Heights');
+
+  const [janeEyre, wutheringHeights] = books;
+  const changed = await buildCalibreLibrary([{ ...janeEyre!, modified: '2024-06-01 09:00:00+00:00' }, wutheringHeights!]);
+  storage.put('metadata.db', changed['metadata.db']!, '2');
+  storage.put('Charlotte Bronte/Jane Eyre (1)/cover.jpg', 'new cover of Jane Eyre');
+  storage.calls.length = 0;
+
+  const reloaded = await app.reload();
+
+  await expect.element(reloaded.getByRole('status')).toHaveTextContent('Library updated');
+  await expect.poll(() => coverText(reloaded, 'Jane Eyre')).toBe('new cover of Jane Eyre');
+  expect(await coverText(reloaded, 'Wuthering Heights')).toBe('cover of Wuthering Heights');
+  expect(coverReads(storage)).toEqual(['Charlotte Bronte/Jane Eyre (1)/cover.jpg']);
+});

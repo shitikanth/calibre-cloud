@@ -1,5 +1,5 @@
 import type { LibraryOperations, LibraryRequest, LibraryResponse, Operation } from './protocol.ts';
-import { listBooks } from './books-query.ts';
+import { listBooks, listCoverVersions } from './books-query.ts';
 import { forgetOtherDatabases, importDatabase, openStoredDatabase, releasePool, wipeDatabases } from './db-store.ts';
 import type { Database } from './sqlite.ts';
 
@@ -36,6 +36,9 @@ const handlers: Handlers = {
   },
   listBooks(page) {
     return listBooks(requireDb(), page);
+  },
+  listCoverVersions() {
+    return listCoverVersions(requireDb());
   },
 };
 

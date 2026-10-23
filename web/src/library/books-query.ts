@@ -1,4 +1,4 @@
-import type { BookSummary } from './protocol.ts';
+import type { BookSummary, CoverVersion } from './protocol.ts';
 import type { Database } from './sqlite.ts';
 
 const LIST_BOOKS = `
@@ -20,4 +20,8 @@ export function listBooks(db: Database, { offset, limit }: { offset: number; lim
     authors: JSON.parse(row.authors) as string[],
     cover: row.has_cover ? { path: `${row.path}/cover.jpg`, version: row.last_modified } : null,
   }));
+}
+
+export function listCoverVersions(db: Database): CoverVersion[] {
+  return db.selectObjects('SELECT id AS bookId, last_modified AS version FROM books WHERE has_cover') as CoverVersion[];
 }

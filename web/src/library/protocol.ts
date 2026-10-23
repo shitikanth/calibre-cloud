@@ -5,6 +5,8 @@ export type BookSummary = {
   cover: { path: string; version: string } | null;
 };
 
+export type CoverVersion = { bookId: number; version: string };
+
 export type LibraryOperations = {
   open: { args: { bytes: ArrayBuffer }; result: string | null };
   openStored: { args: { file: string }; result: boolean };
@@ -12,6 +14,7 @@ export type LibraryOperations = {
   close: { args: Record<string, never>; result: void };
   countBooks: { args: Record<string, never>; result: number };
   listBooks: { args: { offset: number; limit: number }; result: BookSummary[] };
+  listCoverVersions: { args: Record<string, never>; result: CoverVersion[] };
 };
 
 export type Operation = keyof LibraryOperations;

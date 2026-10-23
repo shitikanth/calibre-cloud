@@ -1,4 +1,5 @@
 import type { ReadOptions, StorageAdapter } from '../storage/adapter.ts';
+import { forgetStaleCovers } from './cover-cache.ts';
 import type { LibraryIndex } from './library-index.ts';
 import { loadStoredLibrary, saveStoredLibrary } from './stored-library.ts';
 
@@ -22,6 +23,7 @@ export async function updateLibrary(index: LibraryIndex, storage: StorageAdapter
   const { version } = await storage.stat(METADATA);
   if (loadStoredLibrary()?.version === version) return false;
   await download(index, storage, version);
+  await forgetStaleCovers(await index.listCoverVersions());
   return true;
 }
 

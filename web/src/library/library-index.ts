@@ -1,5 +1,5 @@
 import { LibraryIndexError, libraryIndexError } from './errors.ts';
-import type { BookSummary, LibraryOperations, LibraryRequest, LibraryResponse, Operation } from './protocol.ts';
+import type { BookSummary, CoverVersion, LibraryOperations, LibraryRequest, LibraryResponse, Operation } from './protocol.ts';
 
 type Pending = { resolve(result: unknown): void; reject(error: Error): void };
 
@@ -28,6 +28,10 @@ export class LibraryIndex {
 
   listBooks(page: { offset: number; limit: number }): Promise<BookSummary[]> {
     return this.call('listBooks', page);
+  }
+
+  listCoverVersions(): Promise<CoverVersion[]> {
+    return this.call('listCoverVersions', {});
   }
 
   dispose(): void {

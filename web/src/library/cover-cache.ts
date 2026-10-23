@@ -1,5 +1,5 @@
 import type { StorageAdapter } from '../storage/adapter.ts';
-import type { BookSummary } from './protocol.ts';
+import type { BookSummary, CoverVersion } from './protocol.ts';
 
 const CACHE_NAME = 'calibre-cloud:covers';
 
@@ -30,6 +30,13 @@ export async function loadCover(
   const blob = await storage.read(cover.path, { signal });
   await cache?.put(key, new Response(blob)).catch(() => undefined);
   return blob;
+}
+
+export async function forgetStaleCovers(current: CoverVersion[]): Promise<void> {
+  const cache = await openCache();
+  if (!cache) return;
+  const keep = new Set(current.map(({ bookId, version }) => coverKey(bookId, version)));
+  for (const request of await cache.keys()) if (!keep.has(request.url)) await cache.delete(request);
 }
 
 export async function forgetCovers(): Promise<void> {
