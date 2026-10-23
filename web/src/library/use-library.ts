@@ -4,12 +4,12 @@ import { useConnection } from '../connection/context.tsx';
 import { useLibraryIndex } from './context.tsx';
 import { openLibrary } from './sync.ts';
 
-export type DownloadProgress = { loaded: number; total: number };
+export type LoadProgress = { loaded: number; total: number };
 
 export function useOpenLibrary() {
   const { connection, storage } = useConnection();
   const index = useLibraryIndex();
-  const [progress, setProgress] = useState<DownloadProgress | undefined>();
+  const [progress, setProgress] = useState<LoadProgress | undefined>();
 
   const query = useQuery({
     queryKey: ['library-db', connection],
