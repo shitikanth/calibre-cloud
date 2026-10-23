@@ -42,6 +42,14 @@ async function openFixture(location?: string): Promise<OpenedBook> {
   return book;
 }
 
+async function settled(relocations: Relocation[]) {
+  let count: number;
+  do {
+    count = relocations.length;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  } while (count !== relocations.length);
+}
+
 function goToChapterTwo(renderer: EpubRenderer) {
   return renderer.goTo(renderer.toc[1]?.location ?? '');
 }
@@ -139,4 +147,20 @@ test('open rejects when the file is not a book', async () => {
   const { renderer, container } = await createInContainer();
 
   await expect(renderer.open(new Blob(['not a book']), container, {})).rejects.toThrow();
+});
+
+test('arrow keys pressed inside the section document turn the page', async () => {
+  const { renderer, relocations } = await openFixture();
+  const opening = relocations.at(-1)?.fraction ?? Number.NaN;
+  const press = (key: string) => {
+    for (const type of ['keydown', 'keyup']) renderer.sectionDocument?.dispatchEvent(new KeyboardEvent(type, { key, bubbles: true }));
+  };
+
+  press('ArrowRight');
+  await vi.waitFor(() => expect(relocations.at(-1)?.fraction).toBeGreaterThan(opening));
+  await settled(relocations);
+  const turned = relocations.at(-1)?.fraction ?? Number.NaN;
+
+  press('ArrowLeft');
+  await vi.waitFor(() => expect(relocations.at(-1)?.fraction).toBeLessThan(turned));
 });

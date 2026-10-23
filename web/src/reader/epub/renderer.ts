@@ -63,8 +63,15 @@ export async function createEpubRenderer(): Promise<EpubRenderer> {
     }
   };
 
+  const turnPage = (event: Event) => {
+    const { key } = event as KeyboardEvent;
+    if (key === 'ArrowRight') void renderer.next();
+    else if (key === 'ArrowLeft') void renderer.previous();
+  };
+
   const sectionLoaded = (event: Event) => {
     sectionDocument = (event as CustomEvent<SectionLoad>).detail.doc;
+    sectionDocument.addEventListener('keydown', turnPage);
   };
 
   const refuseScripts = (event: Event) => {
@@ -86,7 +93,7 @@ export async function createEpubRenderer(): Promise<EpubRenderer> {
       });
   };
 
-  return {
+  const renderer: EpubRenderer = {
     get toc() {
       return toc;
     },
@@ -149,6 +156,7 @@ export async function createEpubRenderer(): Promise<EpubRenderer> {
       errorListeners.clear();
     },
   };
+  return renderer;
 }
 
 // The paginator re-renders on the first notification from its own ResizeObserver. If that lands

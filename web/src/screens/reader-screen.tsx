@@ -1,5 +1,5 @@
 import { Link, useNavigate } from '@tanstack/react-router';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type Ref } from 'react';
 import { bookFilename } from '../download/save-blob.ts';
 import { useDownload } from '../download/use-download.ts';
 import type { BookDetail, BookFormat } from '../library/protocol.ts';
@@ -86,11 +86,17 @@ function Reader({ book, format }: { book: BookDetail; format: BookFormat }) {
   );
 }
 
-type ReaderShellProps = { book: BookDetail; theme: ReaderTheme; tools?: ReactNode; children: ReactNode };
+type ReaderShellProps = {
+  book: BookDetail;
+  theme: ReaderTheme;
+  tools?: ReactNode;
+  children: ReactNode;
+  ref?: Ref<HTMLDivElement>;
+};
 
-function ReaderShell({ book, theme, tools, children }: ReaderShellProps) {
+function ReaderShell({ book, theme, tools, children, ref }: ReaderShellProps) {
   return (
-    <div className="reader flex h-dvh flex-col" data-theme={theme}>
+    <div ref={ref} className="reader flex h-dvh flex-col" data-theme={theme}>
       <header className="flex items-center gap-2 border-b border-(--reader-line) px-2 py-1">
         <Link
           to="/books/$bookId"
@@ -176,6 +182,7 @@ type OpenedBookProps = {
 
 function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBookProps) {
   const renderers = useRenderers();
+  const shell = useRef<HTMLDivElement>(null);
   const container = useRef<HTMLDivElement>(null);
   const [renderer, setRenderer] = useState<BookRenderer | undefined>(undefined);
   const [status, setStatus] = useState<OpenStatus>('opening');
@@ -240,6 +247,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
   useEffect(() => {
     if (!renderer) return;
     const turnPage = (event: KeyboardEvent) => {
+      if (shell.current?.querySelector('[aria-expanded="true"]')) return;
       if (event.key === 'ArrowRight') void renderer.next();
       else if (event.key === 'ArrowLeft') void renderer.previous();
     };
@@ -249,6 +257,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
 
   return (
     <ReaderShell
+      ref={shell}
       book={book}
       theme={settings.theme}
       tools={
