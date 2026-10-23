@@ -106,6 +106,21 @@ test('a link with a search term opens on its results', async () => {
   await expectTitles(app.screen, ['1984']);
 });
 
+test('a search that matches nothing says so, and clearing it brings the books back', async () => {
+  const app = await renderApp({ storage: await bronteLibrary(), connected: true });
+
+  await search(app.screen, 'tolkien');
+
+  await expect.element(app.screen.getByText('No books match “tolkien”.')).toBeVisible();
+  expect(app.screen.getByRole('list', { name: 'Books' }).query()).toBeNull();
+
+  await userEvent.clear(app.screen.getByRole('searchbox', { name: 'Search books' }));
+
+  await expectTitles(app.screen, ['Jane Eyre', 'A Wizard of Earthsea', 'Wuthering Heights']);
+  expect(app.screen.getByText(/No books match/).query()).toBeNull();
+  expect(app.url).toBe('/');
+});
+
 test('search ignores case and accents on both sides', async () => {
   const storage = new FakeStorage(
     await buildCalibreLibrary([

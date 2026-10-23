@@ -21,7 +21,12 @@ export function LibraryScreen() {
       <h1 className="text-3xl font-semibold">Library</h1>
       {count.isSuccess && <p className="mt-2 text-neutral-600">{formatBookCount(count.data)}</p>}
       <SearchBox term={search} />
-      {books.isSuccess && <BookGrid books={books.data} />}
+      {books.isSuccess &&
+        (books.data.length === 0 && search.trim() ? (
+          <p className="mt-6 text-neutral-600">No books match “{search.trim()}”.</p>
+        ) : (
+          <BookGrid books={books.data} />
+        ))}
       {books.hasNextPage && (
         <LoadMore
           loaded={books.data?.length ?? 0}
