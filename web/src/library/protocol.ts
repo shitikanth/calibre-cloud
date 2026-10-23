@@ -17,10 +17,12 @@ export type BookDetail = BookSummary & {
   formats: BookFormat[];
 };
 
+export type BookListQuery = { offset: number; limit: number; search?: string };
+
 export type LibraryOperations = {
   open: { args: { bytes: ArrayBuffer }; result: void };
   countBooks: { args: Record<string, never>; result: number };
-  listBooks: { args: { offset: number; limit: number }; result: BookSummary[] };
+  listBooks: { args: BookListQuery; result: BookSummary[] };
   getBook: { args: { bookId: number }; result: BookDetail | null };
 };
 

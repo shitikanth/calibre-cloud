@@ -31,7 +31,7 @@ test('clicking a book opens its detail page, which survives a reload', async () 
 
   await expect.element(app.screen.getByRole('heading', { level: 1, name: 'Jane Eyre' })).toBeVisible();
   await expect.element(app.screen.getByText('Charlotte Brontë & Emily Brontë')).toBeVisible();
-  expect(app.location()).toBe('/books/1');
+  expect(app.url).toBe('/books/1');
   expect(storage.calls.filter(({ path }) => path === 'metadata.db')).toHaveLength(1);
 
   const reloaded = await app.reload();
@@ -49,7 +49,8 @@ test('the detail page shows the metadata Calibre holds for the book', async () =
       {
         title: 'A Wizard of Earthsea',
         authors: ['Ursula K. Le Guin'],
-        series: { name: 'Earthsea', index: 1.5 },
+        series: 'Earthsea',
+        seriesIndex: 1.5,
         tags: ['Fantasy', 'Classics'],
         publisher: 'Parnassus Press',
         languages: ['eng'],

@@ -19,9 +19,15 @@ const rootRoute = createRootRoute({
   notFoundComponent: () => <p>Page not found.</p>,
 });
 
+type LibrarySearch = { q?: string };
+
 const homeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
+  validateSearch: (search: Record<string, unknown>): LibrarySearch => {
+    const q = search['q'];
+    return typeof q === 'string' || typeof q === 'number' ? { q: String(q) } : {};
+  },
   component: HomeScreen,
 });
 
