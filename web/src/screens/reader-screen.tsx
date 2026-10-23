@@ -4,12 +4,15 @@ import { bookFilename } from '../download/save-blob.ts';
 import { useDownload } from '../download/use-download.ts';
 import type { BookDetail, BookFormat } from '../library/protocol.ts';
 import { useRenderers } from '../reader/context.tsx';
-import type { BookRenderer, Relocation } from '../reader/renderer.ts';
+import { loadReaderSettings, saveReaderSettings, type ReaderSettings } from '../reader/reader-settings.ts';
+import type { BookRenderer, ReaderTheme, Relocation } from '../reader/renderer.ts';
 import { useBookFile } from '../reader/use-book-file.ts';
 import { NotFound, OpenBook } from './book-screen.tsx';
 import { ConnectedShell } from './connected-shell.tsx';
 import { describeError } from './describe-error.ts';
 import { ProgressBar } from './progress-bar.tsx';
+import { SettingsTool } from './reader-settings-tool.tsx';
+import { TocTool } from './reader-toc.tsx';
 
 export function ReaderScreen({ bookId, format }: { bookId: string; format: string }) {
   return (
@@ -34,11 +37,17 @@ function ReaderForFormat({ book, formatName }: { book: BookDetail; formatName: s
 function Reader({ book, format }: { book: BookDetail; format: BookFormat }) {
   const file = useBookFile(format.path);
   const navigate = useNavigate();
+  const [settings, setSettings] = useState(loadReaderSettings);
   const { state } = file;
+
+  const changeSettings = (next: ReaderSettings) => {
+    saveReaderSettings(next);
+    setSettings(next);
+  };
 
   if (state.status === 'failed') {
     return (
-      <ReaderShell book={book}>
+      <ReaderShell book={book} theme={settings.theme}>
         <FetchFailed book={book} error={state.error} retry={() => void file.start()} />
       </ReaderShell>
     );
@@ -49,7 +58,7 @@ function Reader({ book, format }: { book: BookDetail; format: BookFormat }) {
       void navigate({ to: '/books/$bookId', params: { bookId: String(book.id) } });
     };
     return (
-      <ReaderShell book={book}>
+      <ReaderShell book={book} theme={settings.theme}>
         <section className="mx-auto flex w-full max-w-md flex-col items-center gap-4 px-4 py-12">
           <ProgressBar
             label={`Downloading ${format.format}`}
@@ -57,25 +66,36 @@ function Reader({ book, format }: { book: BookDetail; format: BookFormat }) {
             total={state.status === 'fetching' ? state.total : 0}
             className="w-full"
           />
-          <button type="button" className="rounded border border-neutral-400 px-3 py-1 text-sm" onClick={cancel}>
+          <button type="button" className="rounded border border-(--reader-line) px-3 py-1 text-sm" onClick={cancel}>
             Cancel
           </button>
         </section>
       </ReaderShell>
     );
   }
-  return <OpenedBook book={book} format={format} blob={state.result.blob} />;
+  return (
+    <OpenedBook
+      key={`${book.id}/${format.format}`}
+      book={book}
+      format={format}
+      blob={state.result.blob}
+      settings={settings}
+      onSettingsChange={changeSettings}
+    />
+  );
 }
 
-function ReaderShell({ book, tools, children }: { book: BookDetail; tools?: ReactNode; children: ReactNode }) {
+type ReaderShellProps = { book: BookDetail; theme: ReaderTheme; tools?: ReactNode; children: ReactNode };
+
+function ReaderShell({ book, theme, tools, children }: ReaderShellProps) {
   return (
-    <div className="flex h-dvh flex-col bg-white text-neutral-900">
-      <header className="flex items-center gap-2 border-b border-neutral-200 px-2 py-1">
+    <div className="reader flex h-dvh flex-col" data-theme={theme}>
+      <header className="flex items-center gap-2 border-b border-(--reader-line) px-2 py-1">
         <Link
           to="/books/$bookId"
           params={{ bookId: String(book.id) }}
           aria-label="Back to book"
-          className="rounded p-2 hover:bg-neutral-100"
+          className="rounded p-2 hover:bg-(--reader-hover)"
         >
           <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 fill-none stroke-current stroke-2">
             <path d="M15 5l-7 7 7 7" />
@@ -94,7 +114,7 @@ function BackToBook({ book }: { book: BookDetail }) {
     <Link
       to="/books/$bookId"
       params={{ bookId: String(book.id) }}
-      className="rounded border border-neutral-400 px-4 py-2"
+      className="rounded border border-(--reader-line) px-4 py-2"
     >
       Back to book
     </Link>
@@ -106,10 +126,10 @@ function FetchFailed({ book, error, retry }: { book: BookDetail; error: Error; r
   return (
     <section role="alert" className="mx-auto w-full max-w-md px-4 py-12">
       <h2 className="text-xl font-semibold">{title}</h2>
-      <p className="mt-2 text-neutral-700">{detail}</p>
+      <p className="mt-2 text-(--reader-muted)">{detail}</p>
       <div className="mt-4 flex flex-wrap gap-2">
         {canRetry && (
-          <button type="button" className="rounded bg-neutral-900 px-4 py-2 text-white" onClick={retry}>
+          <button type="button" className="rounded bg-(--reader-fg) px-4 py-2 text-(--reader-bg)" onClick={retry}>
             Retry
           </button>
         )}
@@ -124,11 +144,11 @@ function Unopenable({ book, format }: { book: BookDetail; format: BookFormat }) 
   return (
     <section role="alert" className="mx-auto w-full max-w-md px-4 py-12">
       <h2 className="text-xl font-semibold">Couldn’t open this book</h2>
-      <p className="mt-2 text-neutral-700">This {format.format} can’t be read here. You can still download it.</p>
+      <p className="mt-2 text-(--reader-muted)">This {format.format} can’t be read here. You can still download it.</p>
       <div className="mt-4 flex flex-wrap gap-2">
         <button
           type="button"
-          className="rounded bg-neutral-900 px-4 py-2 text-white"
+          className="rounded bg-(--reader-fg) px-4 py-2 text-(--reader-bg)"
           disabled={download.state.status === 'fetching'}
           onClick={() => void download.start()}
         >
@@ -145,13 +165,22 @@ function Unopenable({ book, format }: { book: BookDetail; format: BookFormat }) 
 
 type OpenStatus = 'opening' | 'open' | 'unopenable';
 
-function OpenedBook({ book, format, blob }: { book: BookDetail; format: BookFormat; blob: Blob }) {
+type OpenedBookProps = {
+  book: BookDetail;
+  format: BookFormat;
+  blob: Blob;
+  settings: ReaderSettings;
+  onSettingsChange: (settings: ReaderSettings) => void;
+};
+
+function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBookProps) {
   const renderers = useRenderers();
   const container = useRef<HTMLDivElement>(null);
   const [renderer, setRenderer] = useState<BookRenderer | undefined>(undefined);
   const [status, setStatus] = useState<OpenStatus>('opening');
   const [relocation, setRelocation] = useState<Relocation | undefined>(undefined);
   const [renderError, setRenderError] = useState<Error | undefined>(undefined);
+  const [zoom, setZoom] = useState(1);
 
   useEffect(() => {
     const factory = renderers[format.format];
@@ -192,6 +221,15 @@ function OpenedBook({ book, format, blob }: { book: BookDetail; format: BookForm
   }, [renderers, format.format, blob]);
 
   useEffect(() => {
+    renderer?.setStyles?.(settings);
+  }, [renderer, settings]);
+
+  const changeZoom = (next: number) => {
+    setZoom(next);
+    renderer?.setZoom?.(next);
+  };
+
+  useEffect(() => {
     if (!renderer) return;
     const turnPage = (event: KeyboardEvent) => {
       if (event.key === 'ArrowRight') void renderer.next();
@@ -202,7 +240,25 @@ function OpenedBook({ book, format, blob }: { book: BookDetail; format: BookForm
   }, [renderer]);
 
   return (
-    <ReaderShell book={book}>
+    <ReaderShell
+      book={book}
+      theme={settings.theme}
+      tools={
+        status === 'open' &&
+        renderer && (
+          <>
+            <TocTool renderer={renderer} />
+            <SettingsTool
+              renderer={renderer}
+              settings={settings}
+              onSettingsChange={onSettingsChange}
+              zoom={zoom}
+              onZoomChange={changeZoom}
+            />
+          </>
+        )
+      }
+    >
       {status === 'unopenable' && <Unopenable book={book} format={format} />}
       {renderError && status === 'open' && (
         <p role="alert" className="bg-amber-50 px-4 py-2 text-sm text-amber-900">
@@ -211,12 +267,12 @@ function OpenedBook({ book, format, blob }: { book: BookDetail; format: BookForm
       )}
       <div ref={container} className="min-h-0 flex-1 overflow-hidden" hidden={status === 'unopenable'} />
       {status === 'open' && renderer && (
-        <nav aria-label="Pages" className="flex items-center justify-between gap-2 border-t border-neutral-200 px-2 py-1">
-          <button type="button" className="rounded px-3 py-1 hover:bg-neutral-100" onClick={() => void renderer.previous()}>
+        <nav aria-label="Pages" className="flex items-center justify-between gap-2 border-t border-(--reader-line) px-2 py-1">
+          <button type="button" className="rounded px-3 py-1 hover:bg-(--reader-hover)" onClick={() => void renderer.previous()}>
             Previous
           </button>
-          <span className="text-sm text-neutral-600">{progressText(relocation)}</span>
-          <button type="button" className="rounded px-3 py-1 hover:bg-neutral-100" onClick={() => void renderer.next()}>
+          <span className="text-sm text-(--reader-muted)">{progressText(relocation)}</span>
+          <button type="button" className="rounded px-3 py-1 hover:bg-(--reader-hover)" onClick={() => void renderer.next()}>
             Next
           </button>
         </nav>

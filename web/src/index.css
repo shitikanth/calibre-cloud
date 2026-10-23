@@ -14,3 +14,23 @@
     @apply underline;
   }
 }
+
+@layer components {
+  .reader {
+    --reader-bg: #ffffff;
+    --reader-fg: var(--color-neutral-900);
+    --reader-line: color-mix(in srgb, var(--reader-fg) 15%, var(--reader-bg));
+    --reader-hover: color-mix(in srgb, var(--reader-fg) 8%, var(--reader-bg));
+    --reader-muted: color-mix(in srgb, var(--reader-fg) 70%, var(--reader-bg));
+    background-color: var(--reader-bg);
+    color: var(--reader-fg);
+  }
+  .reader[data-theme='sepia'] {
+    --reader-bg: #f4ecd8;
+    --reader-fg: #5b4636;
+  }
+  .reader[data-theme='dark'] {
+    --reader-bg: #121212;
+    --reader-fg: #e0e0e0;
+  }
+}
