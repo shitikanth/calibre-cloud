@@ -33,10 +33,13 @@ The app's read-only access to one library in one storage provider. Ending it is 
 _Avoid_: session, account, login, sign-in
 
 **Reading position**:
-Where a reader last left off in one format of a book, remembered on that device only.
+Where in a format a reader on this device last left off. A book has at most one per format, and it belongs to the device, not the library.
 _Avoid_: bookmark, progress, last page
 
-**Continue reading**:
-The home view's row of the books most recently read on this device, each resuming at its reading position.
-_Avoid_: recent books, history, currently reading
+**Reader settings**:
+The device-wide reading preferences a reader applies to every book, such as font size and theme.
+_Avoid_: preferences, per-book settings
 
+**Continue reading**:
+The home-view row of formats that have a reading position on this device, most recently opened first.
+_Avoid_: recent books, history, currently reading
