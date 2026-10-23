@@ -18,6 +18,8 @@ const rootRoute = createRootRoute({
   notFoundComponent: () => <p>Page not found.</p>,
 });
 
+type LibrarySearch = { q?: string };
+
 const homeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
@@ -27,8 +29,6 @@ const homeRoute = createRoute({
   },
   component: HomeScreen,
 });
-
-export type LibrarySearch = { q?: string };
 
 function HomeScreen() {
   const { connection } = useConnection();
