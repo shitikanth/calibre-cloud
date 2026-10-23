@@ -1,6 +1,7 @@
 import { useBookCount, useBooks, useOpenLibrary, type DownloadProgress } from '../library/use-library.ts';
 import { useLibraryUpdate } from '../library/use-library-update.ts';
 import { BookGrid } from './book-grid.tsx';
+import { LibraryNotices } from './library-notices.tsx';
 import { LoadMore } from './load-more.tsx';
 import { StorageErrorScreen } from './storage-error-screen.tsx';
 
@@ -8,7 +9,7 @@ export function LibraryScreen() {
   const library = useOpenLibrary();
   const count = useBookCount(library.isSuccess);
   const books = useBooks(library.isSuccess);
-  useLibraryUpdate(library.data?.fromCache === true);
+  const update = useLibraryUpdate(library.data?.fromCache === true);
 
   if (library.isError) return <StorageErrorScreen error={library.error} retry={() => void library.refetch()} />;
   if (count.isError) return <StorageErrorScreen error={count.error} retry={() => void count.refetch()} />;
@@ -19,6 +20,7 @@ export function LibraryScreen() {
     <section>
       <h1 className="text-3xl font-semibold">Library</h1>
       {count.isSuccess && <p className="mt-2 text-neutral-600">{formatBookCount(count.data)}</p>}
+      <LibraryNotices update={update} />
       {books.isSuccess && <BookGrid books={books.data} />}
       {books.hasNextPage && (
         <LoadMore
