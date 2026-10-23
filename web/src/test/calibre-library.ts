@@ -1,4 +1,5 @@
 import { loadSqlite } from '../library/sqlite.ts';
+import { insertMetadata } from './calibre-metadata.ts';
 
 const CALIBRE_SUBSET_DDL = `
 CREATE TABLE books ( id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -34,7 +35,14 @@ export type BookSpec = {
   added?: string;
   modified?: string;
   hasCover?: boolean;
+  series?: string;
+  tags?: string[];
   formats?: Record<string, string>;
+  seriesIndex?: number;
+  publisher?: string;
+  languages?: string[];
+  published?: string;
+  description?: string;
 };
 
 export type FakeLibraryFiles = Record<string, Uint8Array<ArrayBuffer> | string>;
@@ -52,16 +60,40 @@ export async function buildCalibreLibrary(books: BookSpec[]): Promise<FakeLibrar
       const path = `${ascii(authors[0] ?? 'Unknown')}/${ascii(book.title)} (${id})`;
       const added = book.added ?? `2024-01-${String((id % 28) + 1).padStart(2, '0')} 10:00:00+00:00`;
       db.exec({
-        sql: `INSERT INTO books(id, title, sort, timestamp, author_sort, path, uuid, has_cover, last_modified)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        bind: [id, book.title, book.title, added, authors.join(' & '), path, `uuid-${id}`, book.hasCover ? 1 : 0, book.modified ?? added],
+        sql: `INSERT INTO books(id, title, sort, timestamp, pubdate, series_index, author_sort, path, uuid, has_cover, last_modified)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        bind: [
+          id,
+          book.title,
+          book.title,
+          added,
+          book.published ?? '0101-01-01 00:00:00+00:00',
+          book.seriesIndex ?? 1,
+          authors.join(' & '),
+          path,
+          `uuid-${id}`,
+          book.hasCover ? 1 : 0,
+          book.modified ?? added,
+        ],
       });
+      insertMetadata(db, id, book);
       for (const name of authors) {
         if (!authorIds.has(name)) {
           authorIds.set(name, authorIds.size + 1);
           db.exec({ sql: 'INSERT INTO authors(id, name, sort) VALUES (?, ?, ?)', bind: [authorIds.get(name)!, name, name] });
         }
         db.exec({ sql: 'INSERT INTO books_authors_link(book, author) VALUES (?, ?)', bind: [id, authorIds.get(name)!] });
+      }
+      if (book.series) {
+        db.exec({ sql: 'INSERT OR IGNORE INTO series(name, sort) VALUES (?, ?)', bind: [book.series, book.series] });
+        db.exec({
+          sql: 'INSERT INTO books_series_link(book, series) SELECT ?, id FROM series WHERE name = ?',
+          bind: [id, book.series],
+        });
+      }
+      for (const tag of book.tags ?? []) {
+        db.exec({ sql: 'INSERT OR IGNORE INTO tags(name) VALUES (?)', bind: [tag] });
+        db.exec({ sql: 'INSERT INTO books_tags_link(book, tag) SELECT ?, id FROM tags WHERE name = ?', bind: [id, tag] });
       }
       if (book.hasCover) files[`${path}/cover.jpg`] = `cover of ${book.title}`;
       const stem = ascii(`${book.title} - ${authors[0] ?? 'Unknown'}`);

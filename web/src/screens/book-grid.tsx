@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router';
 import type { BookSummary } from '../library/protocol.ts';
 import { BookCover } from './book-cover.tsx';
 
@@ -15,10 +16,10 @@ export function BookGrid({ books }: { books: BookSummary[] }) {
 
 function BookTile({ book }: { book: BookSummary }) {
   return (
-    <article>
+    <Link to="/books/$bookId" params={{ bookId: String(book.id) }} className="block">
       <BookCover book={book} />
       <h2 className="mt-2 line-clamp-2 text-sm font-medium break-words">{book.title}</h2>
       <p className="line-clamp-2 text-xs text-neutral-600">{book.authors.join(' & ')}</p>
-    </article>
+    </Link>
   );
 }

@@ -16,7 +16,7 @@ export function BookCover({ book }: { book: BookSummary }) {
   );
 }
 
-function BlobImage({ blob, alt }: { blob: Blob; alt: string }) {
+export function BlobImage({ blob, alt }: { blob: Blob; alt: string }) {
   const image = useRef<HTMLImageElement>(null);
   useEffect(() => {
     const url = URL.createObjectURL(blob);
@@ -26,7 +26,7 @@ function BlobImage({ blob, alt }: { blob: Blob; alt: string }) {
   return <img ref={image} alt={alt} decoding="async" className="h-full w-full object-cover" />;
 }
 
-function CoverPlaceholder({ title }: { title: string }) {
+export function CoverPlaceholder({ title }: { title: string }) {
   return (
     <div
       role="img"

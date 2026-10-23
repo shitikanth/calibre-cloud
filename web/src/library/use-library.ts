@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useConnection } from '../connection/context.tsx';
 import { useLibraryIndex } from './context.tsx';
@@ -27,14 +27,15 @@ export function useOpenLibrary() {
 
 const PAGE_SIZE = 60;
 
-export function useBooks(enabled: boolean) {
+export function useBooks(enabled: boolean, search: string) {
   const index = useLibraryIndex();
   const { connection } = useConnection();
   return useInfiniteQuery({
-    queryKey: ['library', connection, 'books'],
+    queryKey: ['library', connection, 'books', search],
     enabled,
     initialPageParam: 0,
-    queryFn: ({ pageParam }) => index.listBooks({ offset: pageParam, limit: PAGE_SIZE }),
+    placeholderData: keepPreviousData,
+    queryFn: ({ pageParam }) => index.listBooks({ offset: pageParam, limit: PAGE_SIZE, search }),
     getNextPageParam: (lastPage, _pages, lastOffset) =>
       lastPage.length < PAGE_SIZE ? undefined : lastOffset + PAGE_SIZE,
     select: (data) => data.pages.flat(),

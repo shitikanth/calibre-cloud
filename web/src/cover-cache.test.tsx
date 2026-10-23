@@ -36,6 +36,17 @@ test('covers seen before come from the device on the next visit', async () => {
   expect(coverReads(storage)).toEqual([]);
 });
 
+test('the full-size cover on a detail page is fetched on every visit', async () => {
+  const storage = new FakeStorage(await buildCalibreLibrary(books));
+  const app = await renderApp({ storage, connected: true, path: '/books/1' });
+  expect(await coverText(app.screen, 'Jane Eyre')).toBe('cover of Jane Eyre');
+
+  const reloaded = await app.reload();
+
+  expect(await coverText(reloaded, 'Jane Eyre')).toBe('cover of Jane Eyre');
+  expect(coverReads(storage)).toEqual(['Charlotte Bronte/Jane Eyre (1)/cover.jpg', 'Charlotte Bronte/Jane Eyre (1)/cover.jpg']);
+});
+
 test('a cover changed in Calibre shows the new image after the library updates', async () => {
   const storage = new FakeStorage(await buildCalibreLibrary(books));
   const app = await renderApp({ storage, connected: true });
@@ -47,9 +58,13 @@ test('a cover changed in Calibre shows the new image after the library updates',
   storage.put('metadata.db', changed['metadata.db']!, '2');
   storage.put('Charlotte Bronte/Jane Eyre (1)/cover.jpg', 'new cover of Jane Eyre');
   storage.calls.length = 0;
+  const download = storage.holdNextRead('metadata.db');
 
   const reloaded = await app.reload();
 
+  expect(await coverText(reloaded, 'Jane Eyre')).toBe('cover of Jane Eyre');
+  await download.started;
+  download.release();
   await expect.element(reloaded.getByRole('status')).toHaveTextContent('Library updated');
   await expect.poll(() => coverText(reloaded, 'Jane Eyre')).toBe('new cover of Jane Eyre');
   expect(await coverText(reloaded, 'Wuthering Heights')).toBe('cover of Wuthering Heights');

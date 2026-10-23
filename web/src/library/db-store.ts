@@ -1,4 +1,5 @@
 import { LibraryInUse } from './errors.ts';
+import { registerFold } from './fold.ts';
 import { loadSqlite, type Database, type Sqlite3 } from './sqlite.ts';
 
 type Pool = Awaited<ReturnType<Sqlite3['installOpfsSAHPoolVfs']>>;
@@ -97,6 +98,7 @@ async function deserialize(data: Uint8Array): Promise<Database> {
 function verified(db: Database): Database {
   try {
     db.exec('PRAGMA query_only = ON');
+    registerFold(db);
     db.selectValue('SELECT count(*) FROM sqlite_schema');
   } catch (error) {
     db.close();

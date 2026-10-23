@@ -24,13 +24,9 @@ export async function renderApp({ storage, path = '/', connected = false }: Rend
     opened.push(connection);
     return storage;
   };
+  let history = createMemoryHistory({ initialEntries: [path] });
   const mount = async () => {
-    const mountedScreen = await render(
-      <App
-        router={createAppRouter({ history: createMemoryHistory({ initialEntries: [path] }) })}
-        openStorage={openStorage}
-      />,
-    );
+    const mountedScreen = await render(<App router={createAppRouter({ history })} openStorage={openStorage} />);
     mounted.add(mountedScreen);
     return mountedScreen;
   };
@@ -41,9 +37,13 @@ export async function renderApp({ storage, path = '/', connected = false }: Rend
       return screen;
     },
     opened,
+    get url() {
+      return history.location.href;
+    },
     async reload() {
       await screen.unmount();
       mounted.delete(screen);
+      history = createMemoryHistory({ initialEntries: [history.location.href] });
       screen = await mount();
       return screen;
     },

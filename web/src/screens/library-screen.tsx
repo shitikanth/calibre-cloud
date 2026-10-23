@@ -1,15 +1,18 @@
 import { useBookCount, useBooks, useOpenLibrary, type DownloadProgress } from '../library/use-library.ts';
 import { useLibraryUpdate } from '../library/use-library-update.ts';
+import { useSearch } from '@tanstack/react-router';
 import { BookGrid } from './book-grid.tsx';
 import { LibraryNotices } from './library-notices.tsx';
 import { LibraryToolbar } from './library-toolbar.tsx';
 import { LoadMore } from './load-more.tsx';
+import { SearchBox } from './search-box.tsx';
 import { StorageErrorScreen } from './storage-error-screen.tsx';
 
 export function LibraryScreen() {
   const library = useOpenLibrary();
   const count = useBookCount(library.isSuccess);
-  const books = useBooks(library.isSuccess);
+  const { q: search = '' } = useSearch({ from: '/' });
+  const books = useBooks(library.isSuccess, search);
   const update = useLibraryUpdate(library.data?.fromCache === true);
 
   if (library.isError) return <StorageErrorScreen error={library.error} retry={() => void library.refetch()} />;
@@ -23,7 +26,13 @@ export function LibraryScreen() {
       {count.isSuccess && <p className="mt-2 text-neutral-600">{formatBookCount(count.data)}</p>}
       <LibraryToolbar update={update} />
       <LibraryNotices update={update} />
-      {books.isSuccess && <BookGrid books={books.data} />}
+      <SearchBox term={search} />
+      {books.isSuccess &&
+        (books.data.length === 0 && search.trim() ? (
+          <p className="mt-6 text-neutral-600">No books match “{search.trim()}”.</p>
+        ) : (
+          <BookGrid books={books.data} />
+        ))}
       {books.hasNextPage && (
         <LoadMore
           loaded={books.data?.length ?? 0}
@@ -35,7 +44,7 @@ export function LibraryScreen() {
   );
 }
 
-function LoadingLibrary({ progress }: { progress: DownloadProgress | undefined }) {
+export function LoadingLibrary({ progress }: { progress: DownloadProgress | undefined }) {
   const percent = progress && progress.total > 0 ? Math.floor((progress.loaded / progress.total) * 100) : undefined;
   return (
     <section>
