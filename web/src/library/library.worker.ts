@@ -1,4 +1,5 @@
 import type { LibraryOperations, LibraryRequest, LibraryResponse, Operation } from './protocol.ts';
+import { listBooks } from './books-query.ts';
 import { loadSqlite, type Database } from './sqlite.ts';
 
 let db: Database | undefined;
@@ -36,6 +37,9 @@ const handlers: Handlers = {
   },
   countBooks() {
     return Number(requireDb().selectValue('SELECT count(*) FROM books'));
+  },
+  listBooks(page) {
+    return listBooks(requireDb(), page);
   },
 };
 
