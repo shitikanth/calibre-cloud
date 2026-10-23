@@ -3,68 +3,32 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { bookFilename } from '../download/save-blob.ts';
 import { useDownload } from '../download/use-download.ts';
 import type { BookDetail, BookFormat } from '../library/protocol.ts';
-import { useLibrarySession } from '../library/session.tsx';
-import { useBook } from '../library/use-book.ts';
 import { useRenderers } from '../reader/context.tsx';
 import type { BookRenderer, Relocation } from '../reader/renderer.ts';
 import { useBookFile } from '../reader/use-book-file.ts';
-import { BookNotFound, NotFound } from './book-screen.tsx';
+import { NotFound, OpenBook } from './book-screen.tsx';
 import { ConnectedShell } from './connected-shell.tsx';
 import { describeError } from './describe-error.ts';
-import { LoadingLibrary } from './library-screen.tsx';
 import { ProgressBar } from './progress-bar.tsx';
-import { StorageErrorScreen } from './storage-error-screen.tsx';
 
 export function ReaderScreen({ bookId, format }: { bookId: string; format: string }) {
-  const { library } = useLibrarySession();
-
-  if (library.isError)
-    return (
-      <ConnectedShell>
-        <StorageErrorScreen error={library.error} retry={() => void library.refetch()} />
-      </ConnectedShell>
-    );
-  if (!library.isSuccess)
-    return (
-      <ConnectedShell>
-        <LoadingLibrary progress={library.progress} />
-      </ConnectedShell>
-    );
-  if (!/^\d+$/.test(bookId))
-    return (
-      <ConnectedShell>
-        <BookNotFound />
-      </ConnectedShell>
-    );
-  return <OpenBookFormat id={Number(bookId)} formatName={format} />;
+  return (
+    <OpenBook bookId={bookId} frame={inShell}>
+      {(book) => <ReaderForFormat book={book} formatName={format} />}
+    </OpenBook>
+  );
 }
 
-function OpenBookFormat({ id, formatName }: { id: number; formatName: string }) {
-  const book = useBook(id);
+function inShell(fallback: ReactNode) {
+  return <ConnectedShell>{fallback}</ConnectedShell>;
+}
+
+function ReaderForFormat({ book, formatName }: { book: BookDetail; formatName: string }) {
   const renderers = useRenderers();
-
-  if (book.isError)
-    return (
-      <ConnectedShell>
-        <StorageErrorScreen error={book.error} retry={() => void book.refetch()} />
-      </ConnectedShell>
-    );
-  if (book.data === null)
-    return (
-      <ConnectedShell>
-        <BookNotFound />
-      </ConnectedShell>
-    );
-  if (!book.data) return null;
-
-  const format = book.data.formats.find((candidate) => candidate.format === formatName);
+  const format = book.formats.find((candidate) => candidate.format === formatName);
   if (!format || !renderers[format.format])
-    return (
-      <ConnectedShell>
-        <NotFound title="Format not found" detail="This book has no such format to read." />
-      </ConnectedShell>
-    );
-  return <Reader book={book.data} format={format} />;
+    return inShell(<NotFound title="Format not found" detail="This book has no such format to read." />);
+  return <Reader book={book} format={format} />;
 }
 
 function Reader({ book, format }: { book: BookDetail; format: BookFormat }) {
