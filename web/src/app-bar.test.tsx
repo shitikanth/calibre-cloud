@@ -100,3 +100,52 @@ test('the browser back button restores the search the box was showing', async ()
   await expectTitles(app.screen, ['Jane Eyre']);
   await expect.element(searchBox(app.screen)).toHaveValue('eyre');
 });
+
+test('the overflow menu opens on More, lists Refresh library and Disconnect, and closes on Escape', async () => {
+  const app = await renderApp({ storage: await bronteLibrary(), connected: true });
+  await expectTitles(app.screen, ['Jane Eyre', 'A Wizard of Earthsea', 'Wuthering Heights']);
+  expect(app.screen.getByRole('menu').query()).toBeNull();
+
+  await userEvent.click(appBar(app.screen).getByRole('button', { name: 'More' }));
+
+  await expect.element(app.screen.getByRole('menu')).toBeVisible();
+  expect(app.screen.getByRole('menuitem').elements().map((item) => item.textContent)).toEqual([
+    'Refresh library',
+    'Disconnect',
+  ]);
+
+  await userEvent.keyboard('{Escape}');
+
+  await expect.poll(() => app.screen.getByRole('menu').query()).toBeNull();
+  await userEvent.click(appBar(app.screen).getByRole('button', { name: 'More' }));
+  await expect.element(app.screen.getByRole('menu')).toBeVisible();
+
+  await userEvent.click(app.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' }));
+
+  await expect.poll(() => app.screen.getByRole('menu').query()).toBeNull();
+});
+
+test('no screen shows a book count', async () => {
+  const app = await renderApp({ storage: await bronteLibrary(), connected: true });
+  await expectTitles(app.screen, ['Jane Eyre', 'A Wizard of Earthsea', 'Wuthering Heights']);
+  expect(app.screen.getByText(/\b\d+ books?\b/).query()).toBeNull();
+
+  await userEvent.click(app.screen.getByRole('link', { name: /Jane Eyre/ }));
+
+  await expect.element(app.screen.getByRole('heading', { level: 1, name: 'Jane Eyre' })).toBeVisible();
+  expect(app.screen.getByText(/\b\d+ books?\b/).query()).toBeNull();
+});
+
+test('the app bar fits a 390px phone without horizontal scroll', async () => {
+  await page.viewport(390, 844);
+  const app = await renderApp({ storage: await bronteLibrary(), connected: true });
+  await expectTitles(app.screen, ['Jane Eyre', 'A Wizard of Earthsea', 'Wuthering Heights']);
+
+  await expectAppBar(app.screen);
+
+  const bar = appBar(app.screen).element().getBoundingClientRect();
+  const more = appBar(app.screen).getByRole('button', { name: 'More' }).element().getBoundingClientRect();
+  expect(bar.right).toBeLessThanOrEqual(390);
+  expect(more.right).toBeLessThanOrEqual(390);
+  expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
+});

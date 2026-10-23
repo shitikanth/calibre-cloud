@@ -101,8 +101,8 @@ test.each(['/books/99', '/books/not-a-number'])('%s shows that the book was not 
   const app = await renderApp({ storage: await janeEyreLibrary(), connected: true, path });
 
   await expect.element(app.screen.getByRole('heading', { level: 1, name: 'Book not found' })).toBeVisible();
-  await userEvent.click(app.screen.getByRole('link', { name: '← Library' }));
-  await expect.element(app.screen.getByText('2 books')).toBeVisible();
+  await userEvent.click(app.screen.getByRole('banner').getByRole('link', { name: 'calibre-cloud' }));
+  await expect.element(app.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
 });
 
 test('the detail page fits a narrow phone screen', async () => {

@@ -95,7 +95,6 @@ test('more books load as the owner scrolls to the end of the grid', async () => 
   const app = await renderApp({ storage, connected: true });
 
   await expect.element(app.screen.getByRole('heading', { name: 'Book 150', exact: true })).toBeVisible();
-  await expect.element(app.screen.getByText('150 books')).toBeVisible();
   expect(app.screen.getByRole('heading', { name: 'Book 1', exact: true }).query()).toBeNull();
 
   await expect

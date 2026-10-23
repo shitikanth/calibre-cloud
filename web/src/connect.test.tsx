@@ -24,7 +24,7 @@ test('connecting a MEGA folder link shows the book count', async () => {
 
   await connect(app.screen, link);
 
-  await expect.element(app.screen.getByText('3 books')).toBeVisible();
+  await expect.element(app.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
   expect(app.opened).toEqual([{ provider: 'mega', link }]);
 });
 
@@ -52,11 +52,11 @@ test.each([
 test('the connection is remembered and the library loads again after a reload', async () => {
   const app = await renderApp({ storage: await threeBookLibrary() });
   await connect(app.screen, link);
-  await expect.element(app.screen.getByText('3 books')).toBeVisible();
+  await expect.element(app.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
 
   const reloaded = await app.reload();
 
-  await expect.element(reloaded.getByText('3 books')).toBeVisible();
+  await expect.element(reloaded.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
   expect(reloaded.getByRole('textbox', { name: 'MEGA folder link' }).query()).toBeNull();
   expect(app.opened).toEqual([
     { provider: 'mega', link },
