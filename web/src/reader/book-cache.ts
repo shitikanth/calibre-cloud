@@ -35,6 +35,14 @@ async function openCache(): Promise<Cache | undefined> {
   }
 }
 
+async function existingCache(): Promise<Cache | undefined> {
+  try {
+    return (await caches.has(CACHE_NAME)) ? await caches.open(CACHE_NAME) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 async function readRecent(cache: Cache): Promise<Entry[]> {
   try {
     const response = await cache.match(recentKey());
@@ -96,13 +104,15 @@ export async function openBookFile(
 }
 
 async function forgetWhere(drop: (entry: BookFormatKey) => boolean): Promise<void> {
-  const cache = await openCache();
+  const cache = await existingCache();
   if (!cache) return;
   for (const request of await cache.keys()) {
     const entry = parseKey(request.url);
     if (entry && drop(entry)) await cache.delete(request);
   }
-  await writeRecent(cache, (await readRecent(cache)).filter((entry) => !drop(entry)));
+  const recent = await readRecent(cache);
+  const kept = recent.filter((entry) => !drop(entry));
+  if (kept.length !== recent.length) await writeRecent(cache, kept);
 }
 
 export function forgetBookFile(bookId: number, format: string): Promise<void> {
