@@ -195,6 +195,23 @@ test('a file the renderer cannot open offers Download instead of Retry', async (
   expect((click.mock.contexts[0] as HTMLAnchorElement).download).toBe('Jane Eyre - Charlotte Brontë.epub');
 });
 
+test('a reader that fails to load offers Retry and Back to book, and Retry opens the book', async () => {
+  const fake = fakeRenderers(['EPUB', 'PDF']);
+  fake.failCreate = new TypeError('Failed to fetch dynamically imported module');
+  const app = await renderApp({ storage: await janeEyreLibrary(), connected: true, path: '/books/1/read/EPUB', renderers: fake.renderers });
+
+  const alert = app.screen.getByRole('alert');
+  await expect.element(alert).toMatchTextContent(/Couldn’t load the reader/);
+  await expect.element(alert.getByRole('link', { name: 'Back to book' })).toBeVisible();
+  expect(alert.getByRole('button', { name: 'Download EPUB' }).query()).toBeNull();
+
+  fake.failCreate = undefined;
+  await userEvent.click(alert.getByRole('button', { name: 'Retry' }));
+
+  await expect.element(app.screen.getByText('# Chapter 1')).toBeVisible();
+  expect(app.screen.getByRole('alert').query()).toBeNull();
+});
+
 test('a page that fails to render shows a notice while the book stays open', async () => {
   const fake = fakeRenderers(['EPUB', 'PDF']);
   const app = await renderApp({ storage: await janeEyreLibrary(), connected: true, path: '/books/1/read/EPUB', renderers: fake.renderers });

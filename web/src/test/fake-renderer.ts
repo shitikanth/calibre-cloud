@@ -108,6 +108,7 @@ export type FakeRenderers = {
   renderers: Renderers;
   instances: FakeRenderer[];
   readonly latest: FakeRenderer;
+  failCreate: Error | undefined;
 };
 
 export function fakeRenderers(
@@ -119,6 +120,7 @@ export function fakeRenderers(
     formats.map((format) => [
       format,
       async () => {
+        if (fake.failCreate) throw fake.failCreate;
         const renderer = new FakeRenderer({ pages: format === 'PDF' });
         setup(renderer, format);
         instances.push(renderer);
@@ -126,13 +128,15 @@ export function fakeRenderers(
       },
     ]),
   );
-  return {
+  const fake: FakeRenderers = {
     renderers,
     instances,
+    failCreate: undefined,
     get latest() {
       const renderer = instances.at(-1);
       if (!renderer) throw new Error('No renderer has been created yet');
       return renderer;
     },
   };
+  return fake;
 }
