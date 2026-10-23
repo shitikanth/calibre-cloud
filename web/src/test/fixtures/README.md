@@ -1,0 +1,1 @@
+- `two-chapters.epub`: a two-chapter EPUB 3 of our own text with a two-entry nav TOC; chapter two carries an inline `<script>`, `onload` and `onclick` handlers, and an external script resource `scripts/marker.js` that would each insert a marker paragraph if they ran.
