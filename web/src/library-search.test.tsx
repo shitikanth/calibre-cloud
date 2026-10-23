@@ -1,0 +1,44 @@
+import { expect, test } from 'vitest';
+import { userEvent } from 'vitest/browser';
+import { buildCalibreLibrary } from './test/calibre-library.ts';
+import { FakeStorage } from './test/fake-storage.ts';
+import { renderApp } from './test/render-app.tsx';
+
+type Screen = Awaited<ReturnType<typeof renderApp>>['screen'];
+
+async function bronteLibrary() {
+  return new FakeStorage(
+    await buildCalibreLibrary([
+      { title: 'Jane Eyre', authors: ['Charlotte Brontë'] },
+      { title: 'A Wizard of Earthsea', authors: ['Ursula K. Le Guin'] },
+      { title: 'Wuthering Heights', authors: ['Emily Brontë'] },
+    ]),
+  );
+}
+
+async function search(screen: Screen, term: string) {
+  const box = screen.getByRole('searchbox', { name: 'Search books' });
+  await userEvent.clear(box);
+  await userEvent.type(box, term);
+}
+
+async function expectTitles(screen: Screen, titles: string[]) {
+  await expect
+    .poll(() =>
+      screen
+        .getByRole('heading', { level: 2 })
+        .elements()
+        .map((element) => element.textContent)
+        .sort(),
+    )
+    .toEqual([...titles].sort());
+}
+
+test('typing in the search box narrows the grid to books whose title matches', async () => {
+  const app = await renderApp({ storage: await bronteLibrary(), connected: true });
+  await expectTitles(app.screen, ['Jane Eyre', 'A Wizard of Earthsea', 'Wuthering Heights']);
+
+  await search(app.screen, 'earthsea');
+
+  await expectTitles(app.screen, ['A Wizard of Earthsea']);
+});

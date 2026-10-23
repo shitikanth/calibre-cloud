@@ -1,4 +1,4 @@
-import type { BookSummary, LibraryOperations, LibraryRequest, LibraryResponse, Operation } from './protocol.ts';
+import type { BookListQuery, BookSummary, LibraryOperations, LibraryRequest, LibraryResponse, Operation } from './protocol.ts';
 
 type Pending = { resolve(result: unknown): void; reject(error: Error): void };
 
@@ -17,8 +17,8 @@ export class LibraryIndex {
     return this.call('countBooks', {});
   }
 
-  listBooks(page: { offset: number; limit: number }): Promise<BookSummary[]> {
-    return this.call('listBooks', page);
+  listBooks(query: BookListQuery): Promise<BookSummary[]> {
+    return this.call('listBooks', query);
   }
 
   dispose(reason = 'The library index was closed'): void {
