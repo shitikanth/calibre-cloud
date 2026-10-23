@@ -16,7 +16,7 @@ export function ReaderPopover({ label, icon, children }: { label: string; icon: 
         aria-label={label}
         aria-expanded={open}
         onClick={() => setOpen((wasOpen) => !wasOpen)}
-        className="rounded p-2 hover:bg-(--reader-hover)"
+        className="flex min-h-11 min-w-11 items-center justify-center rounded hover:bg-(--reader-hover)"
       >
         <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 fill-none stroke-current stroke-2">
           {icon}

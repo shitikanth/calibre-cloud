@@ -68,7 +68,7 @@ function Reader({ book, format }: { book: BookDetail; format: BookFormat }) {
             total={state.status === 'fetching' ? state.total : 0}
             className="w-full"
           />
-          <button type="button" className="rounded border border-(--reader-line) px-3 py-1 text-sm" onClick={cancel}>
+          <button type="button" className="min-h-11 rounded border border-(--reader-line) px-3 py-1 text-sm" onClick={cancel}>
             Cancel
           </button>
         </section>
@@ -102,7 +102,7 @@ function ReaderShell({ book, theme, tools, children, ref }: ReaderShellProps) {
           to="/books/$bookId"
           params={{ bookId: String(book.id) }}
           aria-label="Back to book"
-          className="rounded p-2 hover:bg-(--reader-hover)"
+          className="flex min-h-11 min-w-11 items-center justify-center rounded hover:bg-(--reader-hover)"
         >
           <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 fill-none stroke-current stroke-2">
             <path d="M15 5l-7 7 7 7" />
@@ -313,11 +313,11 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
       <div ref={container} className="min-h-0 flex-1 overflow-hidden" hidden={status === 'unopenable' || status === 'unavailable'} />
       {status === 'open' && renderer && (
         <nav aria-label="Pages" className="flex items-center justify-between gap-2 border-t border-(--reader-line) px-2 py-1">
-          <button type="button" className="rounded px-3 py-1 hover:bg-(--reader-hover)" onClick={() => void renderer.previous()}>
+          <button type="button" className="min-h-11 rounded px-3 py-1 hover:bg-(--reader-hover)" onClick={() => void renderer.previous()}>
             Previous
           </button>
           <span className="text-sm text-(--reader-muted)">{progressText(relocation)}</span>
-          <button type="button" className="rounded px-3 py-1 hover:bg-(--reader-hover)" onClick={() => void renderer.next()}>
+          <button type="button" className="min-h-11 rounded px-3 py-1 hover:bg-(--reader-hover)" onClick={() => void renderer.next()}>
             Next
           </button>
         </nav>
