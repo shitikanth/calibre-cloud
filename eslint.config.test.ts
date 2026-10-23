@@ -38,6 +38,21 @@ describe('storage provider SDK boundary', () => {
     expect(await platformImportErrors('web/src/storage/mega/adapter.ts', source)).toHaveLength(0);
   });
 
+  test.each([
+    ['web/src/screens/example.tsx', '../storage/mega/link.ts'],
+    ['web/src/connection/example.ts', '../storage/mega/provider.ts'],
+    ['web/src/library/example.ts', '../storage/mega/adapter.ts'],
+    ['web/src/example.ts', './storage/mega/provider.ts'],
+  ])('rejects the MEGA provider module in %s', async (filePath, specifier) => {
+    const providerSource = `import * as mega from '${specifier}';\nconsole.log(mega);\n`;
+    expect(await platformImportErrors(filePath, providerSource)).toHaveLength(1);
+  });
+
+  test('allows the MEGA provider module inside the storage layer', async () => {
+    const providerSource = "import * as mega from './mega/provider.ts';\nconsole.log(mega);\n";
+    expect(await platformImportErrors('web/src/storage/providers.ts', providerSource)).toHaveLength(0);
+  });
+
   test('still rejects node:* inside the MEGA adapter', async () => {
     const nodeSource = "import { readFileSync } from 'node:fs';\nreadFileSync('x');\n";
     expect(await platformImportErrors('web/src/storage/mega/adapter.ts', nodeSource)).toHaveLength(1);

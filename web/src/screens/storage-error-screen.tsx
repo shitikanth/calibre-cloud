@@ -15,7 +15,7 @@ export function describeStorageError(error: Error): ErrorCopy {
     return {
       title: 'Wrong folder',
       detail:
-        'This folder has no metadata.db at its root, or the link no longer works. Share the folder Calibre uses as its library and connect again.',
+        'This folder has no metadata.db at its root, or it can no longer be opened. Connect the folder Calibre uses as its library.',
       canRetry: false,
     };
   if (error instanceof QuotaExceeded)

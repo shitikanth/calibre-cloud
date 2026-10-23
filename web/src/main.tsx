@@ -2,7 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './app.tsx';
 import { createAppRouter } from './router.tsx';
-import { openStorage } from './storage/open-storage.ts';
+import { openStorage } from './storage/providers.ts';
 import './index.css';
 
 const root = document.getElementById('root');
