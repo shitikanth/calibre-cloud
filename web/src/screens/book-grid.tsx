@@ -17,7 +17,7 @@ export function BookGrid({ books }: { books: BookSummary[] }) {
 function BookTile({ book }: { book: BookSummary }) {
   return (
     <Link to="/books/$bookId" params={{ bookId: String(book.id) }} className="block">
-      <BookCover book={book} />
+      <BookCover book={book} size="thumbnail" />
       <h2 className="mt-2 line-clamp-2 text-sm font-medium break-words">{book.title}</h2>
       <p className="line-clamp-2 text-xs text-neutral-600">{book.authors.join(' & ')}</p>
     </Link>
