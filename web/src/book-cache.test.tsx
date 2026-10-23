@@ -1,9 +1,11 @@
-import { expect, test } from 'vitest';
+import { expect, onTestFinished, test, vi } from 'vitest';
+import { userEvent } from 'vitest/browser';
 import { Network } from './storage/adapter.ts';
+import { chooseFromMenu } from './test/app-bar.ts';
 import { buildCalibreLibrary } from './test/calibre-library.ts';
 import { fakeRenderers } from './test/fake-renderer.ts';
 import { FakeStorage } from './test/fake-storage.ts';
-import { renderApp, unmountApps } from './test/render-app.tsx';
+import { renderApp, testLink, unmountApps } from './test/render-app.tsx';
 
 const janeEyreEpub = '# Chapter 1\nReader, I married him.';
 const janeEyrePdf = 'Page one\nPage two';
@@ -115,5 +117,85 @@ test('a file the renderer cannot open is downloaded afresh next time', async () 
   const reloaded = await app.reload();
 
   await expect.element(reloaded.getByText('# Chapter 1')).toBeVisible();
+  expect(bookFileCalls(storage, janeEyreEpubPath)).toEqual(['stat', 'read']);
+});
+
+function silenceDownloads() {
+  const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+  onTestFinished(() => click.mockRestore());
+  return click;
+}
+
+test('Download reads from the library even when the reader has the file on the device', async () => {
+  const storage = await library();
+  const fake = fakeRenderers(['EPUB', 'PDF']);
+  const click = silenceDownloads();
+  const app = await renderApp({ storage, connected: true, path: '/books/1/read/EPUB', renderers: fake.renderers });
+  await expect.element(app.screen.getByText('# Chapter 1')).toBeVisible();
+  storage.calls.length = 0;
+
+  await userEvent.click(app.screen.getByRole('link', { name: 'Back to book' }));
+  await userEvent.click(app.screen.getByRole('button', { name: 'Download EPUB' }));
+
+  await expect.poll(() => click.mock.contexts).toHaveLength(1);
+  expect(bookFileCalls(storage, janeEyreEpubPath)).toEqual(['read']);
+});
+
+test('a downloaded file is not on the device for the reader', async () => {
+  const storage = await library();
+  const fake = fakeRenderers(['EPUB', 'PDF']);
+  const click = silenceDownloads();
+  const app = await renderApp({ storage, connected: true, path: '/books/1', renderers: fake.renderers });
+  await userEvent.click(app.screen.getByRole('button', { name: 'Download EPUB' }));
+  await expect.poll(() => click.mock.contexts).toHaveLength(1);
+
+  await userEvent.click(app.screen.getByRole('link', { name: 'Read EPUB' }));
+
+  await expect.element(app.screen.getByText('# Chapter 1')).toBeVisible();
+  expect(bookFileCalls(storage, janeEyreEpubPath)).toEqual(['read', 'stat', 'read']);
+});
+
+test('Refresh library drops the files of formats that left the library, and keeps the rest', async () => {
+  const storage = await library();
+  const fake = fakeRenderers(['EPUB', 'PDF']);
+  await openReader(storage, fake, { path: '/books/1/read/EPUB', firstLine: '# Chapter 1' });
+  const app = await openReader(storage, fake, { path: '/books/2/read/EPUB', firstLine: '# Chapter 1' });
+  await userEvent.click(app.screen.getByRole('link', { name: 'Back to book' }));
+  await expect.element(app.screen.getByRole('link', { name: 'Read EPUB' })).toBeVisible();
+
+  const withoutEpub = await buildCalibreLibrary([janeEyre, { ...wutheringHeights, formats: { PDF: wutheringPdf } }]);
+  storage.put('metadata.db', withoutEpub['metadata.db']!, '2');
+  await chooseFromMenu(app.screen, 'Refresh library');
+  await expect.element(app.screen.getByRole('link', { name: 'Read EPUB' })).not.toBeInTheDocument();
+  const restored = await buildCalibreLibrary([janeEyre, wutheringHeights]);
+  storage.put('metadata.db', restored['metadata.db']!, '3');
+  await chooseFromMenu(app.screen, 'Refresh library');
+  await expect.element(app.screen.getByRole('link', { name: 'Read EPUB' })).toBeVisible();
+  storage.calls.length = 0;
+
+  await userEvent.click(app.screen.getByRole('link', { name: 'Read EPUB' }));
+  await expect.element(app.screen.getByRole('heading', { level: 1, name: 'Wuthering Heights' })).toBeVisible();
+  await expect.element(app.screen.getByText('# Chapter 1')).toBeVisible();
+  await openReader(storage, fake, { path: '/books/1/read/EPUB', firstLine: '# Chapter 1' });
+
+  expect(bookFileCalls(storage, wutheringEpubPath)).toEqual(['stat', 'read']);
+  expect(bookFileCalls(storage, janeEyreEpubPath)).toEqual(['stat']);
+});
+
+test('Disconnect forgets the book files on this device', async () => {
+  const storage = await library();
+  const fake = fakeRenderers(['EPUB', 'PDF']);
+  const app = await renderApp({ storage, connected: true, path: '/books/1/read/EPUB', renderers: fake.renderers });
+  await expect.element(app.screen.getByText('# Chapter 1')).toBeVisible();
+  await userEvent.click(app.screen.getByRole('link', { name: 'Back to book' }));
+
+  await chooseFromMenu(app.screen, 'Disconnect');
+  await expect.element(app.screen.getByRole('textbox', { name: 'MEGA folder link' })).toBeVisible();
+  storage.calls.length = 0;
+  await userEvent.fill(app.screen.getByRole('textbox', { name: 'MEGA folder link' }), testLink);
+  await userEvent.click(app.screen.getByRole('button', { name: 'Connect' }));
+  await userEvent.click(app.screen.getByRole('link', { name: 'Read EPUB' }));
+
+  await expect.element(app.screen.getByText('# Chapter 1')).toBeVisible();
   expect(bookFileCalls(storage, janeEyreEpubPath)).toEqual(['stat', 'read']);
 });
