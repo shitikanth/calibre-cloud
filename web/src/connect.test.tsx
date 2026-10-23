@@ -18,11 +18,13 @@ afterEach(async () => {
   await page.viewport(414, 896);
 });
 
-function connectCard(screen: Awaited<ReturnType<typeof renderApp>>['screen']) {
+type Screen = Awaited<ReturnType<typeof renderApp>>['screen'];
+
+function connectCard(screen: Screen) {
   return screen.getByRole('region', { name: 'calibre-cloud' });
 }
 
-async function connect(screen: Awaited<ReturnType<typeof renderApp>>['screen'], input: string) {
+async function connect(screen: Screen, input: string) {
   await userEvent.fill(screen.getByRole('textbox', { name: 'MEGA folder link' }), input);
   await userEvent.click(screen.getByRole('button', { name: 'Connect' }));
 }
