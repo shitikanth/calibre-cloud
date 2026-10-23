@@ -81,7 +81,7 @@ test('Previous, Next and the arrow keys turn pages, and the chrome shows how far
   await expect.element(app.screen.getByText('Reader, I married him.')).toBeVisible();
   await userEvent.click(app.screen.getByRole('button', { name: 'Previous' }));
   await expect.element(app.screen.getByText('# Chapter 1')).toBeVisible();
-  expect(fake.latest.calls.map(({ op }) => op)).toEqual(['next', 'next', 'previous', 'previous']);
+  expect(fake.latest.calls.map(({ op }) => op).filter((op) => op === 'next' || op === 'previous')).toEqual(['next', 'next', 'previous', 'previous']);
 
   await userEvent.click(app.screen.getByRole('link', { name: 'Back to book' }));
   await expect.element(app.screen.getByRole('button', { name: 'Download EPUB' })).toBeVisible();

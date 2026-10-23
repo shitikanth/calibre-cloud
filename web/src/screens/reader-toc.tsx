@@ -2,8 +2,8 @@ import { useRef, useState } from 'react';
 import type { BookRenderer, TocEntry } from '../reader/renderer.ts';
 import { useDismiss } from './use-dismiss.ts';
 
-export const toolButtonClass = 'rounded p-2 hover:bg-neutral-100';
-export const panelClass = 'absolute right-0 z-20 mt-1 max-h-[70dvh] w-72 overflow-y-auto rounded border border-neutral-300 bg-white shadow-lg';
+export const toolButtonClass = 'rounded p-2 hover:bg-(--reader-hover)';
+export const panelClass = 'absolute right-0 z-20 mt-1 max-h-[70dvh] w-72 overflow-y-auto rounded border border-(--reader-line) bg-(--reader-bg) text-(--reader-fg) shadow-lg';
 
 export function TocTool({ renderer }: { renderer: BookRenderer }) {
   const [open, setOpen] = useState(false);
@@ -31,7 +31,7 @@ export function TocTool({ renderer }: { renderer: BookRenderer }) {
       {open && (
         <nav aria-label="Table of contents" className={`${panelClass} py-1`}>
           {renderer.toc.length === 0 ? (
-            <p className="px-4 py-2 text-sm text-neutral-600">No table of contents</p>
+            <p className="px-4 py-2 text-sm text-(--reader-muted)">No table of contents</p>
           ) : (
             <TocList entries={renderer.toc} jump={jump} />
           )}
@@ -48,7 +48,7 @@ function TocList({ entries, jump }: { entries: TocEntry[]; jump: (entry: TocEntr
         <li key={`${entry.location}-${index}`}>
           <button
             type="button"
-            className="block w-full px-4 py-2 text-left text-sm hover:bg-neutral-100"
+            className="block w-full px-4 py-2 text-left text-sm hover:bg-(--reader-hover)"
             onClick={() => jump(entry)}
           >
             {entry.label}
