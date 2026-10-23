@@ -81,6 +81,31 @@ test('search matches tag names', async () => {
   await expectTitles(app.screen, ['Jane Eyre', 'Dracula']);
 });
 
+test('the search term lives in the URL, so a reload keeps the results', async () => {
+  const app = await renderApp({ storage: await bronteLibrary(), connected: true });
+
+  await search(app.screen, 'brontë');
+  await expectTitles(app.screen, ['Jane Eyre', 'Wuthering Heights']);
+  expect(app.url).toBe('/?q=bront%C3%AB');
+
+  const reloaded = await app.reload();
+  await expect.element(reloaded.getByRole('searchbox', { name: 'Search books' })).toHaveValue('brontë');
+  await expectTitles(reloaded, ['Jane Eyre', 'Wuthering Heights']);
+});
+
+test('a link with a search term opens on its results', async () => {
+  const storage = new FakeStorage(
+    await buildCalibreLibrary([
+      { title: '1984', authors: ['George Orwell'] },
+      { title: 'Animal Farm', authors: ['George Orwell'] },
+    ]),
+  );
+  const app = await renderApp({ storage, connected: true, path: '/?q=1984' });
+
+  await expect.element(app.screen.getByRole('searchbox', { name: 'Search books' })).toHaveValue('1984');
+  await expectTitles(app.screen, ['1984']);
+});
+
 test('search ignores case and accents on both sides', async () => {
   const storage = new FakeStorage(
     await buildCalibreLibrary([
