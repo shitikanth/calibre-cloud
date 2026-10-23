@@ -80,3 +80,24 @@ test('search matches tag names', async () => {
 
   await expectTitles(app.screen, ['Jane Eyre', 'Dracula']);
 });
+
+test('search ignores case and accents on both sides', async () => {
+  const storage = new FakeStorage(
+    await buildCalibreLibrary([
+      { title: 'Jane Eyre', authors: ['Charlotte Brontë'] },
+      { title: 'Les Misérables', authors: ['Victor Hugo'] },
+      { title: 'Emma', authors: ['Jane Austen'] },
+      { title: 'Nada', authors: ['Carmen Laforet'], tags: ['Ficción española'] },
+    ]),
+  );
+  const app = await renderApp({ storage, connected: true });
+
+  await search(app.screen, 'bronte');
+  await expectTitles(app.screen, ['Jane Eyre']);
+
+  await search(app.screen, 'MISÉRABLES');
+  await expectTitles(app.screen, ['Les Misérables']);
+
+  await search(app.screen, 'ÉSPANOLA');
+  await expectTitles(app.screen, ['Nada']);
+});

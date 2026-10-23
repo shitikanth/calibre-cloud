@@ -1,4 +1,5 @@
 import type { BookListQuery, BookSummary } from './protocol.ts';
+import { fold } from './fold.ts';
 import type { Database } from './sqlite.ts';
 
 const LIST_BOOKS = `
@@ -8,13 +9,13 @@ SELECT b.id, b.title, b.path, b.has_cover, b.last_modified,
          WHERE bal.book = b.id) AS authors
   FROM books b
  WHERE $pattern IS NULL
-    OR b.title LIKE $pattern ESCAPE '\\'
+    OR fold(b.title) LIKE $pattern ESCAPE '\\'
     OR EXISTS (SELECT 1 FROM books_authors_link bal JOIN authors a ON a.id = bal.author
-                WHERE bal.book = b.id AND a.name LIKE $pattern ESCAPE '\\')
+                WHERE bal.book = b.id AND fold(a.name) LIKE $pattern ESCAPE '\\')
     OR EXISTS (SELECT 1 FROM books_series_link bsl JOIN series s ON s.id = bsl.series
-                WHERE bsl.book = b.id AND s.name LIKE $pattern ESCAPE '\\')
+                WHERE bsl.book = b.id AND fold(s.name) LIKE $pattern ESCAPE '\\')
     OR EXISTS (SELECT 1 FROM books_tags_link btl JOIN tags t ON t.id = btl.tag
-                WHERE btl.book = b.id AND t.name LIKE $pattern ESCAPE '\\')
+                WHERE btl.book = b.id AND fold(t.name) LIKE $pattern ESCAPE '\\')
  ORDER BY b.timestamp DESC, b.id DESC
  LIMIT $limit OFFSET $offset`;
 
@@ -33,5 +34,5 @@ export function listBooks(db: Database, { offset, limit, search }: BookListQuery
 function likePattern(search: string | undefined): string | null {
   const term = search?.trim();
   if (!term) return null;
-  return `%${term.replace(/[\\%_]/g, '\\$&')}%`;
+  return `%${fold(term).replace(/[\\%_]/g, '\\$&')}%`;
 }
