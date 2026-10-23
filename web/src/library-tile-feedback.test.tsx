@@ -83,7 +83,7 @@ test('the hover style only applies on devices that can hover, so a tap leaves no
   const hoverRules = [...document.styleSheets]
     .flatMap((sheet) => flattenRules(sheet.cssRules))
     .filter((rule): rule is CSSStyleRule => rule instanceof CSSStyleRule && rule.selectorText.includes(':hover'))
-    .filter((rule) => janeEyre.element().matches(rule.selectorText.replaceAll(':hover', '')));
+    .filter((rule) => janeEyre.element().matches(rule.selectorText.replaceAll(/(?<!\\):hover/g, '')));
 
   expect(hoverRules.length).toBeGreaterThan(0);
   for (const rule of hoverRules) expect(enclosingMediaQueries(rule)).toContain('(hover: hover)');
