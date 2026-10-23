@@ -29,7 +29,7 @@ export function LibraryScreen() {
   );
 }
 
-function LoadingLibrary({ progress }: { progress: DownloadProgress | undefined }) {
+export function LoadingLibrary({ progress }: { progress: DownloadProgress | undefined }) {
   const percent = progress && progress.total > 0 ? Math.floor((progress.loaded / progress.total) * 100) : undefined;
   return (
     <section>

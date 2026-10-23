@@ -2,7 +2,7 @@ import { createMemoryHistory } from '@tanstack/react-router';
 import { render } from 'vitest-browser-react';
 import { App } from '../app.tsx';
 import { saveConnection, type Connection } from '../connection/connection.ts';
-import { createAppRouter } from '../router.tsx';
+import { createAppRouter, type AppRouter } from '../router.tsx';
 import type { StorageAdapter } from '../storage/adapter.ts';
 import '../index.css';
 
@@ -17,23 +17,23 @@ export async function renderApp({ storage, path = '/', connected = false }: Rend
     opened.push(connection);
     return storage;
   };
-  const mount = () =>
-    render(
-      <App
-        router={createAppRouter({ history: createMemoryHistory({ initialEntries: [path] }) })}
-        openStorage={openStorage}
-      />,
-    );
+  let router: AppRouter;
+  const mount = (at: string) => {
+    router = createAppRouter({ history: createMemoryHistory({ initialEntries: [at] }) });
+    return render(<App router={router} openStorage={openStorage} />);
+  };
 
-  let screen = await mount();
+  let screen = await mount(path);
   return {
     get screen() {
       return screen;
     },
     opened,
+    location: () => router.state.location.href,
     async reload() {
+      const at = router.state.location.href;
       await screen.unmount();
-      screen = await mount();
+      screen = await mount(at);
       return screen;
     },
   };

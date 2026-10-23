@@ -6,6 +6,7 @@ import {
   type RouterHistory,
 } from '@tanstack/react-router';
 import { useConnection } from './connection/context.tsx';
+import { BookScreen } from './screens/book-screen.tsx';
 import { ConnectScreen } from './screens/connect-screen.tsx';
 import { LibraryScreen } from './screens/library-screen.tsx';
 
@@ -29,7 +30,19 @@ function HomeScreen() {
   return connection ? <LibraryScreen /> : <ConnectScreen />;
 }
 
-const routeTree = rootRoute.addChildren([homeRoute]);
+const bookRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/books/$bookId',
+  component: BookRouteScreen,
+});
+
+function BookRouteScreen() {
+  const { connection } = useConnection();
+  const { bookId } = bookRoute.useParams();
+  return connection ? <BookScreen bookId={bookId} /> : <ConnectScreen />;
+}
+
+const routeTree = rootRoute.addChildren([homeRoute, bookRoute]);
 
 export function createAppRouter(options: { history?: RouterHistory } = {}) {
   return createRouter({ routeTree, ...options });

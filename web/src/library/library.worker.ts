@@ -1,4 +1,5 @@
 import type { LibraryOperations, LibraryRequest, LibraryResponse, Operation } from './protocol.ts';
+import { getBook } from './book-query.ts';
 import { listBooks } from './books-query.ts';
 import { loadSqlite, type Database } from './sqlite.ts';
 
@@ -40,6 +41,9 @@ const handlers: Handlers = {
   },
   listBooks(page) {
     return listBooks(requireDb(), page);
+  },
+  getBook({ bookId }) {
+    return getBook(requireDb(), bookId);
   },
 };
 

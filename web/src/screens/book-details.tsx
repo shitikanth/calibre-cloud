@@ -1,0 +1,27 @@
+import type { BookDetail } from '../library/protocol.ts';
+import { useDetailCover } from '../library/use-book.ts';
+import { BlobImage, CoverPlaceholder } from './book-cover.tsx';
+
+export function BookDetails({ book }: { book: BookDetail }) {
+  return (
+    <article className="mt-4 grid gap-6 sm:grid-cols-[minmax(0,16rem)_1fr]">
+      <div className="w-40 sm:w-full">
+        <DetailCover book={book} />
+      </div>
+      <div className="min-w-0">
+        <h1 className="text-3xl font-semibold break-words">{book.title}</h1>
+        <p className="mt-1 text-lg text-neutral-700">{book.authors.join(' & ')}</p>
+      </div>
+    </article>
+  );
+}
+
+function DetailCover({ book }: { book: BookDetail }) {
+  const cover = useDetailCover(book);
+  if (!book.cover || cover.isError) return <CoverPlaceholder title={book.title} />;
+  return (
+    <div className="aspect-2/3 overflow-hidden rounded bg-neutral-200">
+      {cover.data && <BlobImage blob={cover.data} alt={`Cover of ${book.title}`} />}
+    </div>
+  );
+}

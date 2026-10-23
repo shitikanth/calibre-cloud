@@ -5,10 +5,23 @@ export type BookSummary = {
   cover: { path: string; version: string } | null;
 };
 
+export type BookFormat = { format: string; size: number; path: string };
+
+export type BookDetail = BookSummary & {
+  series: { name: string; index: number } | null;
+  tags: string[];
+  publisher: string | null;
+  languages: string[];
+  published: string | null;
+  description: string | null;
+  formats: BookFormat[];
+};
+
 export type LibraryOperations = {
   open: { args: { bytes: ArrayBuffer }; result: void };
   countBooks: { args: Record<string, never>; result: number };
   listBooks: { args: { offset: number; limit: number }; result: BookSummary[] };
+  getBook: { args: { bookId: number }; result: BookDetail | null };
 };
 
 export type Operation = keyof LibraryOperations;
