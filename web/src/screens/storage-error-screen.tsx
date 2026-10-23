@@ -1,9 +1,16 @@
+import { LibraryInUse } from '../library/errors.ts';
 import { useDisconnect } from '../library/use-disconnect.ts';
 import { Aborted, Network, NotFound, QuotaExceeded, ReconnectRequired } from '../storage/adapter.ts';
 
 type ErrorCopy = { title: string; detail: string; canRetry: boolean };
 
 export function describeStorageError(error: Error): ErrorCopy {
+  if (error instanceof LibraryInUse)
+    return {
+      title: 'Library is open in another tab',
+      detail: 'This browser can show the library in one tab at a time. Close the other tab, then try again.',
+      canRetry: true,
+    };
   if (error instanceof NotFound)
     return {
       title: 'Wrong folder',

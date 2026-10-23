@@ -43,6 +43,24 @@ async function withNewBook(storage: FakeStorage, version: string) {
   storage.put('metadata.db', updated!, version);
 }
 
+test('a second tab says the library is open in another tab', async () => {
+  const storage = await libraryOf(brontës);
+  const first = await renderApp({ storage, connected: true });
+  await expect.element(first.screen.getByText('3 books')).toBeVisible();
+
+  const second = await renderApp({ storage, connected: true });
+
+  await expect
+    .element(second.screen.getByRole('heading', { name: 'Library is open in another tab' }))
+    .toBeVisible();
+  await expect.element(first.screen.getByText('3 books')).toBeVisible();
+
+  await first.screen.unmount();
+  await userEvent.click(second.screen.getByRole('button', { name: 'Try again' }));
+
+  await expect.element(second.screen.getByText('3 books')).toBeVisible();
+});
+
 test('a changed library downloads in the background, swaps in, and says so', async () => {
   const storage = await libraryOf(brontës);
   const app = await renderApp({ storage, connected: true });
