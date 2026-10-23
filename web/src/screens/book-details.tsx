@@ -3,6 +3,7 @@ import { useDetailCover } from '../library/use-book.ts';
 import { BlobImage, CoverPlaceholder } from './book-cover.tsx';
 import { BookDescription } from './book-description.tsx';
 import { BookFields } from './book-fields.tsx';
+import { FormatList } from './format-list.tsx';
 
 export function BookDetails({ book }: { book: BookDetail }) {
   return (
@@ -14,6 +15,7 @@ export function BookDetails({ book }: { book: BookDetail }) {
         <h1 className="text-3xl font-semibold break-words">{book.title}</h1>
         <p className="mt-1 text-lg text-neutral-700">{book.authors.join(' & ')}</p>
         <BookFields book={book} />
+        <FormatList book={book} />
         {book.description && <BookDescription html={book.description} />}
       </div>
     </article>

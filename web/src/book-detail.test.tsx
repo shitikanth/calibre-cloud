@@ -1,8 +1,12 @@
 import { userEvent } from 'vitest/browser';
-import { expect, test } from 'vitest';
+import { afterEach, expect, test, vi } from 'vitest';
 import { buildCalibreLibrary } from './test/calibre-library.ts';
 import { FakeStorage } from './test/fake-storage.ts';
 import { renderApp } from './test/render-app.tsx';
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 async function janeEyreLibrary() {
   return new FakeStorage(
@@ -90,6 +94,44 @@ test('the description keeps its formatting but nothing in it runs', async () => 
   const html = shown.element().innerHTML;
   expect(html).not.toMatch(/<script|<img|onerror|onclick|style=|javascript:/i);
   expect((window as { ranScript?: number }).ranScript).toBeUndefined();
+});
+
+function captureDownloads() {
+  const createObjectURL = vi.spyOn(URL, 'createObjectURL');
+  const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+  return () =>
+    (click.mock.contexts as HTMLAnchorElement[]).map((anchor) => {
+      const index = createObjectURL.mock.results.findIndex(({ value }) => value === anchor.href);
+      return { filename: anchor.download, blob: createObjectURL.mock.calls[index]?.[0] as Blob };
+    });
+}
+
+test('each format is listed with its size and downloads straight to the device', async () => {
+  const storage = new FakeStorage(
+    await buildCalibreLibrary([
+      {
+        title: 'Jane Eyre',
+        authors: ['Charlotte Brontë', 'Emily Brontë'],
+        formats: { EPUB: 'fake epub bytes', PDF: 'p'.repeat(2048) },
+      },
+    ]),
+  );
+  const downloads = captureDownloads();
+  const app = await renderApp({ storage, connected: true, path: '/books/1' });
+  const formats = app.screen.getByRole('list', { name: 'Formats' }).getByRole('listitem');
+
+  await expect.element(formats.first()).toBeVisible();
+  expect(formats.elements().map((format) => format.textContent)).toEqual([
+    'EPUB15 BDownload EPUB',
+    'PDF2.0 KBDownload PDF',
+  ]);
+
+  await userEvent.click(app.screen.getByRole('button', { name: 'Download EPUB' }));
+
+  await expect.poll(() => downloads()).toHaveLength(1);
+  const [saved] = downloads();
+  expect(saved?.filename).toBe('Jane Eyre - Charlotte Brontë & Emily Brontë.epub');
+  expect(await saved?.blob.text()).toBe('fake epub bytes');
 });
 
 test('fields the book doesn’t have are left out', async () => {
