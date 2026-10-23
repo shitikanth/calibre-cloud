@@ -18,7 +18,7 @@ export function LibraryScreen() {
 
   return (
     <section>
-      {!search && <ContinueReading />}
+      {!search.trim() && <ContinueReading />}
       {books.isSuccess &&
         (books.data.length === 0 && search.trim() ? (
           <p className="text-neutral-600">No books match “{search.trim()}”.</p>

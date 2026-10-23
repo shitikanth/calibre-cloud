@@ -189,8 +189,9 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
     let cancelled = false;
     let opened: BookRenderer | undefined;
     const unsubscribe: (() => void)[] = [];
-    const position = trackPosition(book.id, format.format);
-    const saved = loadPosition(book.id, format.format);
+    const key = { bookId: book.id, format: format.format };
+    const position = trackPosition(key);
+    const saved = loadPosition(key);
     void (async () => {
       try {
         const created = await factory();

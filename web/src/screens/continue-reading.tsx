@@ -4,6 +4,7 @@ import type { BookSummary } from '../library/protocol.ts';
 import { useBooksById } from '../library/use-book.ts';
 import { listPositions, subscribePositions, type PositionEntry } from '../reader/positions.ts';
 import { BookCover } from './book-cover.tsx';
+import { tileLinkClass } from './book-grid.tsx';
 
 const ROW_LENGTH = 6;
 
@@ -34,7 +35,7 @@ function ContinueCard({ entry, book }: { entry: PositionEntry; book: BookSummary
     <Link
       to="/books/$bookId/read/$format"
       params={{ bookId: String(book.id), format: entry.format }}
-      className="block rounded transition-transform hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 motion-reduce:transition-none"
+      className={tileLinkClass}
     >
       <BookCover book={book} loading="lazy" />
       <h3 className="mt-2 line-clamp-2 text-sm font-medium break-words">{book.title}</h3>

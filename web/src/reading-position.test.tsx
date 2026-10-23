@@ -92,14 +92,14 @@ test('a burst of page turns is written once at once and once more about a second
   const positionWrites = () => setItem.mock.calls.filter(([key]) => key === 'calibre-cloud:positions').length;
   const { fake, app } = await openReader(await janeEyreLibrary(), '/books/1/read/EPUB');
   await expect.poll(positionWrites).toBe(1);
-
-  for (let page = 0; page < 3; page += 1) await userEvent.click(app.screen.getByRole('button', { name: 'Next' }));
-
-  await expect.element(app.screen.getByText('line 4')).toBeVisible();
-  expect(positionWrites()).toBeLessThan(4);
-  await expect.poll(positionWrites).toBe(2);
   await new Promise((resolve) => setTimeout(resolve, 1_200));
+
+  for (const location of ['2', '3', '4']) fake.latest.emitRelocation({ location, fraction: (Number(location) - 1) / 4 });
+
   expect(positionWrites()).toBe(2);
+  await expect.poll(positionWrites).toBe(3);
+  await new Promise((resolve) => setTimeout(resolve, 1_200));
+  expect(positionWrites()).toBe(3);
 
   const reloaded = await app.reload();
 
