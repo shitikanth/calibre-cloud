@@ -5,13 +5,20 @@ import { providers } from '../storage/providers.ts';
 
 export function ConnectScreen() {
   return (
-    <section>
-      <h1 className="text-3xl font-semibold">calibre-cloud</h1>
-      <p className="mt-2 text-neutral-600">Browse your Calibre library straight from the cloud storage it lives in.</p>
-      {providers.map((provider) => (
-        <ConnectForm key={provider.id} provider={provider} />
-      ))}
-    </section>
+    <div className="flex justify-center sm:py-12">
+      <section
+        aria-labelledby="connect-title"
+        className="w-full max-w-md rounded-lg border border-neutral-200 bg-white p-6 shadow-sm sm:p-8"
+      >
+        <h1 id="connect-title" className="text-3xl font-semibold">
+          calibre-cloud
+        </h1>
+        <p className="mt-2 text-neutral-600">Browse your Calibre library straight from the cloud storage it lives in.</p>
+        {providers.map((provider) => (
+          <ConnectForm key={provider.id} provider={provider} />
+        ))}
+      </section>
+    </div>
   );
 }
 
