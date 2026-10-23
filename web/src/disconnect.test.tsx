@@ -1,5 +1,6 @@
 import { expect, onTestFinished, test, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
+import { chooseFromMenu } from './test/app-bar.ts';
 import { buildCalibreLibrary } from './test/calibre-library.ts';
 import { FakeStorage } from './test/fake-storage.ts';
 import { renderApp, testLink } from './test/render-app.tsx';
@@ -16,7 +17,7 @@ async function connect(screen: Screen) {
 }
 
 async function expectLibraryShown(screen: Screen) {
-  await expect.element(screen.getByText('1 book')).toBeVisible();
+  await expect.element(screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
   await expect
     .element(screen.getByRole('img', { name: 'Cover of Jane Eyre' }))
     .toHaveAttribute('src', expect.stringMatching(/^blob:/));
@@ -38,7 +39,7 @@ test('Disconnect forgets the link, the library and the covers on this device', a
   const app = await renderApp({ storage, connected: true });
   await expectLibraryShown(app.screen);
 
-  await userEvent.click(app.screen.getByRole('button', { name: 'Disconnect' }));
+  await chooseFromMenu(app.screen, 'Disconnect');
 
   await expect.element(app.screen.getByRole('textbox', { name: 'MEGA folder link' })).toBeVisible();
   const reloaded = await app.reload();
@@ -59,11 +60,11 @@ test('a Disconnect that cannot forget the library says so and stays connected', 
   const app = await renderApp({ storage: await libraryWithCover(), connected: true });
   await expectLibraryShown(app.screen);
 
-  await userEvent.click(app.screen.getByRole('button', { name: 'Disconnect' }));
+  await chooseFromMenu(app.screen, 'Disconnect');
 
   await expect.element(app.screen.getByRole('alert')).toMatchTextContent(/Couldn’t disconnect.*Storage is busy/);
-  await expect.element(app.screen.getByText('1 book')).toBeVisible();
+  await expect.element(app.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
   forget.mockRestore();
-  await userEvent.click(app.screen.getByRole('button', { name: 'Disconnect' }));
+  await chooseFromMenu(app.screen, 'Disconnect');
   await expect.element(app.screen.getByRole('textbox', { name: 'MEGA folder link' })).toBeVisible();
 });

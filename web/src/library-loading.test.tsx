@@ -19,7 +19,7 @@ test('the first download of the library shows its progress', async () => {
   await expect.element(app.screen.getByText('50%')).toBeVisible();
 
   download.release();
-  await expect.element(app.screen.getByText('1 book')).toBeVisible();
+  await expect.element(app.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
   expect(app.screen.getByRole('progressbar').query()).toBeNull();
 });
 
@@ -43,7 +43,7 @@ test('a network failure explains itself and the library loads on retry', async (
   storage.heal('metadata.db');
   await userEvent.click(app.screen.getByRole('button', { name: 'Try again' }));
 
-  await expect.element(app.screen.getByText('1 book')).toBeVisible();
+  await expect.element(app.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
 });
 
 test('a file that is not a SQLite database shows that the library could not be opened', async () => {

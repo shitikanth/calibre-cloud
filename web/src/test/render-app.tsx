@@ -40,6 +40,9 @@ export async function renderApp({ storage, path = '/', connected = false }: Rend
     get url() {
       return history.location.href;
     },
+    back() {
+      history.back();
+    },
     async reload({ whileClosed }: { whileClosed?: () => Promise<void> } = {}) {
       await screen.unmount();
       mounted.delete(screen);

@@ -4,7 +4,7 @@ import { BookCover } from './book-cover.tsx';
 
 export function BookGrid({ books }: { books: BookSummary[] }) {
   return (
-    <ul aria-label="Books" className="mt-6 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+    <ul aria-label="Books" className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
       {books.map((book) => (
         <li key={book.id} className="min-w-0">
           <BookTile book={book} />

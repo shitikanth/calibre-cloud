@@ -21,3 +21,5 @@ export function useDisconnect() {
     },
   });
 }
+
+export type Disconnect = ReturnType<typeof useDisconnect>;
