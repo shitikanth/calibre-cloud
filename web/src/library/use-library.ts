@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useConnection } from '../connection/context.tsx';
 import { useLibraryIndex } from './context.tsx';
@@ -24,6 +24,22 @@ export function useOpenLibrary() {
     },
   });
   return { ...query, progress };
+}
+
+const PAGE_SIZE = 60;
+
+export function useBooks(enabled: boolean) {
+  const index = useLibraryIndex();
+  const { connection } = useConnection();
+  return useInfiniteQuery({
+    queryKey: ['library', connection, 'books'],
+    enabled,
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) => index.listBooks({ offset: pageParam, limit: PAGE_SIZE }),
+    getNextPageParam: (lastPage, _pages, lastOffset) =>
+      lastPage.length < PAGE_SIZE ? undefined : lastOffset + PAGE_SIZE,
+    select: (data) => data.pages.flat(),
+  });
 }
 
 export function useBookCount(enabled: boolean) {

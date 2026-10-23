@@ -4,6 +4,7 @@ import { App } from '../app.tsx';
 import { saveConnection, type Connection } from '../connection/connection.ts';
 import { createAppRouter } from '../router.tsx';
 import type { StorageAdapter } from '../storage/adapter.ts';
+import '../index.css';
 
 export const testLink = 'https://mega.nz/folder/TestHandle#TestKey_123';
 
