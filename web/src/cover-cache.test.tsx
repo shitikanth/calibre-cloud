@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest';
+import { userEvent } from 'vitest/browser';
 import { buildCalibreLibrary, type BookSpec } from './test/calibre-library.ts';
 import { FakeStorage } from './test/fake-storage.ts';
 import { renderApp } from './test/render-app.tsx';
@@ -36,7 +37,20 @@ test('covers seen before come from the device on the next visit', async () => {
   expect(coverReads(storage)).toEqual([]);
 });
 
-test('the full-size cover on a detail page is fetched on every visit', async () => {
+test('a detail page whose cover the grid already cached reads nothing from storage', async () => {
+  const storage = new FakeStorage(await buildCalibreLibrary(books));
+  const app = await renderApp({ storage, connected: true });
+  expect(await coverText(app.screen, 'Jane Eyre')).toBe('cover of Jane Eyre');
+  storage.calls.length = 0;
+
+  await userEvent.click(app.screen.getByRole('link', { name: /Jane Eyre/ }));
+
+  await expect.element(app.screen.getByRole('heading', { level: 1, name: 'Jane Eyre' })).toBeVisible();
+  expect(await coverText(app.screen, 'Jane Eyre')).toBe('cover of Jane Eyre');
+  expect(coverReads(storage)).toEqual([]);
+});
+
+test('a detail page downloads an uncached cover once and keeps it for the next visit', async () => {
   const storage = new FakeStorage(await buildCalibreLibrary(books));
   const app = await renderApp({ storage, connected: true, path: '/books/1' });
   expect(await coverText(app.screen, 'Jane Eyre')).toBe('cover of Jane Eyre');
@@ -44,7 +58,7 @@ test('the full-size cover on a detail page is fetched on every visit', async () 
   const reloaded = await app.reload();
 
   expect(await coverText(reloaded, 'Jane Eyre')).toBe('cover of Jane Eyre');
-  expect(coverReads(storage)).toEqual(['Charlotte Bronte/Jane Eyre (1)/cover.jpg', 'Charlotte Bronte/Jane Eyre (1)/cover.jpg']);
+  expect(coverReads(storage)).toEqual(['Charlotte Bronte/Jane Eyre (1)/cover.jpg']);
 });
 
 test('a cover changed in Calibre shows the new image after the library updates', async () => {

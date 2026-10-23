@@ -14,11 +14,15 @@ export type BookSummaryRow = {
   authors: string;
 };
 
+function authorName(stored: string): string {
+  return stored.replaceAll('|', ',');
+}
+
 export function toBookSummary(row: BookSummaryRow): BookSummary {
   return {
     id: row.id,
     title: row.title,
-    authors: JSON.parse(row.authors) as string[],
+    authors: (JSON.parse(row.authors) as string[]).map(authorName),
     cover: row.has_cover ? { path: `${row.path}/cover.jpg`, version: row.last_modified } : null,
   };
 }

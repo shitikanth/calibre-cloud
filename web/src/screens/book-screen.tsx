@@ -1,4 +1,3 @@
-import { Link } from '@tanstack/react-router';
 import { useLibrarySession } from '../library/session.tsx';
 import { useBook } from '../library/use-book.ts';
 import { BookDetails } from './book-details.tsx';
@@ -21,28 +20,14 @@ function OpenBook({ id }: { id: number }) {
   if (book.data === null) return <BookNotFound />;
   if (!book.data) return null;
 
-  return (
-    <>
-      <BackToLibrary />
-      <BookDetails book={book.data} />
-    </>
-  );
+  return <BookDetails book={book.data} />;
 }
 
 function BookNotFound() {
   return (
     <section>
-      <BackToLibrary />
-      <h1 className="mt-4 text-xl font-semibold">Book not found</h1>
+      <h1 className="text-xl font-semibold">Book not found</h1>
       <p className="mt-2 text-neutral-700">This book isn’t in your library any more.</p>
     </section>
-  );
-}
-
-function BackToLibrary() {
-  return (
-    <Link to="/" className="text-sm text-neutral-600 underline">
-      ← Library
-    </Link>
   );
 }

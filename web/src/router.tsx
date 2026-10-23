@@ -6,18 +6,35 @@ import {
   type RouterHistory,
 } from '@tanstack/react-router';
 import { useConnection } from './connection/context.tsx';
+import { useLibrarySession } from './library/session.tsx';
+import { AppBar } from './screens/app-bar.tsx';
 import { BookScreen } from './screens/book-screen.tsx';
 import { ConnectScreen } from './screens/connect-screen.tsx';
+import { LibraryNotices } from './screens/library-notices.tsx';
 import { LibraryScreen } from './screens/library-screen.tsx';
 
 const rootRoute = createRootRoute({
-  component: () => (
-    <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-      <Outlet />
-    </main>
-  ),
+  component: RootLayout,
   notFoundComponent: () => <p>Page not found.</p>,
 });
+
+function RootLayout() {
+  const { connection } = useConnection();
+  return (
+    <>
+      {connection && <AppBar />}
+      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+        {connection && <SessionNotices />}
+        <Outlet />
+      </main>
+    </>
+  );
+}
+
+function SessionNotices() {
+  const { update } = useLibrarySession();
+  return <LibraryNotices update={update} />;
+}
 
 type LibrarySearch = { q?: string };
 

@@ -43,13 +43,3 @@ export function useBooks(enabled: boolean, search: string) {
     select: (data) => data.pages.flat(),
   });
 }
-
-export function useBookCount(enabled: boolean) {
-  const index = useLibraryIndex();
-  const { connection } = useConnection();
-  return useQuery({
-    queryKey: ['library', connection, 'count'],
-    enabled,
-    queryFn: () => index.countBooks(),
-  });
-}
