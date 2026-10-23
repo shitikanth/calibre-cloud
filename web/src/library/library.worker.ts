@@ -52,14 +52,18 @@ function requireDb(): Database {
   return db;
 }
 
-self.onmessage = async ({ data: request }: MessageEvent<LibraryRequest>) => {
-  let response: LibraryResponse;
+async function handle(request: LibraryRequest): Promise<LibraryResponse> {
   try {
     const handler = handlers[request.op] as (args: LibraryRequest) => unknown;
-    response = { id: request.id, ok: true, result: await handler(request) };
+    return { id: request.id, ok: true, result: await handler(request) };
   } catch (error) {
     const { name, message } = error instanceof Error ? error : new Error(String(error));
-    response = { id: request.id, ok: false, error: { name, message } };
+    return { id: request.id, ok: false, error: { name, message } };
   }
-  self.postMessage(response);
+}
+
+let queue = Promise.resolve();
+
+self.onmessage = ({ data: request }: MessageEvent<LibraryRequest>) => {
+  queue = queue.then(async () => self.postMessage(await handle(request)));
 };

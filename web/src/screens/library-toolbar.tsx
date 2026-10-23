@@ -1,8 +1,10 @@
+import { useDisconnect } from '../library/use-disconnect.ts';
 import type { useLibraryUpdate } from '../library/use-library-update.ts';
 
 type LibraryUpdate = ReturnType<typeof useLibraryUpdate>;
 
 export function LibraryToolbar({ update }: { update: LibraryUpdate }) {
+  const disconnect = useDisconnect();
   return (
     <div className="mt-3 flex flex-wrap gap-2 text-sm">
       <button
@@ -12,6 +14,9 @@ export function LibraryToolbar({ update }: { update: LibraryUpdate }) {
         onClick={() => void update.refetch()}
       >
         {update.isFetching ? 'Checking for changes…' : 'Refresh library'}
+      </button>
+      <button type="button" className="rounded border border-neutral-400 px-3 py-1" onClick={disconnect}>
+        Disconnect
       </button>
     </div>
   );

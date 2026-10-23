@@ -1,4 +1,4 @@
-import { useConnection } from '../connection/context.tsx';
+import { useDisconnect } from '../library/use-disconnect.ts';
 import { Aborted, Network, NotFound, QuotaExceeded, ReconnectRequired } from '../storage/adapter.ts';
 
 type ErrorCopy = { title: string; detail: string; canRetry: boolean };
@@ -30,7 +30,7 @@ export function describeStorageError(error: Error): ErrorCopy {
 }
 
 export function StorageErrorScreen({ error, retry }: { error: Error; retry: () => void }) {
-  const { disconnect } = useConnection();
+  const disconnect = useDisconnect();
   const { title, detail, canRetry } = describeStorageError(error);
   return (
     <section role="alert">
