@@ -5,6 +5,9 @@ import {
   createRouter,
   type RouterHistory,
 } from '@tanstack/react-router';
+import { useConnection } from './connection/context.tsx';
+import { ConnectScreen } from './screens/connect-screen.tsx';
+import { LibraryScreen } from './screens/library-screen.tsx';
 
 const rootRoute = createRootRoute({
   component: () => (
@@ -18,13 +21,13 @@ const rootRoute = createRootRoute({
 const homeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
-  component: () => (
-    <>
-      <h1 className="text-3xl font-semibold">calibre-cloud</h1>
-      <p className="mt-2 text-neutral-600">Browse your Calibre library from the cloud.</p>
-    </>
-  ),
+  component: HomeScreen,
 });
+
+function HomeScreen() {
+  const { connection } = useConnection();
+  return connection ? <LibraryScreen /> : <ConnectScreen />;
+}
 
 const routeTree = rootRoute.addChildren([homeRoute]);
 
