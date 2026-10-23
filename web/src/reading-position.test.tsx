@@ -106,3 +106,16 @@ test('a burst of page turns is written once at once and once more about a second
   await expect.element(reloaded.getByText('line 4')).toBeVisible();
   expect(fake.latest.opened?.location).toBe('4');
 });
+
+test('unreadable saved positions are ignored and overwritten as the reader goes on', async () => {
+  localStorage.setItem('calibre-cloud:positions', '{"1/EPUB":{"location":5}');
+  const { fake, app } = await openReader(await janeEyreLibrary(), '/books/1/read/EPUB');
+  await expect.element(app.screen.getByText('# One')).toBeVisible();
+  expect(fake.latest.opened?.location).toBeUndefined();
+  await userEvent.click(app.screen.getByRole('button', { name: 'Next' }));
+
+  const reloaded = await app.reload();
+
+  await expect.element(reloaded.getByText('line 2')).toBeVisible();
+  expect(fake.latest.opened?.location).toBe('2');
+});

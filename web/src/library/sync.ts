@@ -1,4 +1,5 @@
 import type { ReadOptions, StorageAdapter } from '../storage/adapter.ts';
+import { forgetPositions } from '../reader/positions.ts';
 import { forgetStaleCovers } from './cover-cache.ts';
 import type { LibraryIndex } from './library-index.ts';
 import { loadStoredLibrary, saveStoredLibrary } from './stored-library.ts';
@@ -36,4 +37,5 @@ async function download(
   const file = await index.open(await blob.arrayBuffer());
   saveStoredLibrary(file === null ? undefined : { version, file });
   await forgetStaleCovers(await index.listCoverVersions());
+  forgetPositions(await index.listBookFormats());
 }

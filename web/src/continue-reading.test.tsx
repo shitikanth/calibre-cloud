@@ -3,7 +3,8 @@ import { expect, test } from 'vitest';
 import { buildCalibreLibrary, type BookSpec } from './test/calibre-library.ts';
 import { fakeRenderers } from './test/fake-renderer.ts';
 import { FakeStorage } from './test/fake-storage.ts';
-import { renderApp } from './test/render-app.tsx';
+import { chooseFromMenu } from './test/app-bar.ts';
+import { renderApp, testLink } from './test/render-app.tsx';
 import type { Screen } from './test/screen.ts';
 
 const epub = ['# One', 'line 2', 'line 3', 'line 4', 'line 5'].join('\n');
@@ -73,4 +74,87 @@ test('the home view lists the six most recently opened formats, newest first, wi
   await expect.element(row.getByRole('img', { name: 'Cover of Jane Eyre' })).toHaveAttribute('src', expect.stringMatching(/^blob:/));
   await expect.element(row.getByRole('img', { name: 'No cover for Shirley' })).toBeVisible();
   await expect.element(app.screen.getByRole('list', { name: 'Books' })).toBeVisible();
+});
+
+test('the row stays out of the way with nothing to continue and while searching', async () => {
+  const started = await startApp(await bronteLibrary());
+  const { app } = started;
+  await expect.element(app.screen.getByRole('list', { name: 'Books' })).toBeVisible();
+  expect(continueReading(app.screen).query()).toBeNull();
+
+  await read(started, 2, 'EPUB', 1);
+  app.navigate('/');
+  await expect.poll(() => cardTitles(app.screen)).toEqual(['Wuthering Heights']);
+
+  const search = app.screen.getByRole('searchbox', { name: 'Search books' });
+  await userEvent.type(search, 'jane');
+  await expect.element(app.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
+  expect(continueReading(app.screen).query()).toBeNull();
+
+  await userEvent.clear(search);
+  await expect.poll(() => cardTitles(app.screen)).toEqual(['Wuthering Heights']);
+});
+
+test('tapping a card opens the reader at the saved position', async () => {
+  const started = await startApp(await bronteLibrary());
+  const { fake, app } = started;
+  await read(started, 3, 'EPUB', 2);
+  await read(started, 2, 'PDF', 1);
+  app.navigate('/');
+  await expect.poll(() => cardTitles(app.screen)).toEqual(['Wuthering Heights', 'Agnes Grey']);
+
+  await userEvent.click(continueReading(app.screen).getByRole('link', { name: /Agnes Grey/ }));
+
+  await expect.element(app.screen.getByRole('heading', { level: 1, name: 'Agnes Grey' })).toBeVisible();
+  await expect.element(app.screen.getByText('line 3')).toBeVisible();
+  expect(app.url).toBe('/books/3/read/EPUB');
+  expect(fake.latest.opened?.location).toBe('3');
+
+  app.navigate('/');
+  await userEvent.click(continueReading(app.screen).getByRole('link', { name: /Wuthering Heights/ }));
+
+  await expect.element(app.screen.getByText('page 2 of 3')).toBeVisible();
+  expect(app.url).toBe('/books/2/read/PDF');
+});
+
+test('Refresh library drops the cards of a book and of a format that are gone', async () => {
+  const storage = await bronteLibrary(books.slice(0, 3));
+  const started = await startApp(storage);
+  const { app } = started;
+  for (const bookId of [1, 2, 3]) await read(started, bookId, 'EPUB', 1);
+  app.navigate('/');
+  await expect.poll(() => cardTitles(app.screen)).toEqual(['Agnes Grey', 'Wuthering Heights', 'Jane Eyre']);
+
+  const [janeEyre, wutheringHeights] = books;
+  const changed = await buildCalibreLibrary([janeEyre!, { ...wutheringHeights!, formats: { PDF: pdf } }]);
+  storage.put('metadata.db', changed['metadata.db']!, '2');
+  await chooseFromMenu(app.screen, 'Refresh library');
+
+  await expect.element(app.screen.getByRole('status')).toHaveTextContent('Library updated');
+  await expect.poll(() => cardTitles(app.screen)).toEqual(['Jane Eyre']);
+});
+
+test('Disconnect forgets every position but keeps the reader settings', async () => {
+  const started = await startApp(await bronteLibrary());
+  const { fake, app } = started;
+  await read(started, 1, 'EPUB', 2);
+  await userEvent.click(app.screen.getByRole('button', { name: 'Settings' }));
+  await userEvent.click(app.screen.getByRole('dialog', { name: 'Settings' }).getByRole('button', { name: 'Larger text' }));
+  await userEvent.keyboard('{Escape}');
+  app.navigate('/');
+  await expect.poll(() => cardTitles(app.screen)).toEqual(['Jane Eyre']);
+
+  await chooseFromMenu(app.screen, 'Disconnect');
+  await expect.element(app.screen.getByRole('textbox', { name: 'MEGA folder link' })).toBeVisible();
+  await userEvent.fill(app.screen.getByRole('textbox', { name: 'MEGA folder link' }), testLink);
+  await userEvent.click(app.screen.getByRole('button', { name: 'Connect' }));
+
+  await expect.element(app.screen.getByRole('list', { name: 'Books' })).toBeVisible();
+  expect(continueReading(app.screen).query()).toBeNull();
+
+  await read(started, 1, 'EPUB');
+
+  await expect.element(app.screen.getByText('# One')).toBeVisible();
+  expect(fake.latest.opened?.location).toBeUndefined();
+  expect(fake.latest.calls.find((call) => call.op === 'setStyles')).toEqual({ op: 'setStyles', styles: { fontSize: 110, theme: 'light' } });
 });
