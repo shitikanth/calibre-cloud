@@ -40,5 +40,6 @@ export async function forgetStaleCovers(current: CoverVersion[]): Promise<void> 
 }
 
 export async function forgetCovers(): Promise<void> {
-  await caches.delete(CACHE_NAME).catch(() => undefined);
+  if (typeof caches === 'undefined') return;
+  await caches.delete(CACHE_NAME);
 }

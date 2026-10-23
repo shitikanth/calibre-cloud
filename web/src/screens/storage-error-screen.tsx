@@ -1,6 +1,6 @@
 import { LibraryInUse } from '../library/errors.ts';
-import { useDisconnect } from '../library/use-disconnect.ts';
 import { Aborted, Network, NotFound, QuotaExceeded, ReconnectRequired } from '../storage/adapter.ts';
+import { DisconnectButton } from './disconnect-button.tsx';
 
 type ErrorCopy = { title: string; detail: string; canRetry: boolean };
 
@@ -37,21 +37,23 @@ export function describeStorageError(error: Error): ErrorCopy {
 }
 
 export function StorageErrorScreen({ error, retry }: { error: Error; retry: () => void }) {
-  const disconnect = useDisconnect();
   const { title, detail, canRetry } = describeStorageError(error);
+  const openElsewhere = error instanceof LibraryInUse;
   return (
     <section role="alert">
       <h1 className="text-xl font-semibold">{title}</h1>
       <p className="mt-2 text-neutral-700">{detail}</p>
-      <div className="mt-4 flex gap-2">
+      <div className="mt-4 flex flex-wrap gap-2">
         {canRetry && (
           <button type="button" className="rounded bg-neutral-900 px-4 py-2 text-white" onClick={retry}>
             Try again
           </button>
         )}
-        <button type="button" className="rounded border border-neutral-400 px-4 py-2" onClick={disconnect}>
-          Connect a different library
-        </button>
+        {!openElsewhere && (
+          <DisconnectButton className="rounded border border-neutral-400 px-4 py-2 disabled:opacity-60">
+            Connect a different library
+          </DisconnectButton>
+        )}
       </div>
     </section>
   );

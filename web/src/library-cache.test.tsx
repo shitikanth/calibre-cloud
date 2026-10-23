@@ -89,6 +89,8 @@ test('a second tab says the library is open in another tab', async () => {
   await expect
     .element(second.screen.getByRole('heading', { name: 'Library is open in another tab' }))
     .toBeVisible();
+  await expect.element(second.screen.getByText(/Close the other tab/)).toBeVisible();
+  expect(second.screen.getByRole('alert').getByRole('button').elements().map((button) => button.textContent)).toEqual(['Try again']);
   await expect.element(first.screen.getByText('3 books')).toBeVisible();
 
   await first.screen.unmount();

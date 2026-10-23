@@ -52,3 +52,18 @@ test('Disconnect forgets the link, the library and the covers on this device', a
     'Charlotte Bronte/Jane Eyre (1)/cover.jpg',
   ]);
 });
+
+test('a Disconnect that cannot forget the library says so and stays connected', async () => {
+  const forget = vi.spyOn(caches, 'delete').mockRejectedValue(new DOMException('Storage is busy', 'InvalidStateError'));
+  onTestFinished(() => forget.mockRestore());
+  const app = await renderApp({ storage: await libraryWithCover(), connected: true });
+  await expectLibraryShown(app.screen);
+
+  await userEvent.click(app.screen.getByRole('button', { name: 'Disconnect' }));
+
+  await expect.element(app.screen.getByRole('alert')).toMatchTextContent(/Couldn’t disconnect.*Storage is busy/);
+  await expect.element(app.screen.getByText('1 book')).toBeVisible();
+  forget.mockRestore();
+  await userEvent.click(app.screen.getByRole('button', { name: 'Disconnect' }));
+  await expect.element(app.screen.getByRole('textbox', { name: 'MEGA folder link' })).toBeVisible();
+});
