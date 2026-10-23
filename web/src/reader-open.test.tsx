@@ -195,7 +195,7 @@ test('a file the renderer cannot open offers Download instead of Retry', async (
   expect((click.mock.contexts[0] as HTMLAnchorElement).download).toBe('Jane Eyre - Charlotte Brontë.epub');
 });
 
-test('a reader that fails to load offers Retry and Back to book, and Retry opens the book', async () => {
+test('a renderer that fails to load offers Retry and Back to book, and Retry opens the book', async () => {
   const fake = fakeRenderers(['EPUB', 'PDF']);
   fake.failCreate = new TypeError('Failed to fetch dynamically imported module');
   const app = await renderApp({ storage: await janeEyreLibrary(), connected: true, path: '/books/1/read/EPUB', renderers: fake.renderers });

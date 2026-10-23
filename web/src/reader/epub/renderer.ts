@@ -170,8 +170,10 @@ export async function createEpubRenderer(): Promise<EpubRenderer> {
     },
     destroy() {
       destroyed.abort();
-      if (view && !opening) teardown(view);
-      view?.remove();
+      if (view) {
+        if (opening) view.remove();
+        else teardown(view);
+      }
       view = undefined;
       toc = [];
       sectionDocument = undefined;

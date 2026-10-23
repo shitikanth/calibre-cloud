@@ -170,7 +170,7 @@ function Unopenable({ book, format }: { book: BookDetail; format: BookFormat }) 
   );
 }
 
-function ReaderUnavailable({ book, retry }: { book: BookDetail; retry: () => void }) {
+function RendererUnavailable({ book, retry }: { book: BookDetail; retry: () => void }) {
   return (
     <section role="alert" className="mx-auto w-full max-w-md px-4 py-12">
       <h2 className="text-xl font-semibold">Couldn’t load the reader</h2>
@@ -185,7 +185,7 @@ function ReaderUnavailable({ book, retry }: { book: BookDetail; retry: () => voi
   );
 }
 
-type OpenStatus = 'opening' | 'open' | 'unopenable' | 'unavailable';
+type OpenStatus = 'opening' | 'open' | 'unopenable' | 'renderer-unavailable';
 
 type OpenedBookProps = {
   book: BookDetail;
@@ -221,7 +221,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
       try {
         created = await factory();
       } catch {
-        if (!cancelled) setStatus('unavailable');
+        if (!cancelled) setStatus('renderer-unavailable');
         return;
       }
       if (cancelled) {
@@ -304,13 +304,13 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
       }
     >
       {status === 'unopenable' && <Unopenable book={book} format={format} />}
-      {status === 'unavailable' && <ReaderUnavailable book={book} retry={retryLoading} />}
+      {status === 'renderer-unavailable' && <RendererUnavailable book={book} retry={retryLoading} />}
       {renderError && status === 'open' && (
         <p role="alert" className="bg-amber-50 px-4 py-2 text-sm text-amber-900">
           This page couldn’t be shown. Keep reading from the next one.
         </p>
       )}
-      <div ref={container} className="min-h-0 flex-1 overflow-hidden" hidden={status === 'unopenable' || status === 'unavailable'} />
+      <div ref={container} className="min-h-0 flex-1 overflow-hidden" hidden={status === 'unopenable' || status === 'renderer-unavailable'} />
       {status === 'open' && renderer && (
         <nav aria-label="Pages" className="flex items-center justify-between gap-2 border-t border-(--reader-line) px-2 py-1">
           <button type="button" className="min-h-11 rounded px-3 py-1 hover:bg-(--reader-hover)" onClick={() => void renderer.previous()}>
