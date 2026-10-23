@@ -39,3 +39,4 @@ _Avoid_: bookmark, progress, last page
 **Continue reading**:
 The home view's row of the books most recently read on this device, each resuming at its reading position.
 _Avoid_: recent books, history, currently reading
+
