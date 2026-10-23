@@ -143,6 +143,44 @@ test('a book still opens when the device refuses to keep it, and downloads again
   expect(bookFileCalls(storage, janeEyreEpubPath)).toEqual(['stat', 'read']);
 });
 
+test('a book still opens when the device cannot list what it keeps', async () => {
+  const storage = await library();
+  const fake = fakeRenderers(['EPUB', 'PDF']);
+  const app = await renderApp({ storage, connected: true, path: '/books/1', renderers: fake.renderers });
+  await expect.element(app.screen.getByRole('link', { name: 'Read EPUB' })).toBeVisible();
+  const keys = vi.spyOn(Cache.prototype, 'keys').mockRejectedValue(new DOMException('Storage unavailable', 'UnknownError'));
+  onTestFinished(() => keys.mockRestore());
+
+  await userEvent.click(app.screen.getByRole('link', { name: 'Read EPUB' }));
+
+  await expect.element(app.screen.getByText('# Chapter 1')).toBeVisible();
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  expect(app.screen.getByRole('alert').query()).toBeNull();
+});
+
+test('a book downloads and opens when the device cannot look up what it keeps', async () => {
+  const match = vi.spyOn(Cache.prototype, 'match').mockRejectedValue(new DOMException('Storage unavailable', 'UnknownError'));
+  onTestFinished(() => match.mockRestore());
+  const storage = await library();
+  const fake = fakeRenderers(['EPUB', 'PDF']);
+  const app = await renderApp({ storage, connected: true, path: '/books/1/read/EPUB', renderers: fake.renderers });
+
+  await expect.element(app.screen.getByText('# Chapter 1')).toBeVisible();
+  expect(app.screen.getByRole('alert').query()).toBeNull();
+  expect(bookFileCalls(storage, janeEyreEpubPath)).toEqual(['stat', 'read']);
+});
+
+test('a book opens before the device has finished keeping it', async () => {
+  const put = vi.spyOn(Cache.prototype, 'put').mockReturnValue(new Promise(() => {}));
+  onTestFinished(() => put.mockRestore());
+  const storage = await library();
+  const fake = fakeRenderers(['EPUB', 'PDF']);
+  const app = await renderApp({ storage, connected: true, path: '/books/1/read/EPUB', renderers: fake.renderers });
+
+  await expect.element(app.screen.getByText('# Chapter 1')).toBeVisible();
+  expect(put).toHaveBeenCalled();
+});
+
 test('a file the renderer cannot open is downloaded afresh next time', async () => {
   const storage = await library();
   let failOpen = true;
