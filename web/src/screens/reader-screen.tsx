@@ -35,7 +35,7 @@ function ReaderForFormat({ book, formatName }: { book: BookDetail; formatName: s
 }
 
 function Reader({ book, format }: { book: BookDetail; format: BookFormat }) {
-  const file = useBookFile(format.path);
+  const file = useBookFile({ bookId: book.id, format: format.format, path: format.path });
   const navigate = useNavigate();
   const [settings, setSettings] = useState(loadReaderSettings);
   const { state } = file;

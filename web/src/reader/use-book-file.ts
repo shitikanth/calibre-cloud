@@ -1,20 +1,18 @@
 import { useCallback, useEffect } from 'react';
 import { useConnection } from '../connection/context.tsx';
 import { useFetch, type FetchOptions } from '../download/use-fetch.ts';
-import type { LibraryPath } from '../storage/adapter.ts';
+import { openBookFile, type BookFile, type BookFileKey } from './book-cache.ts';
 
-export type BookFile = { blob: Blob; version: string };
+export type { BookFile } from './book-cache.ts';
 
-export function useBookFile(path: LibraryPath) {
+export function useBookFile({ bookId, format, path }: BookFileKey) {
   const { storage } = useConnection();
   const run = useCallback(
     async (options: FetchOptions): Promise<BookFile> => {
       if (!storage) throw new Error('Not connected');
-      const { version } = await storage.stat(path);
-      const blob = await storage.read(path, options);
-      return { blob, version };
+      return openBookFile(storage, { bookId, format, path }, options);
     },
-    [storage, path],
+    [storage, bookId, format, path],
   );
   const fetch = useFetch(run);
   const { start } = fetch;
