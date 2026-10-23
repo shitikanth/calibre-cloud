@@ -1,6 +1,6 @@
 # calibre-cloud: High-Level Design
 
-Status: the first slice is built: browse, search, book detail, and download from a MEGA shared folder. Google Drive, Dropbox, and the reader are not built yet.
+Status: the first slice is built: browse, search, book detail, and download from a MEGA shared folder. The reader is built for EPUB and PDF. Google Drive and Dropbox are not built yet.
 
 ## Goal
 
@@ -49,7 +49,7 @@ flowchart LR
 - **Storage provider:** each provider also owns its connect input (for MEGA, a folder link and its validation) and the shape of its saved connection. Only the storage layer knows the providers; everything above it sees a connection and an adapter. ESLint enforces this boundary and keeps each provider's SDK inside its adapter.
 - **Library index:** the official SQLite WASM build in a Web Worker opens `metadata.db` (the SQLite file Calibre keeps at the library root) read-only and answers browse and search queries over a small typed message API. Queries use Calibre's base tables, not its views or SQL functions.
 - **Library UI:** browse and search by author, series, tag, and other metadata, showing covers.
-- **Reader:** renders a book file in the browser, with one renderer per supported format.
+- **Reader:** renders a book file in the browser, with one renderer per supported format: foliate-js for EPUB and pdf.js for PDF. Every other format is download-only.
 - **Serverless auth functions (optional):** OAuth code exchange and token refresh for providers that need a client secret. Each call is stateless and small.
 
 ### Main flow
@@ -79,7 +79,7 @@ A Calibre library can be many GB, but only `metadata.db` is needed to list the w
 
 - **Frontend:** React, Vite, TypeScript, TanStack Router and TanStack Query, Tailwind.
 - **SQLite:** the official `@sqlite.org/sqlite-wasm` build, run in a Web Worker.
-- **Hosting:** a Cloudflare Worker serving static assets, with SPA fallback and a strict CSP set in platform config, not code. No serverless functions yet; MEGA needs none.
+- **Hosting:** a Cloudflare Worker serving static assets, with SPA fallback and a strict CSP set in platform config, not code. The reader renders each EPUB section in a same-origin `blob:` frame, which needs `style-src 'self' 'unsafe-inline' blob:`, `frame-src blob:`, and `frame-ancestors 'self'`; `script-src` stays `'self' 'wasm-unsafe-eval'`, so scripts inside a book never run. No serverless functions yet; MEGA needs none.
 - **Tests:** Vitest in browser mode (Chromium), driving the whole app against an in-memory fake storage adapter.
 
 ## Storage providers
@@ -100,4 +100,4 @@ A Calibre library can be many GB, but only `metadata.db` is needed to list the w
 
 1. **Google Drive scope:** `drive.readonly` is a restricted scope. Unverified apps are capped at 100 users, and verification can require a paid annual security assessment, which would break "costs scale to zero". `drive.file` with the Google Picker avoids this, but it's unconfirmed whether picking a folder grants access to the files inside it. Prototype this before building the Drive adapter.
 2. **MEGA transfer quota:** free accounts have a bandwidth limit, so large books may fail to download. A download that hits the quota fails at once with `QuotaExceeded` rather than retrying.
-3. **Formats:** which formats the reader supports, beyond the obvious EPUB and PDF.
+3. **Formats:** settled. EPUB and PDF are read in the browser; every other format is download-only.

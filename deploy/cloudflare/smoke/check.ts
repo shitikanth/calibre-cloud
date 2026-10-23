@@ -1,4 +1,5 @@
 import { chromium } from 'playwright';
+import { cspProblems } from './csp.ts';
 
 export async function smokeCheck(origin: string, paths: string[]): Promise<string[]> {
   const browser = await chromium.launch();
@@ -14,9 +15,9 @@ export async function smokeCheck(origin: string, paths: string[]): Promise<strin
 
       const response = await page.goto(new URL(path, origin).href, { waitUntil: 'networkidle' });
       if (!response?.ok()) report(`HTTP ${response?.status() ?? 'no response'}`);
-      if (response && !(await response.headerValue('content-security-policy'))) {
-        report('no Content-Security-Policy header');
-      }
+      const csp = await response?.headerValue('content-security-policy');
+      if (response && !csp) report('no Content-Security-Policy header');
+      if (csp) for (const problem of cspProblems(csp)) report(`CSP ${problem}`);
       const rendered = await page.evaluate(() => document.getElementById('root')?.hasChildNodes());
       if (!rendered) report('#root is empty');
       await page.close();
