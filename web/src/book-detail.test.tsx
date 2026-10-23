@@ -13,6 +13,12 @@ async function janeEyreLibrary() {
   );
 }
 
+function shownFields(screen: Awaited<ReturnType<typeof renderApp>>['screen']) {
+  const terms = screen.getByRole('term').elements();
+  const definitions = screen.getByRole('definition').elements();
+  return Object.fromEntries(terms.map((term, index) => [term.textContent, definitions[index]?.textContent]));
+}
+
 test('clicking a book opens its detail page, which survives a reload', async () => {
   const storage = await janeEyreLibrary();
   const app = await renderApp({ storage, connected: true });
@@ -31,4 +37,42 @@ test('clicking a book opens its detail page, which survives a reload', async () 
     'src',
     expect.stringMatching(/^blob:/),
   );
+});
+
+test('the detail page shows the metadata Calibre holds for the book', async () => {
+  const storage = new FakeStorage(
+    await buildCalibreLibrary([
+      {
+        title: 'A Wizard of Earthsea',
+        authors: ['Ursula K. Le Guin'],
+        series: { name: 'Earthsea', index: 1.5 },
+        tags: ['Fantasy', 'Classics'],
+        publisher: 'Parnassus Press',
+        languages: ['eng'],
+        published: '1968-11-01 00:00:00+00:00',
+        description: '<p>A boy called <b>Sparrowhawk</b>.</p>',
+      },
+    ]),
+  );
+  const app = await renderApp({ storage, connected: true, path: '/books/1' });
+
+  await expect.element(app.screen.getByRole('heading', { level: 1, name: 'A Wizard of Earthsea' })).toBeVisible();
+  await expect.element(app.screen.getByText('Ursula K. Le Guin')).toBeVisible();
+  expect(shownFields(app.screen)).toEqual({
+    Series: 'Book 1.5 of Earthsea',
+    Tags: 'Fantasy, Classics',
+    Publisher: 'Parnassus Press',
+    Language: 'English',
+    Published: expect.stringMatching(/1968/),
+  });
+  await expect.element(app.screen.getByRole('img', { name: 'No cover for A Wizard of Earthsea' })).toBeVisible();
+  await expect.element(app.screen.getByText('Sparrowhawk')).toBeVisible();
+});
+
+test('fields the book doesn’t have are left out', async () => {
+  const storage = new FakeStorage(await buildCalibreLibrary([{ title: 'Poems', authors: ['Emily Brontë'] }]));
+  const app = await renderApp({ storage, connected: true, path: '/books/1' });
+
+  await expect.element(app.screen.getByRole('heading', { level: 1, name: 'Poems' })).toBeVisible();
+  expect(shownFields(app.screen)).toEqual({});
 });

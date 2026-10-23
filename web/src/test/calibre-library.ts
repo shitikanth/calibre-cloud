@@ -1,4 +1,5 @@
 import { loadSqlite } from '../library/sqlite.ts';
+import { insertMetadata } from './calibre-metadata.ts';
 
 const CALIBRE_SUBSET_DDL = `
 CREATE TABLE books ( id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -34,6 +35,12 @@ export type BookSpec = {
   added?: string;
   hasCover?: boolean;
   formats?: Record<string, string>;
+  series?: { name: string; index: number };
+  tags?: string[];
+  publisher?: string;
+  languages?: string[];
+  published?: string;
+  description?: string;
 };
 
 export type FakeLibraryFiles = Record<string, Uint8Array<ArrayBuffer> | string>;
@@ -51,10 +58,23 @@ export async function buildCalibreLibrary(books: BookSpec[]): Promise<FakeLibrar
       const path = `${ascii(authors[0] ?? 'Unknown')}/${ascii(book.title)} (${id})`;
       const added = book.added ?? `2024-01-${String((id % 28) + 1).padStart(2, '0')} 10:00:00+00:00`;
       db.exec({
-        sql: `INSERT INTO books(id, title, sort, timestamp, author_sort, path, uuid, has_cover, last_modified)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        bind: [id, book.title, book.title, added, authors.join(' & '), path, `uuid-${id}`, book.hasCover ? 1 : 0, added],
+        sql: `INSERT INTO books(id, title, sort, timestamp, pubdate, series_index, author_sort, path, uuid, has_cover, last_modified)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        bind: [
+          id,
+          book.title,
+          book.title,
+          added,
+          book.published ?? '0101-01-01 00:00:00+00:00',
+          book.series?.index ?? 1,
+          authors.join(' & '),
+          path,
+          `uuid-${id}`,
+          book.hasCover ? 1 : 0,
+          added,
+        ],
       });
+      insertMetadata(db, id, book);
       for (const name of authors) {
         if (!authorIds.has(name)) {
           authorIds.set(name, authorIds.size + 1);

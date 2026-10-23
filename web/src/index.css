@@ -1,1 +1,16 @@
 @import 'tailwindcss';
+
+@layer components {
+  .description > * + * {
+    @apply mt-3;
+  }
+  .description ul {
+    @apply list-disc pl-6;
+  }
+  .description ol {
+    @apply list-decimal pl-6;
+  }
+  .description a {
+    @apply underline;
+  }
+}
