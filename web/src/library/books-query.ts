@@ -9,7 +9,7 @@ SELECT ${BOOK_SUMMARY_COLUMNS}
  WHERE $pattern IS NULL
     OR fold(b.title) LIKE $pattern ESCAPE '\\'
     OR EXISTS (SELECT 1 FROM books_authors_link bal JOIN authors a ON a.id = bal.author
-                WHERE bal.book = b.id AND fold(a.name) LIKE $pattern ESCAPE '\\')
+                WHERE bal.book = b.id AND fold(replace(a.name, '|', ',')) LIKE $pattern ESCAPE '\\')
     OR EXISTS (SELECT 1 FROM books_series_link bsl JOIN series s ON s.id = bsl.series
                 WHERE bsl.book = b.id AND fold(s.name) LIKE $pattern ESCAPE '\\')
     OR EXISTS (SELECT 1 FROM books_tags_link btl JOIN tags t ON t.id = btl.tag
