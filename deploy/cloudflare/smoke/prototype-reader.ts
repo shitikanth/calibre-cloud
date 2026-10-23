@@ -5,6 +5,12 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { execSync } from 'node:child_process';
 
+declare global {
+  interface Window {
+    __proto: { entries: { t: number; kind: string; text: string }[]; state: Record<string, unknown> };
+  }
+}
+
 const [browserName = 'chromium', origin = 'http://127.0.0.1:8799', fixtures = '.', out = '.'] = process.argv.slice(2);
 mkdirSync(out, { recursive: true });
 const browser = await (browserName === 'webkit' ? webkit : chromium).launch();
