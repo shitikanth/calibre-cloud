@@ -1,12 +1,15 @@
 import { useBookCount, useBooks, useOpenLibrary, type DownloadProgress } from '../library/use-library.ts';
+import { useSearch } from '@tanstack/react-router';
 import { BookGrid } from './book-grid.tsx';
 import { LoadMore } from './load-more.tsx';
+import { SearchBox } from './search-box.tsx';
 import { StorageErrorScreen } from './storage-error-screen.tsx';
 
 export function LibraryScreen() {
   const library = useOpenLibrary();
   const count = useBookCount(library.isSuccess);
-  const books = useBooks(library.isSuccess);
+  const { q: search = '' } = useSearch({ from: '/' });
+  const books = useBooks(library.isSuccess, search);
 
   if (library.isError) return <StorageErrorScreen error={library.error} retry={() => void library.refetch()} />;
   if (count.isError) return <StorageErrorScreen error={count.error} retry={() => void count.refetch()} />;
@@ -17,7 +20,13 @@ export function LibraryScreen() {
     <section>
       <h1 className="text-3xl font-semibold">Library</h1>
       {count.isSuccess && <p className="mt-2 text-neutral-600">{formatBookCount(count.data)}</p>}
-      {books.isSuccess && <BookGrid books={books.data} />}
+      <SearchBox term={search} />
+      {books.isSuccess &&
+        (books.data.length === 0 && search.trim() ? (
+          <p className="mt-6 text-neutral-600">No books match “{search.trim()}”.</p>
+        ) : (
+          <BookGrid books={books.data} />
+        ))}
       {books.hasNextPage && (
         <LoadMore
           loaded={books.data?.length ?? 0}

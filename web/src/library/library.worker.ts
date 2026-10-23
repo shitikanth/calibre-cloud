@@ -1,5 +1,6 @@
 import type { LibraryOperations, LibraryRequest, LibraryResponse, Operation } from './protocol.ts';
 import { listBooks } from './books-query.ts';
+import { registerFold } from './fold.ts';
 import { loadSqlite, type Database } from './sqlite.ts';
 
 let db: Database | undefined;
@@ -28,6 +29,7 @@ const handlers: Handlers = {
     try {
       opened.checkRc(rc);
       opened.exec('PRAGMA query_only = ON');
+      registerFold(opened);
       opened.selectValue('SELECT count(*) FROM sqlite_schema');
     } catch (error) {
       opened.close();

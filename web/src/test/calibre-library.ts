@@ -33,6 +33,8 @@ export type BookSpec = {
   authors?: string[];
   added?: string;
   hasCover?: boolean;
+  series?: string;
+  tags?: string[];
   formats?: Record<string, string>;
 };
 
@@ -61,6 +63,17 @@ export async function buildCalibreLibrary(books: BookSpec[]): Promise<FakeLibrar
           db.exec({ sql: 'INSERT INTO authors(id, name, sort) VALUES (?, ?, ?)', bind: [authorIds.get(name)!, name, name] });
         }
         db.exec({ sql: 'INSERT INTO books_authors_link(book, author) VALUES (?, ?)', bind: [id, authorIds.get(name)!] });
+      }
+      if (book.series) {
+        db.exec({ sql: 'INSERT OR IGNORE INTO series(name, sort) VALUES (?, ?)', bind: [book.series, book.series] });
+        db.exec({
+          sql: 'INSERT INTO books_series_link(book, series) SELECT ?, id FROM series WHERE name = ?',
+          bind: [id, book.series],
+        });
+      }
+      for (const tag of book.tags ?? []) {
+        db.exec({ sql: 'INSERT OR IGNORE INTO tags(name) VALUES (?)', bind: [tag] });
+        db.exec({ sql: 'INSERT INTO books_tags_link(book, tag) SELECT ?, id FROM tags WHERE name = ?', bind: [id, tag] });
       }
       if (book.hasCover) files[`${path}/cover.jpg`] = `cover of ${book.title}`;
       const stem = ascii(`${book.title} - ${authors[0] ?? 'Unknown'}`);
