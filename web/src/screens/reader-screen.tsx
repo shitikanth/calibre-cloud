@@ -5,6 +5,7 @@ import { useDownload } from '../download/use-download.ts';
 import type { BookDetail, BookFormat } from '../library/protocol.ts';
 import { forgetBookFile } from '../reader/book-cache.ts';
 import { useRenderers } from '../reader/context.tsx';
+import { loadPosition, trackPosition } from '../reader/positions.ts';
 import { loadReaderSettings, saveReaderSettings, type ReaderSettings } from '../reader/reader-settings.ts';
 import type { BookRenderer, ReaderTheme, Relocation } from '../reader/renderer.ts';
 import { useBookFile } from '../reader/use-book-file.ts';
@@ -32,7 +33,7 @@ function ReaderForFormat({ book, formatName }: { book: BookDetail; formatName: s
   const format = book.formats.find((candidate) => candidate.format === formatName);
   if (!format || !renderers[format.format])
     return inShell(<NotFound title="Format not found" detail="This book has no such format to read." />);
-  return <Reader book={book} format={format} />;
+  return <Reader key={`${book.id}/${format.format}`} book={book} format={format} />;
 }
 
 function Reader({ book, format }: { book: BookDetail; format: BookFormat }) {
@@ -76,7 +77,6 @@ function Reader({ book, format }: { book: BookDetail; format: BookFormat }) {
   }
   return (
     <OpenedBook
-      key={`${book.id}/${format.format}`}
       book={book}
       format={format}
       blob={state.result.blob}
@@ -190,6 +190,9 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
     let cancelled = false;
     let opened: BookRenderer | undefined;
     const unsubscribe: (() => void)[] = [];
+    const key = { bookId: book.id, format: format.format };
+    const position = trackPosition(key);
+    const saved = loadPosition(key);
     void (async () => {
       try {
         const created = await factory();
@@ -200,12 +203,13 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
         opened = created;
         unsubscribe.push(
           created.onRelocate((next) => {
+            position.relocate(next);
             setRelocation(next);
             setRenderError(undefined);
           }),
           created.onRenderError(setRenderError),
         );
-        await created.open(blob, host, {});
+        await created.open(blob, host, saved ? { location: saved.location } : {});
         if (cancelled) return;
         setRenderer(created);
         setStatus('open');
@@ -218,6 +222,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
     return () => {
       cancelled = true;
       for (const off of unsubscribe) off();
+      position.close();
       opened?.destroy();
       host.replaceChildren();
     };
