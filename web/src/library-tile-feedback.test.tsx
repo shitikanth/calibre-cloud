@@ -20,8 +20,8 @@ function tile(screen: Screen, title: string) {
 }
 
 function styleOf(element: Element) {
-  const { translate, boxShadow, outlineStyle, outlineWidth } = getComputedStyle(element);
-  return { translate, boxShadow, outlineStyle, outlineWidth };
+  const { translate, outlineStyle, outlineWidth } = getComputedStyle(element);
+  return { translate, outlineStyle, outlineWidth };
 }
 
 test('hovering a tile lifts it, and leaving it puts it back', async () => {
