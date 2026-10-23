@@ -1,8 +1,12 @@
-import { userEvent } from 'vitest/browser';
-import { expect, test } from 'vitest';
+import { page, userEvent } from 'vitest/browser';
+import { afterEach, expect, test } from 'vitest';
 import { buildCalibreLibrary } from './test/calibre-library.ts';
 import { FakeStorage } from './test/fake-storage.ts';
 import { renderApp } from './test/render-app.tsx';
+
+afterEach(async () => {
+  await page.viewport(414, 896);
+});
 
 async function janeEyreLibrary() {
   return new FakeStorage(
@@ -98,6 +102,25 @@ test.each(['/books/99', '/books/not-a-number'])('%s shows that the book was not 
   await expect.element(app.screen.getByRole('heading', { level: 1, name: 'Book not found' })).toBeVisible();
   await userEvent.click(app.screen.getByRole('link', { name: '← Library' }));
   await expect.element(app.screen.getByText('2 books')).toBeVisible();
+});
+
+test('the detail page fits a narrow phone screen', async () => {
+  await page.viewport(320, 640);
+  const storage = new FakeStorage(
+    await buildCalibreLibrary([
+      {
+        title: 'Supercalifragilisticexpialidociousnessbookwithnospaces',
+        authors: ['Ursula K. Le Guin'],
+        tags: ['Fantasy', 'Classics', 'Coming of age', 'Wizards'],
+        description: '<p>Averyveryverylongwordwithoutanyspacesthatcouldoverflowthescreen in the description.</p>',
+        formats: { EPUB: 'epub', ORIGINAL_EPUB: 'original epub', PDF: 'pdf' },
+      },
+    ]),
+  );
+  const app = await renderApp({ storage, connected: true, path: '/books/1' });
+
+  await expect.element(app.screen.getByRole('button', { name: 'Download ORIGINAL_EPUB' })).toBeVisible();
+  expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(320);
 });
 
 test('fields the book doesn’t have are left out', async () => {

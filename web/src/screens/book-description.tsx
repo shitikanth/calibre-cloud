@@ -9,6 +9,6 @@ const purifyConfig = {
 export function BookDescription({ html }: { html: string }) {
   const clean = useMemo(() => DOMPurify.sanitize(html, purifyConfig), [html]);
   return (
-    <section aria-label="Description" className="description mt-6 max-w-prose" dangerouslySetInnerHTML={{ __html: clean }} />
+    <section aria-label="Description" className="description mt-6 max-w-prose break-words" dangerouslySetInnerHTML={{ __html: clean }} />
   );
 }

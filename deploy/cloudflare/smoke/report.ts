@@ -1,6 +1,6 @@
 import { smokeCheck } from './check.ts';
 
-export const smokePaths = ['/', '/smoke/deep-link'];
+export const smokePaths = ['/', '/smoke/deep-link', '/books/1'];
 
 export async function smokeAndReport(origin: string): Promise<boolean> {
   console.log(`Smoke-checking ${origin} at ${smokePaths.join(', ')}`);

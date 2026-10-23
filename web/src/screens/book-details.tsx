@@ -7,7 +7,7 @@ import { FormatList } from './format-list.tsx';
 
 export function BookDetails({ book }: { book: BookDetail }) {
   return (
-    <article className="mt-4 grid gap-6 sm:grid-cols-[minmax(0,16rem)_1fr]">
+    <article className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-6 sm:grid-cols-[minmax(0,16rem)_minmax(0,1fr)]">
       <div className="w-40 sm:w-full">
         <DetailCover book={book} />
       </div>
