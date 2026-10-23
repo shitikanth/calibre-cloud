@@ -15,6 +15,7 @@ declare module 'foliate-js/view.js' {
     toc?: TocItem[];
     sections: unknown[];
     transformTarget?: EventTarget;
+    destroy?(): void;
   };
 
   export type NavigationTarget = { index: number };

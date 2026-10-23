@@ -164,3 +164,18 @@ test('arrow keys pressed inside the section document turn the page', async () =>
   press('ArrowLeft');
   await vi.waitFor(() => expect(relocations.at(-1)?.fraction).toBeLessThan(turned));
 });
+
+test('destroy during open leaves nothing behind', async () => {
+  const { renderer, relocations, container } = await createInContainer();
+  const blob = await (await fetch(fixtureUrl)).blob();
+
+  const opening = renderer.open(blob, container, {});
+  renderer.destroy();
+  await opening;
+  await settled(relocations);
+
+  expect(container.childElementCount).toBe(0);
+  expect(renderer.toc).toEqual([]);
+  expect(renderer.sectionDocument).toBeUndefined();
+  expect(relocations).toEqual([]);
+});
