@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { buildCalibreLibrary } from './test/calibre-library.ts';
+import { buildCalibreLibrary, type BookSpec } from './test/calibre-library.ts';
 import { FakeStorage } from './test/fake-storage.ts';
 import { renderApp } from './test/render-app.tsx';
 
@@ -37,4 +37,31 @@ test('a book without a cover shows a placeholder with its title and no cover is 
   await expect.element(placeholder).toBeVisible();
   await expect.element(placeholder).toHaveTextContent('Wuthering Heights');
   expect(storage.calls.filter(({ path }) => path.endsWith('cover.jpg'))).toEqual([]);
+});
+
+function numberedBooks(count: number, extra: Partial<BookSpec> = {}): BookSpec[] {
+  return Array.from({ length: count }, (_, index) => ({
+    title: `Book ${index + 1}`,
+    added: new Date(Date.UTC(2024, 0, 1) + index * 3_600_000).toISOString().replace('T', ' ').replace('Z', '+00:00'),
+    ...extra,
+  }));
+}
+
+test('covers load from the library as tiles scroll into view', async () => {
+  const storage = new FakeStorage(await buildCalibreLibrary(numberedBooks(20, { hasCover: true })));
+  const coverReads = (book: number) =>
+    storage.calls.filter(({ op, path }) => op === 'read' && path.endsWith(`/Book ${book} (${book})/cover.jpg`));
+  const app = await renderApp({ storage, connected: true });
+
+  const newest = app.screen.getByRole('img', { name: 'Cover of Book 20' });
+  await expect.element(newest).toBeVisible();
+  await expect.element(newest).toHaveAttribute('src', expect.stringMatching(/^blob:/));
+  expect(coverReads(1)).toEqual([]);
+
+  await app.screen.getByRole('heading', { name: 'Book 1', exact: true }).element().scrollIntoView();
+
+  const oldest = app.screen.getByRole('img', { name: 'Cover of Book 1' });
+  await expect.element(oldest).toBeVisible();
+  await expect.element(oldest).toHaveAttribute('src', expect.stringMatching(/^blob:/));
+  expect(coverReads(1)).toHaveLength(1);
 });
