@@ -1,4 +1,3 @@
-import { File as MegaFile } from 'megajs';
 import { NotFound, type FileStat, type LibraryPath, type ReadOptions, type StorageAdapter } from '../adapter.ts';
 import { downloadToBlob, type DownloadOptions, type DownloadStream } from './download.ts';
 import { toStorageError } from './errors.ts';
@@ -14,6 +13,7 @@ export function createMegaAdapter(link: string): StorageAdapter {
 
   const loadTree = () => {
     tree ??= (async () => {
+      const { File: MegaFile } = await import('megajs');
       const root = MegaFile.fromURL(link);
       await root.loadAttributes();
       return root as unknown as MegaNode;
