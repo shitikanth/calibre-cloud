@@ -3,12 +3,10 @@ import type { BookSummary } from '../library/protocol.ts';
 import { useCover } from '../library/use-cover.ts';
 import { useInView } from './use-in-view.ts';
 
-export type CoverSize = 'thumbnail' | 'full';
-
-export function BookCover({ book, size }: { book: BookSummary; size: CoverSize }) {
+export function BookCover({ book, loading }: { book: BookSummary; loading: 'eager' | 'lazy' }) {
   const frame = useRef<HTMLDivElement>(null);
   const inView = useInView(frame, { rootMargin: '200px', once: true });
-  const cover = useCover(book, size === 'full' || inView);
+  const cover = useCover(book, loading === 'eager' || inView);
 
   if (!book.cover || cover.isError) return <CoverPlaceholder title={book.title} />;
   return (
