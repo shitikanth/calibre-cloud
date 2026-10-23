@@ -9,6 +9,8 @@ SELECT b.id, b.title, b.path, b.has_cover, b.last_modified,
   FROM books b
  WHERE $pattern IS NULL
     OR b.title LIKE $pattern ESCAPE '\\'
+    OR EXISTS (SELECT 1 FROM books_authors_link bal JOIN authors a ON a.id = bal.author
+                WHERE bal.book = b.id AND a.name LIKE $pattern ESCAPE '\\')
  ORDER BY b.timestamp DESC, b.id DESC
  LIMIT $limit OFFSET $offset`;
 

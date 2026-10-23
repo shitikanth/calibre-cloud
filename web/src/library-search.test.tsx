@@ -42,3 +42,11 @@ test('typing in the search box narrows the grid to books whose title matches', a
 
   await expectTitles(app.screen, ['A Wizard of Earthsea']);
 });
+
+test('search matches author names', async () => {
+  const app = await renderApp({ storage: await bronteLibrary(), connected: true });
+
+  await search(app.screen, 'le guin');
+
+  await expectTitles(app.screen, ['A Wizard of Earthsea']);
+});
