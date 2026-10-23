@@ -8,6 +8,13 @@ import '../index.css';
 
 export const testLink = 'https://mega.nz/folder/TestHandle#TestKey_123';
 
+const mounted = new Set<{ unmount(): Promise<void> | void }>();
+
+export async function unmountApps() {
+  for (const screen of mounted) await screen.unmount();
+  mounted.clear();
+}
+
 export type RenderAppOptions = { storage: StorageAdapter; path?: string; connected?: boolean };
 
 export async function renderApp({ storage, path = '/', connected = false }: RenderAppOptions) {
@@ -17,13 +24,16 @@ export async function renderApp({ storage, path = '/', connected = false }: Rend
     opened.push(connection);
     return storage;
   };
-  const mount = () =>
-    render(
+  const mount = async () => {
+    const mountedScreen = await render(
       <App
         router={createAppRouter({ history: createMemoryHistory({ initialEntries: [path] }) })}
         openStorage={openStorage}
       />,
     );
+    mounted.add(mountedScreen);
+    return mountedScreen;
+  };
 
   let screen = await mount();
   return {
@@ -33,6 +43,7 @@ export async function renderApp({ storage, path = '/', connected = false }: Rend
     opened,
     async reload() {
       await screen.unmount();
+      mounted.delete(screen);
       screen = await mount();
       return screen;
     },

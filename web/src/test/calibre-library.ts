@@ -32,6 +32,7 @@ export type BookSpec = {
   title: string;
   authors?: string[];
   added?: string;
+  modified?: string;
   hasCover?: boolean;
   formats?: Record<string, string>;
 };
@@ -53,7 +54,7 @@ export async function buildCalibreLibrary(books: BookSpec[]): Promise<FakeLibrar
       db.exec({
         sql: `INSERT INTO books(id, title, sort, timestamp, author_sort, path, uuid, has_cover, last_modified)
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        bind: [id, book.title, book.title, added, authors.join(' & '), path, `uuid-${id}`, book.hasCover ? 1 : 0, added],
+        bind: [id, book.title, book.title, added, authors.join(' & '), path, `uuid-${id}`, book.hasCover ? 1 : 0, book.modified ?? added],
       });
       for (const name of authors) {
         if (!authorIds.has(name)) {

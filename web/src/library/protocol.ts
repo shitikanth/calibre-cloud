@@ -6,7 +6,10 @@ export type BookSummary = {
 };
 
 export type LibraryOperations = {
-  open: { args: { bytes: ArrayBuffer }; result: void };
+  open: { args: { bytes: ArrayBuffer }; result: string | null };
+  openStored: { args: { file: string }; result: boolean };
+  clear: { args: Record<string, never>; result: void };
+  close: { args: Record<string, never>; result: void };
   countBooks: { args: Record<string, never>; result: number };
   listBooks: { args: { offset: number; limit: number }; result: BookSummary[] };
 };

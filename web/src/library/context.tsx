@@ -5,7 +5,13 @@ const LibraryIndexContext = createContext<LibraryIndex | undefined>(undefined);
 
 export function LibraryIndexProvider({ children }: { children: ReactNode }) {
   const [index] = useState(() => new LibraryIndex());
-  useEffect(() => () => index.dispose(), [index]);
+  const [disposal] = useState<{ timer?: ReturnType<typeof setTimeout> }>({});
+  useEffect(() => {
+    clearTimeout(disposal.timer);
+    return () => {
+      disposal.timer = setTimeout(() => index.dispose());
+    };
+  }, [index, disposal]);
   return <LibraryIndexContext value={index}>{children}</LibraryIndexContext>;
 }
 

@@ -21,7 +21,7 @@ export class FakeStorage implements StorageAdapter {
   readonly calls: FakeStorageCall[] = [];
   private readonly files = new Map<LibraryPath, StoredFile>();
   private readonly failures = new Map<LibraryPath, StorageError>();
-  private readonly holds = new Map<LibraryPath, { started: () => void; released: Promise<void> }>();
+  private readonly holds = new Map<string, { started: () => void; released: Promise<void> }>();
 
   constructor(files: Record<LibraryPath, Uint8Array<ArrayBuffer> | string> = {}) {
     for (const [path, content] of Object.entries(files)) this.put(path, content);
@@ -41,16 +41,25 @@ export class FakeStorage implements StorageAdapter {
   }
 
   holdNextRead(path: LibraryPath): HeldRead {
+    return this.holdNext('read', path);
+  }
+
+  holdNextStat(path: LibraryPath): HeldRead {
+    return this.holdNext('stat', path);
+  }
+
+  private holdNext(op: FakeStorageCall['op'], path: LibraryPath): HeldRead {
     let started!: () => void;
     let release!: () => void;
     const startedPromise = new Promise<void>((resolve) => (started = resolve));
     const released = new Promise<void>((resolve) => (release = resolve));
-    this.holds.set(path, { started, released });
+    this.holds.set(`${op}:${path}`, { started, released });
     return { started: startedPromise, release };
   }
 
   async stat(path: LibraryPath): Promise<FileStat> {
     this.calls.push({ op: 'stat', path });
+    await this.waitIfHeld('stat', path);
     const file = this.lookup(path);
     return { size: file.bytes.byteLength, version: file.version };
   }
@@ -62,16 +71,18 @@ export class FakeStorage implements StorageAdapter {
     const total = file.bytes.byteLength;
     onProgress?.(Math.floor(total / 2), total);
 
-    const hold = this.holds.get(path);
-    if (hold) {
-      this.holds.delete(path);
-      hold.started();
-      await Promise.race([hold.released, abortion(signal)]);
-    }
-
+    await this.waitIfHeld('read', path, signal);
     throwIfAborted(signal);
     onProgress?.(total, total);
     return new Blob([file.bytes]);
+  }
+
+  private async waitIfHeld(op: FakeStorageCall['op'], path: LibraryPath, signal?: AbortSignal) {
+    const hold = this.holds.get(`${op}:${path}`);
+    if (!hold) return;
+    this.holds.delete(`${op}:${path}`);
+    hold.started();
+    await Promise.race([hold.released, abortion(signal)]);
   }
 
   private lookup(path: LibraryPath): StoredFile {
