@@ -69,6 +69,29 @@ test('the detail page shows the metadata Calibre holds for the book', async () =
   await expect.element(app.screen.getByText('Sparrowhawk')).toBeVisible();
 });
 
+test('the description keeps its formatting but nothing in it runs', async () => {
+  const description = [
+    '<p>An <b>orphan</b> <a href="javascript:window.ranScript=1">governess</a>.</p>',
+    '<script>window.ranScript = 1</script>',
+    '<img src="x" onerror="window.ranScript = 1">',
+    '<p style="color: red" onclick="window.ranScript = 1">Reader, I married him.</p>',
+  ].join('');
+  const storage = new FakeStorage(
+    await buildCalibreLibrary([{ title: 'Jane Eyre', authors: ['Charlotte Brontë'], description }]),
+  );
+  const app = await renderApp({ storage, connected: true, path: '/books/1' });
+
+  const shown = app.screen.getByRole('region', { name: 'Description' });
+  await expect.element(shown.getByText('orphan')).toBeVisible();
+  expect(shown.getByText('orphan').element().tagName).toBe('B');
+  await userEvent.click(shown.getByText('Reader, I married him.'));
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  const html = shown.element().innerHTML;
+  expect(html).not.toMatch(/<script|<img|onerror|onclick|style=|javascript:/i);
+  expect((window as { ranScript?: number }).ranScript).toBeUndefined();
+});
+
 test('fields the book doesn’t have are left out', async () => {
   const storage = new FakeStorage(await buildCalibreLibrary([{ title: 'Poems', authors: ['Emily Brontë'] }]));
   const app = await renderApp({ storage, connected: true, path: '/books/1' });
