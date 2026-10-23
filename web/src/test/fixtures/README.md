@@ -1,0 +1,1 @@
+- `two-pages.pdf`: two pages of our own text with a two-entry outline ("Page one", "Page two"), for the PDF renderer test.
