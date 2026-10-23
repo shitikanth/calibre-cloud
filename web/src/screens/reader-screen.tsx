@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { bookFilename } from '../download/save-blob.ts';
 import { useDownload } from '../download/use-download.ts';
 import type { BookDetail, BookFormat } from '../library/protocol.ts';
+import { forgetBookFile } from '../reader/book-cache.ts';
 import { useRenderers } from '../reader/context.tsx';
 import { loadReaderSettings, saveReaderSettings, type ReaderSettings } from '../reader/reader-settings.ts';
 import type { BookRenderer, ReaderTheme, Relocation } from '../reader/renderer.ts';
@@ -35,7 +36,7 @@ function ReaderForFormat({ book, formatName }: { book: BookDetail; formatName: s
 }
 
 function Reader({ book, format }: { book: BookDetail; format: BookFormat }) {
-  const file = useBookFile(format.path);
+  const file = useBookFile({ bookId: book.id, format: format.format, path: format.path });
   const navigate = useNavigate();
   const [settings, setSettings] = useState(loadReaderSettings);
   const { state } = file;
@@ -209,7 +210,9 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
         setRenderer(created);
         setStatus('open');
       } catch {
-        if (!cancelled) setStatus('unopenable');
+        if (cancelled) return;
+        setStatus('unopenable');
+        if (opened) void forgetBookFile(book.id, format.format);
       }
     })();
     return () => {
@@ -218,7 +221,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
       opened?.destroy();
       host.replaceChildren();
     };
-  }, [renderers, format.format, blob]);
+  }, [renderers, book.id, format.format, blob]);
 
   useEffect(() => {
     renderer?.setStyles?.(settings);
