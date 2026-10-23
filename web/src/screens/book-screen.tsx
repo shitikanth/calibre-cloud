@@ -1,19 +1,24 @@
 import { Link } from '@tanstack/react-router';
+import { useLibrarySession } from '../library/session.tsx';
 import { useBook } from '../library/use-book.ts';
-import { useOpenLibrary } from '../library/use-library.ts';
 import { BookDetails } from './book-details.tsx';
 import { LoadingLibrary } from './library-screen.tsx';
 import { StorageErrorScreen } from './storage-error-screen.tsx';
 
 export function BookScreen({ bookId }: { bookId: string }) {
-  const id = /^\d+$/.test(bookId) ? Number(bookId) : undefined;
-  const library = useOpenLibrary();
-  const book = useBook(id ?? 0, library.isSuccess && id !== undefined);
+  const { library } = useLibrarySession();
 
   if (library.isError) return <StorageErrorScreen error={library.error} retry={() => void library.refetch()} />;
-  if (book.isError) return <StorageErrorScreen error={book.error} retry={() => void book.refetch()} />;
   if (!library.isSuccess) return <LoadingLibrary progress={library.progress} />;
-  if (id === undefined || book.data === null) return <BookNotFound />;
+  if (!/^\d+$/.test(bookId)) return <BookNotFound />;
+  return <OpenBook id={Number(bookId)} />;
+}
+
+function OpenBook({ id }: { id: number }) {
+  const book = useBook(id);
+
+  if (book.isError) return <StorageErrorScreen error={book.error} retry={() => void book.refetch()} />;
+  if (book.data === null) return <BookNotFound />;
   if (!book.data) return null;
 
   return (

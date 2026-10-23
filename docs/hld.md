@@ -1,6 +1,6 @@
 # calibre-cloud: High-Level Design
 
-Status: draft. Nothing is implemented yet.
+Status: the first slice is built: browse, search, book detail, and download from a MEGA shared folder. Google Drive, Dropbox, and the reader are not built yet.
 
 ## Goal
 
@@ -27,9 +27,11 @@ Let users browse and read their Calibre library in a browser, with nothing to in
 ```mermaid
 flowchart LR
   subgraph Browser
-    UI[Library UI] --> IDX[Library index]
+    UI[Library UI] --> IDX[Library index<br/>Web Worker]
     UI --> RD[Reader]
-    IDX --> SA[Storage adapter]
+    UI --> SA[Storage adapter]
+    UI --> DC[(Device cache<br/>OPFS, Cache API)]
+    IDX --> DC
     RD --> SA
   end
   SA -- metadata.db, covers, book files --> CS[(User's cloud storage)]
@@ -39,20 +41,43 @@ flowchart LR
 
 ### Components
 
-- **Storage adapter:** one per provider, all behind a single interface: list a folder, and read a file by its path relative to the library root. Nothing above this layer knows which provider is in use.
-- **Library index:** loads `metadata.db` (the SQLite file Calibre keeps at the library root) into an in-browser SQLite engine and answers browse and search queries.
+- **Storage adapter:** one per provider, all behind a single interface of two operations, each taking a path relative to the library root:
+  - `stat`: the file's size and a version that changes when the file does.
+  - `read`: the whole file as a Blob, with progress and cancellation.
+
+  Every failure is one of five provider-neutral errors: `NotFound`, `ReconnectRequired`, `QuotaExceeded`, `Network`, `Aborted`. The UI explains errors in these terms only.
+- **Storage provider:** each provider also owns its connect input (for MEGA, a folder link and its validation) and the shape of its saved connection. Only the storage layer knows the providers; everything above it sees a connection and an adapter. ESLint enforces this boundary and keeps each provider's SDK inside its adapter.
+- **Library index:** the official SQLite WASM build in a Web Worker opens `metadata.db` (the SQLite file Calibre keeps at the library root) read-only and answers browse and search queries over a small typed message API. Queries use Calibre's base tables, not its views or SQL functions.
 - **Library UI:** browse and search by author, series, tag, and other metadata, showing covers.
 - **Reader:** renders a book file in the browser, with one renderer per supported format.
 - **Serverless auth functions (optional):** OAuth code exchange and token refresh for providers that need a client secret. Each call is stateless and small.
 
 ### Main flow
 
-1. The user connects a provider and picks their library folder.
-2. The storage adapter downloads `metadata.db` once, and the library index opens it.
+1. The user connects a provider and picks their library folder. The connection is saved in localStorage.
+2. The storage adapter downloads `metadata.db`, and the library index opens it and keeps it on the device.
 3. The UI queries the index and fetches covers as they scroll into view.
 4. Opening a book fetches only that book's file, and the reader renders it.
 
 A Calibre library can be many GB, but only `metadata.db` is needed to list the whole library. Everything else is fetched when it's needed.
+
+### Caching on the device
+
+- `metadata.db` lives in OPFS through SQLite's `opfs-sahpool` VFS. The version `stat` reported for it is kept in localStorage.
+- A returning visit opens the cached copy at once. The app calls `stat('metadata.db')` once per page load and on "Refresh library", with no polling. A new version downloads to a separate file and replaces the old one only when complete.
+- If the check fails, the cached library stays browsable with a banner saying why.
+- Only one tab can hold the OPFS pool, so a second tab asks the user to close the first.
+- Where OPFS is unavailable, the library is held in memory and downloaded on every visit.
+- Covers are cached in the Cache API, keyed by book and its `last_modified`. Whenever a downloaded `metadata.db` is opened, cached covers it no longer refers to are deleted.
+- Book files and full-size covers on the detail page are never cached.
+- After connecting, the app asks for persistent storage. Disconnect deletes the saved connection, the cached library, and the covers.
+
+## Stack and hosting
+
+- **Frontend:** React, Vite, TypeScript, TanStack Router and TanStack Query, Tailwind.
+- **SQLite:** the official `@sqlite.org/sqlite-wasm` build, run in a Web Worker.
+- **Hosting:** a Cloudflare Worker serving static assets, with SPA fallback and a strict CSP set in platform config, not code. No serverless functions yet; MEGA needs none.
+- **Tests:** Vitest in browser mode (Chromium), driving the whole app against an in-memory fake storage adapter.
 
 ## Storage providers
 
@@ -71,7 +96,5 @@ A Calibre library can be many GB, but only `metadata.db` is needed to list the w
 ## Risks and open questions
 
 1. **Google Drive scope:** `drive.readonly` is a restricted scope. Unverified apps are capped at 100 users, and verification can require a paid annual security assessment, which would break "costs scale to zero". `drive.file` with the Google Picker avoids this, but it's unconfirmed whether picking a folder grants access to the files inside it. Prototype this before building the Drive adapter.
-2. **MEGA transfer quota:** free accounts have a bandwidth limit, so large books may fail to download.
-3. **Large `metadata.db`:** big libraries mean a slow first load. Caching it in the browser between visits is undecided.
-4. **Formats:** which formats the reader supports, beyond the obvious EPUB and PDF.
-5. **Stack:** frontend framework, SQLite engine, and serverless platform are not chosen yet.
+2. **MEGA transfer quota:** free accounts have a bandwidth limit, so large books may fail to download. A download that hits the quota fails at once with `QuotaExceeded` rather than retrying.
+3. **Formats:** which formats the reader supports, beyond the obvious EPUB and PDF.

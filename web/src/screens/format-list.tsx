@@ -1,8 +1,9 @@
 import { bookFilename } from '../download/save-blob.ts';
 import { useDownload, type DownloadState } from '../download/use-download.ts';
 import type { BookDetail, BookFormat } from '../library/protocol.ts';
-import { Network, NotFound, QuotaExceeded, ReconnectRequired } from '../storage/adapter.ts';
+import { describeError } from './describe-error.ts';
 import { formatSize } from './format.ts';
+import { ProgressBar } from './progress-bar.tsx';
 
 export function FormatList({ book }: { book: BookDetail }) {
   if (book.formats.length === 0) return <p className="mt-6 text-sm text-neutral-600">No files for this book.</p>;
@@ -23,7 +24,7 @@ function FormatItem({ format, filename }: { format: BookFormat; filename: string
       <span className="font-medium">{format.format}</span>
       <span className="text-sm text-neutral-600">{formatSize(format.size)}</span>
       {state.status === 'downloading' ? (
-        <DownloadProgress format={format.format} state={state} cancel={download.cancel} />
+        <DownloadingFormat format={format.format} state={state} cancel={download.cancel} />
       ) : (
         <button
           type="button"
@@ -35,7 +36,7 @@ function FormatItem({ format, filename }: { format: BookFormat; filename: string
       )}
       {state.status === 'failed' && (
         <p role="alert" className="w-full text-sm text-red-700">
-          {describeDownloadError(state.error)}
+          <DownloadError error={state.error} />
         </p>
       )}
     </li>
@@ -44,17 +45,10 @@ function FormatItem({ format, filename }: { format: BookFormat; filename: string
 
 type Downloading = Extract<DownloadState, { status: 'downloading' }>;
 
-function DownloadProgress({ format, state, cancel }: { format: string; state: Downloading; cancel: () => void }) {
-  const percent = state.total > 0 ? Math.floor((state.loaded / state.total) * 100) : undefined;
+function DownloadingFormat({ format, state, cancel }: { format: string; state: Downloading; cancel: () => void }) {
   return (
     <span className="ml-auto flex items-center gap-2">
-      <progress
-        aria-label={`Downloading ${format}`}
-        className="w-24"
-        max={100}
-        {...(percent === undefined ? {} : { value: percent })}
-      />
-      {percent !== undefined && <span className="text-sm text-neutral-600">{percent}%</span>}
+      <ProgressBar label={`Downloading ${format}`} loaded={state.loaded} total={state.total} className="w-36" />
       <button type="button" className="rounded border border-neutral-400 px-3 py-1 text-sm" onClick={cancel}>
         Cancel
       </button>
@@ -62,10 +56,11 @@ function DownloadProgress({ format, state, cancel }: { format: string; state: Do
   );
 }
 
-function describeDownloadError(error: Error): string {
-  if (error instanceof NotFound) return 'This file is missing from your library.';
-  if (error instanceof QuotaExceeded) return 'Download quota exceeded. Try later.';
-  if (error instanceof Network) return 'Couldn’t reach your library. Check your connection and try again.';
-  if (error instanceof ReconnectRequired) return 'Your access has expired. Connect again.';
-  return `The download failed: ${error.message}`;
+function DownloadError({ error }: { error: Error }) {
+  const { title, detail } = describeError(error, 'file');
+  return (
+    <>
+      <span className="font-medium">{title}.</span> {detail}
+    </>
+  );
 }

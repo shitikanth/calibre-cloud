@@ -1,4 +1,5 @@
 import type { ReadOptions, StorageAdapter } from '../storage/adapter.ts';
+import { forgetStaleCovers } from './cover-cache.ts';
 import type { LibraryIndex } from './library-index.ts';
 import { loadStoredLibrary, saveStoredLibrary } from './stored-library.ts';
 
@@ -34,4 +35,5 @@ async function download(
   const blob = await storage.read(METADATA, onProgress ? { onProgress } : {});
   const file = await index.open(await blob.arrayBuffer());
   saveStoredLibrary(file === null ? undefined : { version, file });
+  await forgetStaleCovers(await index.listCoverVersions());
 }

@@ -35,6 +35,42 @@ test('a returning owner sees the cached library without waiting on the network',
   expect(metadataCalls(storage)).toEqual([{ op: 'stat', path: 'metadata.db' }]);
 });
 
+function metadataStats(storage: FakeStorage) {
+  return metadataCalls(storage).filter(({ op }) => op === 'stat');
+}
+
+test('loading a book page directly checks the library for changes once', async () => {
+  const storage = await libraryOf(brontës);
+  const app = await renderApp({ storage, connected: true, path: '/books/2' });
+  await expect.element(app.screen.getByRole('heading', { level: 1, name: 'Wuthering Heights' })).toBeVisible();
+  storage.calls.length = 0;
+
+  const reloaded = await app.reload();
+
+  await expect.element(reloaded.getByRole('heading', { level: 1, name: 'Wuthering Heights' })).toBeVisible();
+  await expect.poll(() => metadataStats(storage)).toHaveLength(1);
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  expect(metadataStats(storage)).toHaveLength(1);
+});
+
+test('going from the grid to a book and back does not check the library again', async () => {
+  const storage = await libraryOf(brontës);
+  const app = await renderApp({ storage, connected: true });
+  await expect.element(app.screen.getByText('3 books')).toBeVisible();
+  storage.calls.length = 0;
+  const reloaded = await app.reload();
+  await expect.element(reloaded.getByText('3 books')).toBeVisible();
+  await expect.poll(() => metadataStats(storage)).toHaveLength(1);
+
+  await userEvent.click(reloaded.getByRole('link', { name: /Jane Eyre/ }));
+  await expect.element(reloaded.getByRole('heading', { level: 1, name: 'Jane Eyre' })).toBeVisible();
+  await userEvent.click(reloaded.getByRole('link', { name: '← Library' }));
+  await expect.element(reloaded.getByText('3 books')).toBeVisible();
+  await new Promise((resolve) => setTimeout(resolve, 300));
+
+  expect(metadataStats(storage)).toHaveLength(1);
+});
+
 async function withNewBook(storage: FakeStorage, version: string) {
   const { 'metadata.db': updated } = await buildCalibreLibrary([
     ...brontës,
@@ -53,6 +89,8 @@ test('a second tab says the library is open in another tab', async () => {
   await expect
     .element(second.screen.getByRole('heading', { name: 'Library is open in another tab' }))
     .toBeVisible();
+  await expect.element(second.screen.getByText(/Close the other tab/)).toBeVisible();
+  expect(second.screen.getByRole('alert').getByRole('button').elements().map((button) => button.textContent)).toEqual(['Try again']);
   await expect.element(first.screen.getByText('3 books')).toBeVisible();
 
   await first.screen.unmount();
@@ -115,6 +153,20 @@ test('a failed download of a changed library keeps the cached one browsable with
   const again = await app.reload();
   await expect.element(again.getByRole('alert')).toMatchTextContent(/Couldn’t reach your library/);
   await expect.element(again.getByText('3 books')).toBeVisible();
+});
+
+test('an unreachable library keeps the cached one browsable with a banner saying why', async () => {
+  const storage = await libraryOf(brontës);
+  const app = await renderApp({ storage, connected: true });
+  await expect.element(app.screen.getByText('3 books')).toBeVisible();
+  storage.failWith('metadata.db', new Network(), 'stat');
+
+  const reloaded = await app.reload();
+
+  await expect.element(reloaded.getByRole('alert')).toMatchTextContent(/Couldn’t reach your library/);
+  await expect.element(reloaded.getByText('3 books')).toBeVisible();
+  await userEvent.click(reloaded.getByRole('link', { name: /Wuthering Heights/ }));
+  await expect.element(reloaded.getByRole('heading', { level: 1, name: 'Wuthering Heights' })).toBeVisible();
 });
 
 test('MEGA over quota keeps the cached library browsable with a banner saying why', async () => {

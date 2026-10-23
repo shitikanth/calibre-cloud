@@ -70,3 +70,41 @@ test('a cover changed in Calibre shows the new image after the library updates',
   expect(await coverText(reloaded, 'Wuthering Heights')).toBe('cover of Wuthering Heights');
   expect(coverReads(storage)).toEqual(['Charlotte Bronte/Jane Eyre (1)/cover.jpg']);
 });
+
+async function evictLibraryFromDevice() {
+  const root = await navigator.storage.getDirectory();
+  await expect
+    .poll(async () => {
+      try {
+        for await (const name of root.keys()) await root.removeEntry(name, { recursive: true });
+        return true;
+      } catch {
+        return false;
+      }
+    })
+    .toBe(true);
+}
+
+async function cachedCoverCount(): Promise<number> {
+  let count = 0;
+  for (const name of await caches.keys()) count += (await (await caches.open(name)).keys()).length;
+  return count;
+}
+
+test('a library downloaded afresh drops the covers it no longer uses', async () => {
+  const storage = new FakeStorage(await buildCalibreLibrary(books));
+  const app = await renderApp({ storage, connected: true });
+  expect(await coverText(app.screen, 'Jane Eyre')).toBe('cover of Jane Eyre');
+  expect(await coverText(app.screen, 'Wuthering Heights')).toBe('cover of Wuthering Heights');
+
+  const [janeEyre, wutheringHeights] = books;
+  const changed = await buildCalibreLibrary([{ ...janeEyre!, modified: '2024-06-01 09:00:00+00:00' }, wutheringHeights!]);
+  storage.put('metadata.db', changed['metadata.db']!, '2');
+  storage.put('Charlotte Bronte/Jane Eyre (1)/cover.jpg', 'new cover of Jane Eyre');
+
+  const reloaded = await app.reload({ whileClosed: evictLibraryFromDevice });
+
+  expect(await coverText(reloaded, 'Jane Eyre')).toBe('new cover of Jane Eyre');
+  expect(await coverText(reloaded, 'Wuthering Heights')).toBe('cover of Wuthering Heights');
+  await expect.poll(cachedCoverCount).toBe(2);
+});

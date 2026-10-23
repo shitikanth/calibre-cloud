@@ -14,6 +14,11 @@ const megaSdk = {
   message: 'Only the MEGA storage adapter (web/src/storage/mega/) may use megajs.',
 };
 
+const megaProvider = {
+  group: ['**/storage/mega', '**/storage/mega/*'],
+  message: 'Only web/src/storage/ may import the MEGA provider. Everything above the storage boundary uses storage/providers.ts.',
+};
+
 export default defineConfig([
   globalIgnores(['**/dist/', '**/.wrangler/', '**/.vitest/']),
   js.configs.recommended,
@@ -29,6 +34,10 @@ export default defineConfig([
   },
   {
     ignores: ['deploy/**'],
+    rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, megaSdk, megaProvider] }] },
+  },
+  {
+    files: ['web/src/storage/**'],
     rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, megaSdk] }] },
   },
   {

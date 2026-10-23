@@ -1,15 +1,16 @@
-export type Connection = { provider: 'mega'; link: string };
+import type { Connection } from '../storage/provider.ts';
+import { readConnection } from '../storage/providers.ts';
+
+export type { Connection };
 
 const storageKey = 'calibre-cloud:connection';
 
 export function loadConnection(): Connection | undefined {
   try {
-    const stored: unknown = JSON.parse(localStorage.getItem(storageKey) ?? 'null');
-    if (isConnection(stored)) return stored;
+    return readConnection(JSON.parse(localStorage.getItem(storageKey) ?? 'null'));
   } catch {
     return undefined;
   }
-  return undefined;
 }
 
 export function saveConnection(connection: Connection): void {
@@ -18,10 +19,4 @@ export function saveConnection(connection: Connection): void {
 
 export function clearConnection(): void {
   localStorage.removeItem(storageKey);
-}
-
-function isConnection(value: unknown): value is Connection {
-  if (typeof value !== 'object' || value === null) return false;
-  const { provider, link } = value as Record<string, unknown>;
-  return provider === 'mega' && typeof link === 'string';
 }

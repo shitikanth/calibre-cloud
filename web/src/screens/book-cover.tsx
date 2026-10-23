@@ -1,12 +1,12 @@
 import { useEffect, useRef } from 'react';
 import type { BookSummary } from '../library/protocol.ts';
-import { useCover } from '../library/use-cover.ts';
+import { useCover, type CoverSize } from '../library/use-cover.ts';
 import { useInView } from './use-in-view.ts';
 
-export function BookCover({ book }: { book: BookSummary }) {
+export function BookCover({ book, size }: { book: BookSummary; size: CoverSize }) {
   const frame = useRef<HTMLDivElement>(null);
   const inView = useInView(frame, { rootMargin: '200px', once: true });
-  const cover = useCover(book, inView);
+  const cover = useCover(book, size, size === 'full' || inView);
 
   if (!book.cover || cover.isError) return <CoverPlaceholder title={book.title} />;
   return (
@@ -16,7 +16,7 @@ export function BookCover({ book }: { book: BookSummary }) {
   );
 }
 
-export function BlobImage({ blob, alt }: { blob: Blob; alt: string }) {
+function BlobImage({ blob, alt }: { blob: Blob; alt: string }) {
   const image = useRef<HTMLImageElement>(null);
   useEffect(() => {
     const url = URL.createObjectURL(blob);
@@ -26,7 +26,7 @@ export function BlobImage({ blob, alt }: { blob: Blob; alt: string }) {
   return <img ref={image} alt={alt} decoding="async" className="h-full w-full object-cover" />;
 }
 
-export function CoverPlaceholder({ title }: { title: string }) {
+function CoverPlaceholder({ title }: { title: string }) {
   return (
     <div
       role="img"

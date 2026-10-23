@@ -1,11 +1,9 @@
+import { BOOK_SUMMARY_COLUMNS, toBookSummary, type BookSummaryRow } from './book-summary-row.ts';
 import type { BookDetail, BookFormat } from './protocol.ts';
 import type { Database } from './sqlite.ts';
 
 const GET_BOOK = `
-SELECT b.id, b.title, b.path, b.has_cover, b.last_modified, b.pubdate, b.series_index,
-       (SELECT json_group_array(a.name ORDER BY bal.id)
-          FROM books_authors_link bal JOIN authors a ON a.id = bal.author
-         WHERE bal.book = b.id) AS authors,
+SELECT ${BOOK_SUMMARY_COLUMNS}, b.pubdate, b.series_index,
        (SELECT s.name FROM books_series_link bsl JOIN series s ON s.id = bsl.series
          WHERE bsl.book = b.id) AS series,
        (SELECT json_group_array(t.name ORDER BY btl.id)
@@ -23,15 +21,9 @@ SELECT b.id, b.title, b.path, b.has_cover, b.last_modified, b.pubdate, b.series_
 const GET_FORMATS = `
 SELECT format, uncompressed_size, name FROM data WHERE book = ? ORDER BY format`;
 
-type BookRow = {
-  id: number;
-  title: string;
-  path: string;
-  has_cover: number;
-  last_modified: string;
+type BookRow = BookSummaryRow & {
   pubdate: string | null;
   series_index: number;
-  authors: string;
   series: string | null;
   tags: string;
   publisher: string | null;
@@ -46,10 +38,7 @@ export function getBook(db: Database, bookId: number): BookDetail | null {
   if (!row) return null;
   const formats = db.selectObjects(GET_FORMATS, [bookId]) as FormatRow[];
   return {
-    id: row.id,
-    title: row.title,
-    authors: JSON.parse(row.authors) as string[],
-    cover: row.has_cover ? { path: `${row.path}/cover.jpg`, version: row.last_modified } : null,
+    ...toBookSummary(row),
     series: row.series === null ? null : { name: row.series, index: row.series_index },
     tags: JSON.parse(row.tags) as string[],
     publisher: row.publisher,

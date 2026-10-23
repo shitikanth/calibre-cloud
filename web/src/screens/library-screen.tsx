@@ -1,19 +1,19 @@
-import { useBookCount, useBooks, useOpenLibrary, type DownloadProgress } from '../library/use-library.ts';
-import { useLibraryUpdate } from '../library/use-library-update.ts';
+import { useLibrarySession } from '../library/session.tsx';
+import { useBookCount, useBooks, type LoadProgress } from '../library/use-library.ts';
 import { useSearch } from '@tanstack/react-router';
 import { BookGrid } from './book-grid.tsx';
 import { LibraryNotices } from './library-notices.tsx';
 import { LibraryToolbar } from './library-toolbar.tsx';
 import { LoadMore } from './load-more.tsx';
+import { ProgressBar } from './progress-bar.tsx';
 import { SearchBox } from './search-box.tsx';
 import { StorageErrorScreen } from './storage-error-screen.tsx';
 
 export function LibraryScreen() {
-  const library = useOpenLibrary();
+  const { library, update } = useLibrarySession();
   const count = useBookCount(library.isSuccess);
   const { q: search = '' } = useSearch({ from: '/' });
   const books = useBooks(library.isSuccess, search);
-  const update = useLibraryUpdate(library.data?.fromCache === true);
 
   if (library.isError) return <StorageErrorScreen error={library.error} retry={() => void library.refetch()} />;
   if (count.isError) return <StorageErrorScreen error={count.error} retry={() => void count.refetch()} />;
@@ -44,18 +44,16 @@ export function LibraryScreen() {
   );
 }
 
-export function LoadingLibrary({ progress }: { progress: DownloadProgress | undefined }) {
-  const percent = progress && progress.total > 0 ? Math.floor((progress.loaded / progress.total) * 100) : undefined;
+export function LoadingLibrary({ progress }: { progress: LoadProgress | undefined }) {
   return (
     <section>
       <h1 className="text-xl font-semibold">Loading your library…</h1>
-      <progress
+      <ProgressBar
+        label="Downloading library"
+        loaded={progress?.loaded ?? 0}
+        total={progress?.total ?? 0}
         className="mt-4 w-full"
-        aria-label="Downloading library"
-        max={100}
-        {...(percent === undefined ? {} : { value: percent })}
       />
-      {percent !== undefined && <p className="mt-1 text-sm text-neutral-600">{percent}%</p>}
     </section>
   );
 }
