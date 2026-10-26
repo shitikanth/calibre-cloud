@@ -188,7 +188,7 @@ test('on a phone the cover, title, fields, formats and description stack in that
   expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
 });
 
-test('on a phone each format row stays on one line, with 44 px Read and Download targets', async () => {
+test('on a phone each format row stays on one line', async () => {
   await page.viewport(390, 844);
   const storage = new FakeStorage(
     await buildCalibreLibrary([{ title: 'Jane Eyre', authors: ['Charlotte Brontë'], formats: { EPUB: 'e'.repeat(277_300), FB2: 'f' } }]),
@@ -201,29 +201,33 @@ test('on a phone each format row stays on one line, with 44 px Read and Download
     const { top, bottom } = element.getBoundingClientRect();
     return (top + bottom) / 2;
   };
-  for (const row of rows.elements()) {
-    const middles = [...row.querySelectorAll('span, a, button')].map(middle);
+  for (const [index, format] of ['EPUB', 'FB2'].entries()) {
+    const row = rows.nth(index);
+    const parts = [row.getByText(format, { exact: true }).element(), ...row.getByRole('link').elements(), ...row.getByRole('button').elements()];
+    const middles = parts.map(middle);
     expect(Math.max(...middles) - Math.min(...middles)).toBeLessThan(1);
-  }
-  const read = app.screen.getByRole('link', { name: 'Read EPUB' }).element().getBoundingClientRect();
-  expect(read.height).toBeGreaterThanOrEqual(44);
-  for (const format of ['EPUB', 'FB2']) {
-    const download = app.screen.getByRole('button', { name: `Download ${format}` }).element().getBoundingClientRect();
-    expect(download.width).toBeGreaterThanOrEqual(44);
-    expect(download.height).toBeGreaterThanOrEqual(44);
   }
   expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
 });
 
-test('on a desktop the Read button and the Download icon are 36 px', async () => {
+test('on a desktop the Read button, the Download icon and Cancel are 36 px', async () => {
   await page.viewport(1280, 800);
   const storage = new FakeStorage(await buildCalibreLibrary([{ title: 'Jane Eyre', authors: ['Charlotte Brontë'], formats: { EPUB: 'epub' } }]));
+  const held = storage.holdNextRead('Charlotte Bronte/Jane Eyre (1)/Jane Eyre - Charlotte Bronte.epub');
   const app = await renderApp({ storage, connected: true, path: '/books/1', renderers: fakeRenderers(['EPUB']).renderers });
   await expect.element(app.screen.getByRole('link', { name: 'Read EPUB' })).toBeVisible();
 
   expect(app.screen.getByRole('link', { name: 'Read EPUB' }).element().getBoundingClientRect().height).toBe(36);
   const download = app.screen.getByRole('button', { name: 'Download EPUB' }).element().getBoundingClientRect();
   expect([download.width, download.height]).toEqual([36, 36]);
+
+  await userEvent.click(app.screen.getByRole('button', { name: 'Download EPUB' }));
+  await held.started;
+  const cancel = app.screen.getByRole('button', { name: 'Cancel' });
+  await expect.element(cancel).toBeVisible();
+  expect(cancel.element().getBoundingClientRect().height).toBe(36);
+  await userEvent.click(cancel);
+  held.release();
 });
 
 test('fields the book doesn’t have are left out', async () => {

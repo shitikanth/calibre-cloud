@@ -27,6 +27,7 @@ function FormatItem({ bookId, format, filename }: { bookId: number; format: Book
   const renderers = useRenderers();
   const download = useDownload(format.path, filename);
   const { state } = download;
+  const downloadLabel = `Download ${format.format}`;
   return (
     <li className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded border border-neutral-300 px-3 py-2">
       <span className="font-medium">{format.format}</span>
@@ -47,8 +48,8 @@ function FormatItem({ bookId, format, filename }: { bookId: number; format: Book
         ) : (
           <button
             type="button"
-            aria-label={`Download ${format.format}`}
-            title={`Download ${format.format}`}
+            aria-label={downloadLabel}
+            title={downloadLabel}
             className="flex size-11 items-center justify-center rounded border border-neutral-400 sm:size-9"
             onClick={() => void download.start()}
           >
@@ -73,7 +74,7 @@ function DownloadingFormat({ format, state, cancel }: { format: string; state: D
   return (
     <span className="flex items-center gap-2">
       <ProgressBar label={`Downloading ${format}`} loaded={state.loaded} total={state.total} className="w-36" />
-      <button type="button" className="min-h-11 rounded border border-neutral-400 px-3 py-1 text-sm sm:min-h-0" onClick={cancel}>
+      <button type="button" className="inline-flex min-h-11 items-center rounded border border-neutral-400 px-3 text-sm sm:min-h-9" onClick={cancel}>
         Cancel
       </button>
     </span>
