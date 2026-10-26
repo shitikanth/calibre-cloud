@@ -7,6 +7,7 @@ import fb2Url from '../../test/fixtures/two-chapters.fb2?url';
 import fbzUrl from '../../test/fixtures/two-chapters.fbz?url';
 import mobiUrl from '../../test/fixtures/two-chapters.mobi?url';
 import cbzUrl from '../../test/fixtures/two-pages.cbz?url';
+import fixedLayoutEpubUrl from '../../test/fixtures/two-fixed-pages.epub?url';
 
 type OpenedBook = { renderer: EpubRenderer; relocations: Relocation[]; container: HTMLElement };
 
@@ -215,11 +216,15 @@ test.each(reflowable)('$extension: TOC goes to chapter two, text settings apply,
   expect(resumed.renderer.sectionDocument?.body.textContent).toContain('tin box of letters');
 });
 
-test('cbz: pages open fixed-layout without text settings, turn, and the CFI reopens on the same page', async () => {
-  const cbz = { extension: 'cbz', url: cbzUrl };
-  const first = await openFixture(undefined, cbz);
+const fixedLayout = [
+  { extension: 'cbz', url: cbzUrl, toc: ['page-1.png', 'page-2.png'] },
+  { extension: 'epub', url: fixedLayoutEpubUrl, toc: ['Page one', 'Page two'] },
+];
+
+test.each(fixedLayout)('fixed-layout $extension: pages open without text settings, turn, and the CFI reopens on the same page', async ({ toc, ...fixture }) => {
+  const first = await openFixture(undefined, fixture);
   expect(first.renderer.setStyles).toBeUndefined();
-  expect(first.renderer.toc.map((entry) => entry.label)).toEqual(['page-1.png', 'page-2.png']);
+  expect(first.renderer.toc.map((entry) => entry.label)).toEqual(toc);
   expect(first.relocations[0]?.location).toMatch(/^epubcfi\(.+\)$/);
   const opening = first.relocations[0]?.location;
 
@@ -229,6 +234,6 @@ test('cbz: pages open fixed-layout without text settings, turn, and the CFI reop
   expect(saved).not.toBe(opening);
   await close(first);
 
-  const resumed = await openFixture(saved, cbz);
+  const resumed = await openFixture(saved, fixture);
   expect(resumed.relocations[0]?.location).toBe(saved);
 });

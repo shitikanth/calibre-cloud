@@ -230,7 +230,7 @@ test('a page that fails to render shows a notice while the book stays open', asy
 });
 
 test('every format foliate-js or pdf.js reads gets a Read button; DJVU and TXT stay download-only', async () => {
-  const readable = ['AZW', 'AZW3', 'CBZ', 'EPUB', 'FB2', 'FBZ', 'KF8', 'MOBI', 'PDF'];
+  const readable = ['AZW', 'AZW3', 'CBZ', 'EPUB', 'FB2', 'FBZ', 'KEPUB', 'KF8', 'MOBI', 'PDF', 'PRC'];
   const storage = new FakeStorage(
     await buildCalibreLibrary([
       {

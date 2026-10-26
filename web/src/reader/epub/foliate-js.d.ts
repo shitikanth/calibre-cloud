@@ -6,7 +6,7 @@ declare module 'foliate-js/view.js' {
   export type ResourceLoad = { type: string; isScript: boolean; allow: boolean | Promise<boolean> };
 
   export type ResourceData = {
-    readonly name: string;
+    readonly name?: string;
     data: string | Blob | Promise<string | Blob>;
     type: string;
   };
@@ -22,7 +22,6 @@ declare module 'foliate-js/view.js' {
 
   export interface FoliateView extends HTMLElement {
     book: Book;
-    isFixedLayout: boolean;
     renderer: HTMLElement & { setStyles?(css: string): void };
     open(book: File): Promise<void>;
     close(): void;

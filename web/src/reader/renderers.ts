@@ -7,10 +7,12 @@ const foliate =
 
 export const renderers: Renderers = {
   EPUB: foliate('epub'),
+  KEPUB: foliate('epub'),
   MOBI: foliate('mobi'),
   AZW: foliate('azw'),
   AZW3: foliate('azw3'),
   KF8: foliate('kf8'),
+  PRC: foliate('prc'),
   FB2: foliate('fb2'),
   FBZ: foliate('fbz'),
   CBZ: foliate('cbz'),

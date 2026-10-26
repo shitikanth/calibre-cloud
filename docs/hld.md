@@ -1,6 +1,6 @@
 # calibre-cloud: High-Level Design
 
-Status: the first slice is built: browse, search, book detail, and download from a MEGA shared folder. The reader is built for EPUB, PDF, MOBI, AZW, AZW3, KF8, FB2, FBZ, and CBZ. Google Drive and Dropbox are not built yet.
+Status: the first slice is built: browse, search, book detail, and download from a MEGA shared folder. The reader is built for EPUB, KEPUB, PDF, MOBI, PRC, AZW, AZW3, KF8, FB2, FBZ, and CBZ. Google Drive and Dropbox are not built yet.
 
 ## Goal
 
@@ -49,7 +49,7 @@ flowchart LR
 - **Storage provider:** each provider also owns its connect input (for MEGA, a folder link and its validation) and the shape of its saved connection. Only the storage layer knows the providers; everything above it sees a connection and an adapter. ESLint enforces this boundary and keeps each provider's SDK inside its adapter.
 - **Library index:** the official SQLite WASM build in a Web Worker opens `metadata.db` (the SQLite file Calibre keeps at the library root) read-only and answers browse and search queries over a small typed message API. Queries use Calibre's base tables, not its views or SQL functions.
 - **Library UI:** browse and search by author, series, tag, and other metadata, showing covers.
-- **Reader:** renders a book file in the browser, with one renderer per supported format: foliate-js for EPUB, MOBI, AZW, AZW3, KF8, FB2, FBZ, and CBZ, and pdf.js for PDF. foliate-js picks CBZ and FB2 by file name, so the renderer names the file with the format's extension. Every other format is download-only.
+- **Reader:** renders a book file in the browser, with one renderer per supported format: foliate-js for EPUB, KEPUB, MOBI, PRC, AZW, AZW3, KF8, FB2, FBZ, and CBZ, and pdf.js for PDF. foliate-js picks CBZ, FB2, and FBZ by file name, so the renderer names the file with the format's extension. Every other format is download-only.
 - **Serverless auth functions (optional):** OAuth code exchange and token refresh for providers that need a client secret. Each call is stateless and small.
 
 ### Main flow

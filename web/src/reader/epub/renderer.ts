@@ -102,7 +102,7 @@ export async function createEpubRenderer(extension = 'epub'): Promise<EpubRender
       .then((data) => (isDocument && typeof data === 'string' ? stripScripts(data, detail.type) : data))
       .catch((cause: unknown) => {
         if (!isDocument) return '';
-        renderError(new Error(`Failed to load ${detail.name}`, { cause }));
+        renderError(new Error(`Failed to load ${detail.name ?? detail.type}`, { cause }));
         return blankDocument;
       });
   };
@@ -166,7 +166,7 @@ export async function createEpubRenderer(extension = 'epub'): Promise<EpubRender
       await navigate('Could not turn to the previous page', () => view?.prev());
     },
     get setStyles() {
-      if (view?.isFixedLayout) return undefined;
+      if (view?.renderer && !view.renderer.setStyles) return undefined;
       return (styles: ReaderStyles) => view?.renderer.setStyles?.(stylesheet(styles));
     },
     destroy() {
