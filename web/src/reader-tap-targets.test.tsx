@@ -30,7 +30,9 @@ test('on a phone, the reader’s buttons and links are at least 44 px tall', asy
   const app = await renderApp({ storage, connected: true, path: '/books/1', renderers: fake.renderers });
   await expect.element(app.screen.getByRole('link', { name: 'Read EPUB' })).toBeVisible();
   expect(size(app.screen, 'link', 'Read EPUB').height).toBeGreaterThanOrEqual(44);
-  expect(size(app.screen, 'button', 'Download EPUB').height).toBeGreaterThanOrEqual(44);
+  const download = size(app.screen, 'button', 'Download EPUB');
+  expect(download.width).toBeGreaterThanOrEqual(44);
+  expect(download.height).toBeGreaterThanOrEqual(44);
 
   await userEvent.click(app.screen.getByRole('link', { name: 'Read EPUB' }));
   await held.started;
