@@ -22,7 +22,8 @@ declare module 'foliate-js/view.js' {
 
   export interface FoliateView extends HTMLElement {
     book: Book;
-    renderer: HTMLElement & { setStyles(css: string): void };
+    isFixedLayout: boolean;
+    renderer: HTMLElement & { setStyles?(css: string): void };
     open(book: File): Promise<void>;
     close(): void;
     init(options: { lastLocation?: string; showTextStart?: boolean }): Promise<void>;

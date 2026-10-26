@@ -2,6 +2,11 @@ import { afterEach, expect, test, vi } from 'vitest';
 import type { Relocation } from '../renderer.ts';
 import { createEpubRenderer, type EpubRenderer } from './renderer.ts';
 import fixtureUrl from '../../test/fixtures/two-chapters.epub?url';
+import azw3Url from '../../test/fixtures/two-chapters.azw3?url';
+import fb2Url from '../../test/fixtures/two-chapters.fb2?url';
+import fbzUrl from '../../test/fixtures/two-chapters.fbz?url';
+import mobiUrl from '../../test/fixtures/two-chapters.mobi?url';
+import cbzUrl from '../../test/fixtures/two-pages.cbz?url';
 
 type OpenedBook = { renderer: EpubRenderer; relocations: Relocation[]; container: HTMLElement };
 
@@ -21,11 +26,15 @@ async function close({ renderer, container }: OpenedBook) {
   container.remove();
 }
 
-async function createInContainer(): Promise<OpenedBook> {
+type Fixture = { extension: string; url: string };
+
+const epubFixture: Fixture = { extension: 'epub', url: fixtureUrl };
+
+async function createInContainer(extension = 'epub'): Promise<OpenedBook> {
   const container = document.createElement('div');
   container.style.cssText = 'width: 600px; height: 800px';
   document.body.append(container);
-  const renderer = await createEpubRenderer();
+  const renderer = await createEpubRenderer(extension);
   const relocations: Relocation[] = [];
   renderer.onRelocate((relocation) => relocations.push(relocation));
   const book = { renderer, relocations, container };
@@ -33,9 +42,9 @@ async function createInContainer(): Promise<OpenedBook> {
   return book;
 }
 
-async function openFixture(location?: string): Promise<OpenedBook> {
-  const book = await createInContainer();
-  const blob = await (await fetch(fixtureUrl)).blob();
+async function openFixture(location?: string, { extension, url }: Fixture = epubFixture): Promise<OpenedBook> {
+  const book = await createInContainer(extension);
+  const blob = await (await fetch(url)).blob();
   await book.renderer.open(blob, book.container, location === undefined ? {} : { location });
   await vi.waitFor(() => expect(book.relocations.length).toBeGreaterThan(0));
   await nextFrame();
@@ -178,4 +187,48 @@ test('destroy during open leaves nothing behind', async () => {
   expect(renderer.toc).toEqual([]);
   expect(renderer.sectionDocument).toBeUndefined();
   expect(relocations).toEqual([]);
+});
+
+const reflowable: Fixture[] = [
+  { extension: 'mobi', url: mobiUrl },
+  { extension: 'azw3', url: azw3Url },
+  { extension: 'fb2', url: fb2Url },
+  { extension: 'fbz', url: fbzUrl },
+];
+
+test.each(reflowable)('$extension: TOC goes to chapter two, text settings apply, and its CFI reopens there', async (fixture) => {
+  const first = await openFixture(undefined, fixture);
+  expect(first.renderer.toc.map((entry) => entry.label)).toEqual(['One: The Lighthouse Ledger', 'Two: The Unsent Letters']);
+  expect(first.relocations[0]?.location).toMatch(/^epubcfi\(.+\)$/);
+  expect(first.renderer.sectionDocument?.body.textContent).toContain('ledger bound in sailcloth');
+
+  await goToChapterTwo(first.renderer);
+  await settled(first.relocations);
+  expect(first.renderer.sectionDocument?.body.textContent).toContain('tin box of letters');
+  first.renderer.setStyles?.({ fontSize: 100, theme: 'dark' });
+  await vi.waitFor(() => expect(computed(first.renderer.sectionDocument, 'body')?.backgroundColor).toBe('rgb(18, 18, 18)'));
+  const saved = first.relocations.at(-1)?.location ?? '';
+  await close(first);
+
+  const resumed = await openFixture(saved, fixture);
+  expect(resumed.relocations[0]?.location).toBe(saved);
+  expect(resumed.renderer.sectionDocument?.body.textContent).toContain('tin box of letters');
+});
+
+test('cbz: pages open fixed-layout without text settings, turn, and the CFI reopens on the same page', async () => {
+  const cbz = { extension: 'cbz', url: cbzUrl };
+  const first = await openFixture(undefined, cbz);
+  expect(first.renderer.setStyles).toBeUndefined();
+  expect(first.renderer.toc.map((entry) => entry.label)).toEqual(['page-1.png', 'page-2.png']);
+  expect(first.relocations[0]?.location).toMatch(/^epubcfi\(.+\)$/);
+  const opening = first.relocations[0]?.location;
+
+  await first.renderer.next();
+  await settled(first.relocations);
+  const saved = first.relocations.at(-1)?.location ?? '';
+  expect(saved).not.toBe(opening);
+  await close(first);
+
+  const resumed = await openFixture(saved, cbz);
+  expect(resumed.relocations[0]?.location).toBe(saved);
 });

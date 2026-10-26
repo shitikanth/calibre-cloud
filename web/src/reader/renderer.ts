@@ -14,7 +14,8 @@ export interface BookRenderer {
   goTo(location: string): Promise<void>;
   next(): Promise<void>;
   previous(): Promise<void>;
-  setStyles?(styles: ReaderStyles): void;
+  // Read once open resolves: a renderer can drop a capability when the book turns out to be fixed-layout.
+  setStyles?: ((styles: ReaderStyles) => void) | undefined;
   setZoom?(zoom: number): void;
   destroy(): void;
 }

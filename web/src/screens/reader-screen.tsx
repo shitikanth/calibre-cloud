@@ -292,13 +292,15 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
         renderer && (
           <>
             <TocTool renderer={renderer} />
-            <SettingsTool
-              renderer={renderer}
-              settings={settings}
-              onSettingsChange={onSettingsChange}
-              zoom={zoom}
-              onZoomChange={changeZoom}
-            />
+            {(renderer.setStyles || renderer.setZoom) && (
+              <SettingsTool
+                renderer={renderer}
+                settings={settings}
+                onSettingsChange={onSettingsChange}
+                zoom={zoom}
+                onZoomChange={changeZoom}
+              />
+            )}
           </>
         )
       }

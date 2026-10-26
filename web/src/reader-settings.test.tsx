@@ -133,6 +133,14 @@ test('unreadable saved settings fall back to the defaults', async () => {
   await expect.poll(() => styleCalls(fake.latest)).toEqual([{ fontSize: 100, theme: 'light' }]);
 });
 
+test('a book with neither text settings nor zoom, such as a comic, has no Settings button', async () => {
+  const fake = fakeRenderers(['EPUB'], (renderer) => Object.assign(renderer, { setStyles: undefined, setZoom: undefined }));
+  const app = await renderApp({ storage: await janeEyreLibrary(), connected: true, path: '/books/1/read/EPUB', renderers: fake.renderers });
+
+  await expect.element(app.screen.getByRole('button', { name: 'Table of contents' })).toBeVisible();
+  await expect.element(app.screen.getByRole('button', { name: 'Settings' })).not.toBeInTheDocument();
+});
+
 test('Zoom in and out step the zoom for the open book only; a reload starts at fit-width again', async () => {
   const { fake, app } = await openReader('/books/1/read/PDF');
   const settings = await openSettings(app.screen);
