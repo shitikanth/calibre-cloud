@@ -1,5 +1,5 @@
 import { onlineManager } from '@tanstack/react-query';
-import { expect, onTestFinished, test } from 'vitest';
+import { expect, onTestFinished, test, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { Network, QuotaExceeded } from './storage/adapter.ts';
 import { chooseFromMenu } from './test/app-bar.ts';
@@ -140,6 +140,62 @@ test('Refresh library picks up a change made after the page loaded', async () =>
   await expect.element(app.screen.getByRole('heading', { level: 2, name: 'Shirley' })).toBeVisible();
   await expect.element(app.screen.getByRole('status')).toHaveTextContent('Library updated');
   expect(metadataCalls(storage).filter(({ op }) => op === 'stat')).toHaveLength(2);
+});
+
+test('Dismiss clears Library updated until the next refresh finds another change', async () => {
+  const storage = await libraryOf(brontës);
+  const app = await renderApp({ storage, connected: true });
+  await expect.element(app.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
+  await withNewBook(storage, '2');
+  await chooseFromMenu(app.screen, 'Refresh library');
+  await expect.element(app.screen.getByRole('status')).toHaveTextContent('Library updated');
+
+  await userEvent.click(app.screen.getByRole('button', { name: 'Dismiss' }));
+
+  expect(app.screen.getByText('Library updated').query()).toBeNull();
+  await userEvent.type(app.screen.getByRole('searchbox', { name: 'Search books' }), 'Shirley');
+  await expect.element(app.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).not.toBeInTheDocument();
+  expect(app.screen.getByText('Library updated').query()).toBeNull();
+
+  const { 'metadata.db': again } = await buildCalibreLibrary([...brontës, { title: 'Villette', authors: ['Charlotte Brontë'] }]);
+  storage.put('metadata.db', again!, '3');
+  await chooseFromMenu(app.screen, 'Refresh library');
+  await expect.element(app.screen.getByRole('status')).toHaveTextContent('Library updated');
+});
+
+test('Library updated hides itself after a few seconds', async () => {
+  const storage = await libraryOf(brontës);
+  const app = await renderApp({ storage, connected: true });
+  await expect.element(app.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
+  await withNewBook(storage, '2');
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'], shouldAdvanceTime: true });
+  await chooseFromMenu(app.screen, 'Refresh library');
+  await expect.element(app.screen.getByRole('status')).toHaveTextContent('Library updated');
+
+  vi.advanceTimersByTime(10_000);
+  vi.useRealTimers();
+
+  await expect.element(app.screen.getByText('Library updated')).not.toBeInTheDocument();
+});
+
+test('Library updated stays while searching and goes away on moving to another page', async () => {
+  const storage = await libraryOf(brontës);
+  const app = await renderApp({ storage, connected: true });
+  await expect.element(app.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
+  await withNewBook(storage, '2');
+  await chooseFromMenu(app.screen, 'Refresh library');
+  await expect.element(app.screen.getByRole('status')).toHaveTextContent('Library updated');
+  await userEvent.type(app.screen.getByRole('searchbox', { name: 'Search books' }), 'Shirley');
+  await expect.element(app.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).not.toBeInTheDocument();
+  await expect.element(app.screen.getByRole('status')).toHaveTextContent('Library updated');
+
+  await userEvent.click(app.screen.getByRole('link', { name: /Shirley/ }));
+
+  await expect.element(app.screen.getByRole('heading', { level: 1, name: 'Shirley' })).toBeVisible();
+  expect(app.screen.getByText('Library updated').query()).toBeNull();
+  app.back();
+  await expect.element(app.screen.getByRole('heading', { level: 2, name: 'Shirley' })).toBeVisible();
+  expect(app.screen.getByText('Library updated').query()).toBeNull();
 });
 
 test('a failed download of a changed library keeps the cached one browsable with a banner', async () => {

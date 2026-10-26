@@ -20,17 +20,21 @@ async function janeEyreLibrary() {
   );
 }
 
-test('EPUB and PDF formats get a Read button beside Download; other formats only Download', async () => {
+test('EPUB and PDF formats get a Read button beside a Download icon; other formats only the Download icon', async () => {
   const fake = fakeRenderers(['EPUB', 'PDF']);
   const app = await renderApp({ storage: await janeEyreLibrary(), connected: true, path: '/books/1', renderers: fake.renderers });
   const formats = app.screen.getByRole('list', { name: 'Formats' }).getByRole('listitem');
 
   await expect.element(formats.first()).toBeVisible();
   expect(formats.elements().map((format) => format.textContent)).toEqual([
-    'EPUB56 BRead EPUBDownload EPUB',
-    'MOBI4 BDownload MOBI',
-    'PDF28 BRead PDFDownload PDF',
+    'EPUB56 BRead',
+    'MOBI4 B',
+    'PDF28 BRead',
   ]);
+  expect(formats.nth(1).getByRole('link').query()).toBeNull();
+  for (const format of ['EPUB', 'MOBI', 'PDF']) {
+    await expect.element(formats.getByRole('button', { name: `Download ${format}` })).toHaveAttribute('title', `Download ${format}`);
+  }
 
   await userEvent.click(app.screen.getByRole('link', { name: 'Read EPUB' }));
 
