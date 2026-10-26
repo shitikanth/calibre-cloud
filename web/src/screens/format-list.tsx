@@ -36,16 +36,25 @@ function FormatItem({ bookId, format, filename }: { bookId: number; format: Book
           <Link
             to="/books/$bookId/read/$format"
             params={{ bookId: String(bookId), format: format.format }}
-            className="inline-flex min-h-11 items-center rounded border border-neutral-900 px-3 py-1 text-sm sm:min-h-0"
+            aria-label={`Read ${format.format}`}
+            className="inline-flex min-h-11 items-center rounded bg-neutral-900 px-4 text-sm text-white sm:min-h-9"
           >
-            Read {format.format}
+            Read
           </Link>
         )}
         {state.status === 'fetching' ? (
           <DownloadingFormat format={format.format} state={state} cancel={download.cancel} />
         ) : (
-          <button type="button" className="min-h-11 rounded bg-neutral-900 px-3 py-1 text-sm text-white sm:min-h-0" onClick={() => void download.start()}>
-            Download {format.format}
+          <button
+            type="button"
+            aria-label={`Download ${format.format}`}
+            title={`Download ${format.format}`}
+            className="flex size-11 items-center justify-center rounded border border-neutral-400 sm:size-9"
+            onClick={() => void download.start()}
+          >
+            <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 fill-none stroke-current stroke-2">
+              <path d="M12 4v11m-5-5 5 5 5-5M5 20h14" />
+            </svg>
           </button>
         )}
       </span>
