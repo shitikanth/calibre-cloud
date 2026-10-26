@@ -54,19 +54,19 @@ test('Larger and Smaller text step the font size and tell the renderer', async (
   await userEvent.click(settings.getByRole('button', { name: 'Larger text' }));
 
   await expect.element(settings).toMatchTextContent(/110%/);
-  expect(styleCalls(fake.latest).at(-1)).toEqual({ fontSize: 110, theme: 'light' });
+  await expect.poll(() => styleCalls(fake.latest).at(-1)).toEqual({ fontSize: 110, theme: 'light' });
 
   await userEvent.click(settings.getByRole('button', { name: 'Smaller text' }));
   await userEvent.click(settings.getByRole('button', { name: 'Smaller text' }));
 
   await expect.element(settings).toMatchTextContent(/90%/);
-  expect(styleCalls(fake.latest).at(-1)).toEqual({ fontSize: 90, theme: 'light' });
+  await expect.poll(() => styleCalls(fake.latest).at(-1)).toEqual({ fontSize: 90, theme: 'light' });
 });
 
 test('the book opens with the default text size and theme', async () => {
   const { fake } = await openReader('/books/1/read/EPUB');
 
-  expect(styleCalls(fake.latest)).toEqual([{ fontSize: 100, theme: 'light' }]);
+  await expect.poll(() => styleCalls(fake.latest)).toEqual([{ fontSize: 100, theme: 'light' }]);
 });
 
 test('choosing Dark themes the book and the reader screen, and nothing outside it', async () => {
@@ -77,7 +77,7 @@ test('choosing Dark themes the book and the reader screen, and nothing outside i
   const settings = await openSettings(app.screen);
   await userEvent.click(settings.getByRole('radiogroup', { name: 'Theme' }).getByRole('radio', { name: 'Dark' }));
 
-  expect(styleCalls(fake.latest).at(-1)).toEqual({ fontSize: 100, theme: 'dark' });
+  await expect.poll(() => styleCalls(fake.latest).at(-1)).toEqual({ fontSize: 100, theme: 'dark' });
   await expect.element(settings.getByRole('radio', { name: 'Dark' })).toBeChecked();
   const root = readerRoot(app.screen)!;
   expect(root).toHaveAttribute('data-theme', 'dark');
@@ -101,7 +101,7 @@ test('text size and theme survive a reload and reach the next book opened', asyn
 
   await expect.element(reloaded.getByRole('button', { name: 'Settings' })).toBeVisible();
   expect(fake.instances).toHaveLength(2);
-  expect(styleCalls(fake.latest)).toEqual([{ fontSize: 110, theme: 'dark' }]);
+  await expect.poll(() => styleCalls(fake.latest)).toEqual([{ fontSize: 110, theme: 'dark' }]);
   expect(readerRoot(reloaded)).toHaveAttribute('data-theme', 'dark');
   await expect.element(await openSettings(reloaded)).toMatchTextContent(/110%/);
 });
@@ -123,14 +123,14 @@ test('Disconnect keeps the reader settings', async () => {
 
   await expect.element(app.screen.getByRole('button', { name: 'Settings' })).toBeVisible();
   expect(fake.instances).toHaveLength(2);
-  expect(styleCalls(fake.latest)).toEqual([{ fontSize: 110, theme: 'sepia' }]);
+  await expect.poll(() => styleCalls(fake.latest)).toEqual([{ fontSize: 110, theme: 'sepia' }]);
 });
 
 test('unreadable saved settings fall back to the defaults', async () => {
   localStorage.setItem('calibre-cloud:reader-settings', '{"fontSize":"huge"');
   const { fake } = await openReader('/books/1/read/EPUB');
 
-  expect(styleCalls(fake.latest)).toEqual([{ fontSize: 100, theme: 'light' }]);
+  await expect.poll(() => styleCalls(fake.latest)).toEqual([{ fontSize: 100, theme: 'light' }]);
 });
 
 test('Zoom in and out step the zoom for the open book only; a reload starts at fit-width again', async () => {
