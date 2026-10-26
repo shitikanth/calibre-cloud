@@ -90,6 +90,28 @@ test('the grid fits a narrow phone screen in two columns', async () => {
   expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(320);
 });
 
+function firstRow(tiles: Element[]) {
+  const top = tiles[0]!.getBoundingClientRect().top;
+  return tiles.map((tile) => tile.getBoundingClientRect()).filter((rect) => rect.top === top);
+}
+
+test('a wider window, as when the owner zooms out, fits more columns and the grid still fills it', async () => {
+  const storage = new FakeStorage(await buildCalibreLibrary(numberedBooks(40)));
+  const app = await renderApp({ storage, connected: true });
+  const grid = app.screen.getByRole('list', { name: 'Books' });
+  await expect.element(grid.getByRole('listitem').first()).toBeVisible();
+
+  const columns: number[] = [];
+  for (const width of [1440, 2880]) {
+    await page.viewport(width, 900);
+    const row = firstRow(grid.getByRole('listitem').elements());
+    columns.push(row.length);
+    expect(row.at(-1)!.right).toBeCloseTo(grid.element().getBoundingClientRect().right, 0);
+    expect(grid.element().getBoundingClientRect().right).toBeCloseTo(width - 24, 0);
+  }
+  expect(columns[1]).toBeGreaterThan(columns[0]!);
+});
+
 test('more books load as the owner scrolls to the end of the grid', async () => {
   const storage = new FakeStorage(await buildCalibreLibrary(numberedBooks(150)));
   const app = await renderApp({ storage, connected: true });

@@ -21,6 +21,7 @@ const rootRoute = createRootRoute({
 function RootLayout() {
   const { connection } = useConnection();
   const reading = useMatch({ from: '/books/$bookId/read/$format', shouldThrow: false }) !== undefined;
+  const library = useMatch({ from: '/', shouldThrow: false }) !== undefined;
   if (!connection) {
     return (
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
@@ -30,7 +31,7 @@ function RootLayout() {
   }
   if (reading) return <Outlet />;
   return (
-    <ConnectedShell>
+    <ConnectedShell wide={library}>
       <Outlet />
     </ConnectedShell>
   );
