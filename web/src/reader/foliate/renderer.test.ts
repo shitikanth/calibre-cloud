@@ -1,6 +1,6 @@
 import { afterEach, expect, test, vi } from 'vitest';
 import type { Relocation } from '../renderer.ts';
-import { createEpubRenderer, type EpubRenderer } from './renderer.ts';
+import { createFoliateRenderer, type FoliateRenderer } from './renderer.ts';
 import fixtureUrl from '../../test/fixtures/two-chapters.epub?url';
 import azw3Url from '../../test/fixtures/two-chapters.azw3?url';
 import fb2Url from '../../test/fixtures/two-chapters.fb2?url';
@@ -9,7 +9,7 @@ import mobiUrl from '../../test/fixtures/two-chapters.mobi?url';
 import cbzUrl from '../../test/fixtures/two-pages.cbz?url';
 import fixedLayoutEpubUrl from '../../test/fixtures/two-fixed-pages.epub?url';
 
-type OpenedBook = { renderer: EpubRenderer; relocations: Relocation[]; container: HTMLElement };
+type OpenedBook = { renderer: FoliateRenderer; relocations: Relocation[]; container: HTMLElement };
 
 const opened: OpenedBook[] = [];
 
@@ -35,7 +35,7 @@ async function createInContainer(extension = 'epub'): Promise<OpenedBook> {
   const container = document.createElement('div');
   container.style.cssText = 'width: 600px; height: 800px';
   document.body.append(container);
-  const renderer = await createEpubRenderer(extension);
+  const renderer = await createFoliateRenderer(extension);
   const relocations: Relocation[] = [];
   renderer.onRelocate((relocation) => relocations.push(relocation));
   const book = { renderer, relocations, container };
@@ -60,7 +60,7 @@ async function settled(relocations: Relocation[]) {
   } while (count !== relocations.length);
 }
 
-function goToChapterTwo(renderer: EpubRenderer) {
+function goToChapterTwo(renderer: FoliateRenderer) {
   return renderer.goTo(renderer.toc[1]?.location ?? '');
 }
 

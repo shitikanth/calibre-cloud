@@ -3,7 +3,7 @@ import type { RendererFactory, Renderers } from './renderer.ts';
 const foliate =
   (extension: string): RendererFactory =>
   () =>
-    import('./epub/renderer.ts').then((module) => module.createEpubRenderer(extension));
+    import('./foliate/renderer.ts').then((module) => module.createFoliateRenderer(extension));
 
 export const renderers: Renderers = {
   EPUB: foliate('epub'),

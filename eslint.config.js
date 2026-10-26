@@ -21,7 +21,7 @@ const megaProvider = {
 
 const foliate = {
   group: ['foliate-js', 'foliate-js/*'],
-  message: 'Only the EPUB renderer (web/src/reader/epub/) may use foliate-js.',
+  message: 'Only the foliate renderer (web/src/reader/foliate/) may use foliate-js.',
 };
 
 const pdfjs = {
@@ -59,7 +59,7 @@ export default defineConfig([
     rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, foliate, pdfjs] }] },
   },
   {
-    files: ['web/src/reader/epub/**'],
+    files: ['web/src/reader/foliate/**'],
     rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, megaSdk, megaProvider, pdfjs] }] },
   },
   {

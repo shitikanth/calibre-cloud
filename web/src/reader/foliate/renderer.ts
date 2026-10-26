@@ -1,7 +1,7 @@
 import type { FoliateView, Location, ResourceData, ResourceLoad, TocItem } from 'foliate-js/view.js';
 import type { BookRenderer, ReaderStyles, ReaderTheme, Relocation, TocEntry } from '../renderer.ts';
 
-export type EpubRenderer = BookRenderer & {
+export type FoliateRenderer = BookRenderer & {
   readonly sectionDocument: Document | undefined;
   readonly refusedResources: readonly string[];
 };
@@ -35,7 +35,7 @@ function stylesheet({ fontSize, theme }: ReaderStyles): string {
   ].join('\n');
 }
 
-export async function createEpubRenderer(extension = 'epub'): Promise<EpubRenderer> {
+export async function createFoliateRenderer(extension = 'epub'): Promise<FoliateRenderer> {
   const [, cfi] = await Promise.all([import('foliate-js/view.js'), import('foliate-js/epubcfi.js')]);
   const relocateListeners = new Set<(relocation: Relocation) => void>();
   const errorListeners = new Set<(error: Error) => void>();
@@ -107,7 +107,7 @@ export async function createEpubRenderer(extension = 'epub'): Promise<EpubRender
       });
   };
 
-  const renderer: EpubRenderer = {
+  const renderer: FoliateRenderer = {
     get toc() {
       return toc;
     },
