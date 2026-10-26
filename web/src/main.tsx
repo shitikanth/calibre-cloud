@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './app.tsx';
+import { renderers } from './reader/renderers.ts';
 import { createAppRouter } from './router.tsx';
 import { openStorage } from './storage/providers.ts';
 import './index.css';
@@ -10,6 +11,6 @@ if (!root) throw new Error('Missing #root element');
 
 createRoot(root).render(
   <StrictMode>
-    <App router={createAppRouter()} openStorage={openStorage} />
+    <App router={createAppRouter()} openStorage={openStorage} renderers={renderers} />
   </StrictMode>,
 );

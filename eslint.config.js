@@ -19,6 +19,16 @@ const megaProvider = {
   message: 'Only web/src/storage/ may import the MEGA provider. Everything above the storage boundary uses storage/providers.ts.',
 };
 
+const foliate = {
+  group: ['foliate-js', 'foliate-js/*'],
+  message: 'Only the EPUB renderer (web/src/reader/epub/) may use foliate-js.',
+};
+
+const pdfjs = {
+  group: ['pdfjs-dist', 'pdfjs-dist/*'],
+  message: 'Only the PDF renderer (web/src/reader/pdf/) may use pdfjs-dist.',
+};
+
 export default defineConfig([
   globalIgnores(['**/dist/', '**/.wrangler/', '**/.vitest/']),
   js.configs.recommended,
@@ -34,14 +44,26 @@ export default defineConfig([
   },
   {
     ignores: ['deploy/**'],
-    rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, megaSdk, megaProvider] }] },
+    rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, megaSdk, megaProvider, foliate, pdfjs] }] },
+  },
+  {
+    files: ['web/vite.config.ts'],
+    rules: { 'no-restricted-imports': ['error', { patterns: [megaSdk, megaProvider, foliate, pdfjs] }] },
   },
   {
     files: ['web/src/storage/**'],
-    rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, megaSdk] }] },
+    rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, megaSdk, foliate, pdfjs] }] },
   },
   {
     files: ['web/src/storage/mega/**'],
-    rules: { 'no-restricted-imports': ['error', { patterns: [platformModules] }] },
+    rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, foliate, pdfjs] }] },
+  },
+  {
+    files: ['web/src/reader/epub/**'],
+    rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, megaSdk, megaProvider, pdfjs] }] },
+  },
+  {
+    files: ['web/src/reader/pdf/**'],
+    rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, megaSdk, megaProvider, foliate] }] },
   },
 ]);

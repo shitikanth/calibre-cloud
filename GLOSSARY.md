@@ -32,12 +32,20 @@ _Avoid_: backend, cloud, drive
 The app's read-only access to one library in one storage provider. Ending it is a disconnect, which also forgets the library on this device.
 _Avoid_: session, account, login, sign-in
 
+**Reader**:
+The screen where a book's format is read in the browser.
+_Avoid_: viewer, player, ebook reader
+
+**Renderer**:
+The engine behind the reader that lays out one format's pages.
+_Avoid_: plugin, viewer, library
+
 **Reading position**:
-Where in a format a reader on this device last left off. A book has at most one per format, and it belongs to the device, not the library.
+Where in a format the user of this device last left off. A book has at most one per format, and it belongs to the device, not the library.
 _Avoid_: bookmark, progress, last page
 
 **Reader settings**:
-The device-wide reading preferences a reader applies to every book, such as font size and theme.
+The device-wide reading preferences the user applies to every book, such as font size and theme.
 _Avoid_: preferences, per-book settings
 
 **Continue reading**:

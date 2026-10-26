@@ -7,6 +7,8 @@ export type BookSummary = {
 
 export type CoverVersion = { bookId: number; version: string };
 
+export type BookFormatKey = { bookId: number; format: string };
+
 export type BookFormat = { format: string; size: number; path: string };
 
 export type BookDetail = BookSummary & {
@@ -30,6 +32,7 @@ export type LibraryOperations = {
   listBooks: { args: BookListQuery; result: BookSummary[] };
   getBook: { args: { bookId: number }; result: BookDetail | null };
   listCoverVersions: { args: Record<string, never>; result: CoverVersion[] };
+  listBookFormats: { args: Record<string, never>; result: BookFormatKey[] };
 };
 
 export type Operation = keyof LibraryOperations;

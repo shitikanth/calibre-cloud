@@ -14,13 +14,12 @@ export function BookGrid({ books }: { books: BookSummary[] }) {
   );
 }
 
+export const tileLinkClass =
+  'block rounded transition-transform hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 motion-reduce:transition-none';
+
 function BookTile({ book }: { book: BookSummary }) {
   return (
-    <Link
-      to="/books/$bookId"
-      params={{ bookId: String(book.id) }}
-      className="block rounded transition-transform hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 motion-reduce:transition-none"
-    >
+    <Link to="/books/$bookId" params={{ bookId: String(book.id) }} className={tileLinkClass}>
       <BookCover book={book} loading="lazy" />
       <h2 className="mt-2 line-clamp-2 text-sm font-medium break-words">{book.title}</h2>
       <p className="line-clamp-2 text-xs text-neutral-600">{book.authors.join(' & ')}</p>
