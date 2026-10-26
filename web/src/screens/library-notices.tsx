@@ -1,4 +1,4 @@
-import type { LibraryUpdate } from '../library/use-library-update.ts';
+import { useDismissLibraryUpdate, type LibraryUpdate } from '../library/use-library-update.ts';
 import { describeError } from './describe-error.ts';
 
 export function LibraryNotices({ update }: { update: LibraryUpdate }) {
@@ -19,9 +19,24 @@ export function LibraryNotices({ update }: { update: LibraryUpdate }) {
     );
   }
   if (!update.data) return null;
+  return <LibraryUpdated />;
+}
+
+function LibraryUpdated() {
+  const dismiss = useDismissLibraryUpdate();
   return (
-    <p role="status" className="mb-4 rounded bg-emerald-50 px-3 py-2 text-emerald-900">
-      Library updated
-    </p>
+    <div className="mb-4 flex items-center justify-between gap-2 rounded bg-emerald-50 pl-3 text-emerald-900">
+      <p role="status">Library updated</p>
+      <button
+        type="button"
+        aria-label="Dismiss"
+        onClick={dismiss}
+        className="flex min-h-11 min-w-11 items-center justify-center rounded hover:bg-emerald-100"
+      >
+        <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 fill-none stroke-current stroke-2">
+          <path d="M6 6l12 12M18 6L6 18" />
+        </svg>
+      </button>
+    </div>
   );
 }
