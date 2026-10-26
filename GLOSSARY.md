@@ -21,7 +21,7 @@ One title in a library, with its metadata and one or more formats.
 _Avoid_: title, entry, item
 
 **Format**:
-One file of a book in a particular file type, such as EPUB or PDF.
+One file of a book in a particular file type, such as EPUB or PDF. EPUB, PDF, MOBI, AZW, AZW3, KF8, FB2, FBZ, and CBZ can be read in the browser; the rest are download-only.
 _Avoid_: edition, copy, version
 
 **Storage provider**:

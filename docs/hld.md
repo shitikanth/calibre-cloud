@@ -1,6 +1,6 @@
 # calibre-cloud: High-Level Design
 
-Status: the first slice is built: browse, search, book detail, and download from a MEGA shared folder. The reader is built for EPUB and PDF. Google Drive and Dropbox are not built yet.
+Status: the first slice is built: browse, search, book detail, and download from a MEGA shared folder. The reader is built for EPUB, PDF, MOBI, AZW, AZW3, KF8, FB2, FBZ, and CBZ. Google Drive and Dropbox are not built yet.
 
 ## Goal
 
@@ -49,7 +49,7 @@ flowchart LR
 - **Storage provider:** each provider also owns its connect input (for MEGA, a folder link and its validation) and the shape of its saved connection. Only the storage layer knows the providers; everything above it sees a connection and an adapter. ESLint enforces this boundary and keeps each provider's SDK inside its adapter.
 - **Library index:** the official SQLite WASM build in a Web Worker opens `metadata.db` (the SQLite file Calibre keeps at the library root) read-only and answers browse and search queries over a small typed message API. Queries use Calibre's base tables, not its views or SQL functions.
 - **Library UI:** browse and search by author, series, tag, and other metadata, showing covers.
-- **Reader:** renders a book file in the browser, with one renderer per supported format: foliate-js for EPUB and pdf.js for PDF. Every other format is download-only.
+- **Reader:** renders a book file in the browser, with one renderer per supported format: foliate-js for EPUB, MOBI, AZW, AZW3, KF8, FB2, FBZ, and CBZ, and pdf.js for PDF. foliate-js picks CBZ and FB2 by file name, so the renderer names the file with the format's extension. Every other format is download-only.
 - **Serverless auth functions (optional):** OAuth code exchange and token refresh for providers that need a client secret. Each call is stateless and small.
 
 ### Main flow
@@ -71,7 +71,7 @@ A Calibre library can be many GB, but only `metadata.db` is needed to list the w
 - Covers are cached in the Cache API, keyed by book and its `last_modified`. The grid and the detail page share this one cache, since Calibre stores a single `cover.jpg` per book. Whenever a downloaded `metadata.db` is opened, cached covers it no longer refers to are deleted.
 - The reader keeps the last 3 opened book files in the Cache API, keyed by book, format, and the version `stat` reports. Opening a book calls `stat` first and skips the download when the version matches; if `stat` fails with `Network` and a cached copy exists, that copy opens. Opening a 4th book evicts the least recently opened. A failed cache write is ignored and the book opens from the downloaded Blob. Entries for books no longer in the library are deleted on a library refresh.
 - The Download button never reads or writes that cache.
-- The reader saves a reading position per book and format in localStorage (EPUB: the CFI at the start of the visible range; PDF: the page number, each with a progress fraction and timestamp), on every relocation and when the reader closes. A changed book file keeps its position. Reader settings (font size, theme) are device-wide; PDF zoom is not saved and every open starts at fit-width.
+- The reader saves a reading position per book and format in localStorage (foliate-js formats: the CFI at the start of the visible range; PDF: the page number, each with a progress fraction and timestamp), on every relocation and when the reader closes. A changed book file keeps its position. Reader settings (font size, theme) are device-wide and apply to reflowable books only; CBZ and fixed-layout EPUB pages are shown untinted at fit-page with no zoom. PDF zoom is not saved and every open starts at fit-width.
 - The home view's Continue reading row lists the 6 most recently opened formats from those positions and opens the reader at the saved position. A library refresh deletes positions whose book or format is gone.
 - After connecting, the app asks for persistent storage. Disconnect deletes the saved connection, the cached library, the covers, the reader's book files, and reading positions. Reader settings stay.
 
@@ -79,7 +79,7 @@ A Calibre library can be many GB, but only `metadata.db` is needed to list the w
 
 - **Frontend:** React, Vite, TypeScript, TanStack Router and TanStack Query, Tailwind.
 - **SQLite:** the official `@sqlite.org/sqlite-wasm` build, run in a Web Worker.
-- **Hosting:** a Cloudflare Worker serving static assets, with SPA fallback and a strict CSP set in platform config, not code. The reader renders each EPUB section in a same-origin `blob:` frame, which needs `style-src 'self' 'unsafe-inline' blob:`, `frame-src blob:`, and `frame-ancestors 'self'`; `script-src` stays `'self' 'wasm-unsafe-eval'`, so scripts inside a book never run. No serverless functions yet; MEGA needs none.
+- **Hosting:** a Cloudflare Worker serving static assets, with SPA fallback and a strict CSP set in platform config, not code. The reader renders each foliate-js section or comic page in a same-origin `blob:` frame, which needs `style-src 'self' 'unsafe-inline' blob:`, `frame-src blob:`, and `frame-ancestors 'self'`; `script-src` stays `'self' 'wasm-unsafe-eval'`, so scripts inside a book never run. No serverless functions yet; MEGA needs none.
 - **Tests:** Vitest in browser mode (Chromium), driving the whole app against an in-memory fake storage adapter.
 
 ## Storage providers
@@ -100,4 +100,4 @@ A Calibre library can be many GB, but only `metadata.db` is needed to list the w
 
 1. **Google Drive scope:** `drive.readonly` is a restricted scope. Unverified apps are capped at 100 users, and verification can require a paid annual security assessment, which would break "costs scale to zero". `drive.file` with the Google Picker avoids this, but it's unconfirmed whether picking a folder grants access to the files inside it. Prototype this before building the Drive adapter.
 2. **MEGA transfer quota:** free accounts have a bandwidth limit, so large books may fail to download. A download that hits the quota fails at once with `QuotaExceeded` rather than retrying.
-3. **Formats:** settled. EPUB and PDF are read in the browser; every other format is download-only.
+3. **Formats:** settled. Every format foliate-js or pdf.js reads is read in the browser; every other format is download-only.
