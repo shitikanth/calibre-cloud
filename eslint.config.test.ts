@@ -70,20 +70,20 @@ describe('renderer engine boundary', () => {
     },
   );
 
-  test.each(['web/src/screens/reader-screen.tsx', 'web/src/reader/renderers.ts', 'web/src/reader/epub/renderer.ts'])(
+  test.each(['web/src/screens/reader-screen.tsx', 'web/src/reader/renderers.ts', 'web/src/reader/foliate/renderer.ts'])(
     'rejects pdfjs-dist in %s',
     async (filePath) => {
       expect(await platformImportErrors(filePath, pdfjs)).toHaveLength(1);
     },
   );
 
-  test('allows foliate-js inside the EPUB renderer and pdfjs-dist inside the PDF renderer', async () => {
-    expect(await platformImportErrors('web/src/reader/epub/renderer.ts', foliate)).toHaveLength(0);
+  test('allows foliate-js inside the foliate renderer and pdfjs-dist inside the PDF renderer', async () => {
+    expect(await platformImportErrors('web/src/reader/foliate/renderer.ts', foliate)).toHaveLength(0);
     expect(await platformImportErrors('web/src/reader/pdf/renderer.ts', pdfjs)).toHaveLength(0);
   });
 
   test('still rejects megajs inside a renderer', async () => {
     const source = "import { File } from 'megajs';\nconsole.log(File);\n";
-    expect(await platformImportErrors('web/src/reader/epub/renderer.ts', source)).toHaveLength(1);
+    expect(await platformImportErrors('web/src/reader/foliate/renderer.ts', source)).toHaveLength(1);
   });
 });
