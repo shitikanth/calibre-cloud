@@ -9,12 +9,14 @@ import { tileColumnsClass, tileLinkClass } from './book-grid.tsx';
 const ROW_LENGTH = 6;
 
 export function ContinueReading() {
-  const positions = useSyncExternalStore(subscribePositions, listPositions).slice(0, ROW_LENGTH);
+  const positions = useSyncExternalStore(subscribePositions, listPositions);
   const books = useBooksById(positions.map(({ bookId }) => bookId));
-  const cards = positions.flatMap((entry) => {
-    const book = books.get(entry.bookId);
-    return book ? [{ entry, book }] : [];
-  });
+  const cards = positions
+    .flatMap((entry) => {
+      const book = books.get(entry.bookId);
+      return book ? [{ entry, book }] : [];
+    })
+    .slice(0, ROW_LENGTH);
   if (cards.length === 0) return null;
   return (
     <section aria-label="Continue reading" className="mb-8">
