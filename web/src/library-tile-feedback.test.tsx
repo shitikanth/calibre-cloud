@@ -28,8 +28,9 @@ test('hovering a tile lifts it, and leaving it puts it back', async () => {
   const app = await renderApp({ storage: await twoBookLibrary(), connected: true });
   const janeEyre = tile(app.screen, 'Jane Eyre');
   await expect.element(janeEyre).toBeVisible();
+  await userEvent.unhover(janeEyre);
+  await expect.poll(() => styleOf(janeEyre.element()).translate).toBe('none');
   const resting = styleOf(janeEyre.element());
-  expect(resting.translate).toBe('none');
 
   await userEvent.hover(janeEyre);
 
