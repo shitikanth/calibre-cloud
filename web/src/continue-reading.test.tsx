@@ -1,5 +1,6 @@
 import { userEvent } from 'vitest/browser';
 import { expect, test } from 'vitest';
+import { savePosition } from './reader/positions.ts';
 import { buildCalibreLibrary, type BookSpec } from './test/calibre-library.ts';
 import { fakeRenderers } from './test/fake-renderer.ts';
 import { FakeStorage } from './test/fake-storage.ts';
@@ -74,6 +75,23 @@ test('the home view lists the six most recently opened formats, newest first, wi
   await expect.element(row.getByRole('img', { name: 'Cover of Jane Eyre' })).toHaveAttribute('src', expect.stringMatching(/^blob:/));
   await expect.element(row.getByRole('img', { name: 'No cover for Shirley' })).toBeVisible();
   await expect.element(app.screen.getByRole('list', { name: 'Books' })).toBeVisible();
+});
+
+test('a position whose book left the library before Refresh library is skipped and the row still shows six', async () => {
+  const started = await startApp(await bronteLibrary());
+  const { app } = started;
+  for (const [index] of titles.entries()) await read(started, index + 1, 'EPUB');
+  savePosition({ bookId: 99, format: 'EPUB' }, { location: '2', fraction: 0.5 });
+  app.navigate('/');
+
+  await expect.poll(() => cardTitles(app.screen)).toEqual([
+    'The Tenant of Wildfell Hall',
+    'The Professor',
+    'Shirley',
+    'Villette',
+    'Agnes Grey',
+    'Wuthering Heights',
+  ]);
 });
 
 test('the row stays out of the way with nothing to continue and while searching', async () => {
