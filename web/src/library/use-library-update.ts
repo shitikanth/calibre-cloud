@@ -1,7 +1,13 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import { useConnection } from '../connection/context.tsx';
+import type { Connection } from '../connection/connection.ts';
 import { useLibraryIndex } from './context.tsx';
 import { updateLibrary } from './sync.ts';
+
+function updateKey(connection: Connection | undefined) {
+  return ['library-db', connection, 'update'];
+}
 
 export function useLibraryUpdate(checkOnLoad: boolean) {
   const { connection, storage } = useConnection();
@@ -9,7 +15,7 @@ export function useLibraryUpdate(checkOnLoad: boolean) {
   const queryClient = useQueryClient();
 
   return useQuery({
-    queryKey: ['library-db', connection, 'update'],
+    queryKey: updateKey(connection),
     enabled: checkOnLoad,
     retry: false,
     staleTime: Infinity,
@@ -25,3 +31,9 @@ export function useLibraryUpdate(checkOnLoad: boolean) {
 }
 
 export type LibraryUpdate = ReturnType<typeof useLibraryUpdate>;
+
+export function useDismissLibraryUpdate() {
+  const { connection } = useConnection();
+  const queryClient = useQueryClient();
+  return useCallback(() => queryClient.setQueryData(updateKey(connection), false), [queryClient, connection]);
+}
