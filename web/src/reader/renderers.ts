@@ -1,6 +1,20 @@
-import type { Renderers } from './renderer.ts';
+import type { RendererFactory, Renderers } from './renderer.ts';
+
+const foliate =
+  (extension: string): RendererFactory =>
+  () =>
+    import('./epub/renderer.ts').then((module) => module.createEpubRenderer(extension));
 
 export const renderers: Renderers = {
-  EPUB: () => import('./epub/renderer.ts').then((module) => module.createEpubRenderer()),
+  EPUB: foliate('epub'),
+  KEPUB: foliate('epub'),
+  MOBI: foliate('mobi'),
+  AZW: foliate('azw'),
+  AZW3: foliate('azw3'),
+  KF8: foliate('kf8'),
+  PRC: foliate('prc'),
+  FB2: foliate('fb2'),
+  FBZ: foliate('fbz'),
+  CBZ: foliate('cbz'),
   PDF: () => import('./pdf/renderer.ts').then((module) => module.createPdfRenderer()),
 };

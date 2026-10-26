@@ -15,24 +15,24 @@ const epub = ['# Chapter 1', 'Reader, I married him.', '# Chapter II', 'The end.
 async function janeEyreLibrary() {
   return new FakeStorage(
     await buildCalibreLibrary([
-      { title: 'Jane Eyre', authors: ['Charlotte Brontë'], formats: { EPUB: epub, PDF: 'Page one\nPage two\nPage three', MOBI: 'mobi' } },
+      { title: 'Jane Eyre', authors: ['Charlotte Brontë'], formats: { EPUB: epub, PDF: 'Page one\nPage two\nPage three', DJVU: 'djvu' } },
     ]),
   );
 }
 
-test('EPUB and PDF formats get a Read button beside a Download icon; other formats only the Download icon', async () => {
+test('formats with a renderer get a Read button beside a Download icon; other formats only the Download icon', async () => {
   const fake = fakeRenderers(['EPUB', 'PDF']);
   const app = await renderApp({ storage: await janeEyreLibrary(), connected: true, path: '/books/1', renderers: fake.renderers });
   const formats = app.screen.getByRole('list', { name: 'Formats' }).getByRole('listitem');
 
   await expect.element(formats.first()).toBeVisible();
   expect(formats.elements().map((format) => format.textContent)).toEqual([
+    'DJVU4 B',
     'EPUB56 BRead',
-    'MOBI4 B',
     'PDF28 BRead',
   ]);
-  expect(formats.nth(1).getByRole('link').query()).toBeNull();
-  for (const format of ['EPUB', 'MOBI', 'PDF']) {
+  expect(formats.nth(0).getByRole('link').query()).toBeNull();
+  for (const format of ['DJVU', 'EPUB', 'PDF']) {
     await expect.element(formats.getByRole('button', { name: `Download ${format}` })).toHaveAttribute('title', `Download ${format}`);
   }
 
@@ -137,7 +137,7 @@ test.each(['/books/99/read/EPUB', '/books/nope/read/EPUB'])('%s says the book wa
   await expect.element(app.screen.getByRole('banner').getByRole('link', { name: 'calibre-cloud' })).toBeVisible();
 });
 
-test.each(['/books/1/read/MOBI', '/books/1/read/AZW3'])('%s says the format was not found', async (path) => {
+test.each(['/books/1/read/DJVU', '/books/1/read/TXT'])('%s says the format was not found', async (path) => {
   const fake = fakeRenderers(['EPUB', 'PDF']);
   const app = await renderApp({ storage: await janeEyreLibrary(), connected: true, path, renderers: fake.renderers });
 
@@ -227,4 +227,22 @@ test('a page that fails to render shows a notice while the book stays open', asy
   await userEvent.click(app.screen.getByRole('button', { name: 'Next' }));
   await expect.element(app.screen.getByText('Reader, I married him.')).toBeVisible();
   expect(app.screen.getByRole('alert').query()).toBeNull();
+});
+
+test('every format foliate-js or pdf.js reads gets a Read button; DJVU and TXT stay download-only', async () => {
+  const readable = ['AZW', 'AZW3', 'CBZ', 'EPUB', 'FB2', 'FBZ', 'KEPUB', 'KF8', 'MOBI', 'PDF', 'PRC'];
+  const storage = new FakeStorage(
+    await buildCalibreLibrary([
+      {
+        title: 'Jane Eyre',
+        authors: ['Charlotte Brontë'],
+        formats: Object.fromEntries([...readable, 'DJVU', 'TXT'].map((format) => [format, format])),
+      },
+    ]),
+  );
+  const app = await renderApp({ storage, connected: true, path: '/books/1' });
+
+  await expect.element(app.screen.getByRole('link', { name: 'Read EPUB' })).toBeVisible();
+  const links = app.screen.getByRole('list', { name: 'Formats' }).getByRole('link');
+  expect(links.elements().map((link) => link.getAttribute('aria-label'))).toEqual(readable.map((format) => `Read ${format}`));
 });

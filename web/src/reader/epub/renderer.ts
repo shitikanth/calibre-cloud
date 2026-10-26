@@ -35,7 +35,7 @@ function stylesheet({ fontSize, theme }: ReaderStyles): string {
   ].join('\n');
 }
 
-export async function createEpubRenderer(): Promise<EpubRenderer> {
+export async function createEpubRenderer(extension = 'epub'): Promise<EpubRenderer> {
   const [, cfi] = await Promise.all([import('foliate-js/view.js'), import('foliate-js/epubcfi.js')]);
   const relocateListeners = new Set<(relocation: Relocation) => void>();
   const errorListeners = new Set<(error: Error) => void>();
@@ -102,7 +102,7 @@ export async function createEpubRenderer(): Promise<EpubRenderer> {
       .then((data) => (isDocument && typeof data === 'string' ? stripScripts(data, detail.type) : data))
       .catch((cause: unknown) => {
         if (!isDocument) return '';
-        renderError(new Error(`Failed to load ${detail.name}`, { cause }));
+        renderError(new Error(`Failed to load ${detail.name ?? detail.type}`, { cause }));
         return blankDocument;
       });
   };
@@ -126,7 +126,7 @@ export async function createEpubRenderer(): Promise<EpubRenderer> {
       view = created;
       opening = true;
       try {
-        await created.open(new File([blob], 'book.epub', { type: blob.type || 'application/epub+zip' }));
+        await created.open(new File([blob], `book.${extension}`, { type: blob.type }));
         if (destroyed.signal.aborted) return;
         await laidOut(created, destroyed.signal);
         if (destroyed.signal.aborted) return;
@@ -165,8 +165,9 @@ export async function createEpubRenderer(): Promise<EpubRenderer> {
     async previous() {
       await navigate('Could not turn to the previous page', () => view?.prev());
     },
-    setStyles(styles) {
-      view?.renderer.setStyles(stylesheet(styles));
+    get setStyles() {
+      if (view?.renderer && !view.renderer.setStyles) return undefined;
+      return (styles: ReaderStyles) => view?.renderer.setStyles?.(stylesheet(styles));
     },
     destroy() {
       destroyed.abort();

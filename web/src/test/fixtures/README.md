@@ -1,2 +1,6 @@
 - `two-chapters.epub`: a two-chapter EPUB 3 of our own text with a two-entry nav TOC; chapter two carries an inline `<script>`, `onload` and `onclick` handlers, and an external script resource `scripts/marker.js` that would each insert a marker paragraph if they ran.
+- `two-chapters.mobi`, `two-chapters.azw3`: the same two chapters of our own text ("One: The Lighthouse Ledger", "Two: The Unsent Letters"), with no scripts. Made from one HTML file with `ebook-convert two-chapters.html two-chapters.azw3 --title "Two Chapters" --authors "Calibre Cloud" --level1-toc "//h:h1" --chapter "//h:h1" --chapter-mark pagebreak`, adding `--mobi-file-type old` for the MOBI.
+- `two-chapters.fb2`: the same two chapters, hand-written as two titled `<section>`s. `two-chapters.fbz` is that file zipped.
+- `two-pages.cbz`: two 300×400 PNG pages, `page-1.png` (red) and `page-2.png` (blue), each labelled with its name.
+- `two-fixed-pages.epub`: a two-page fixed-layout (`rendition:layout` `pre-paginated`) EPUB 3 of our own text, 300×400 per page, with a two-entry nav TOC ("Page one", "Page two").
 - `two-pages.pdf`: two pages of our own text with a two-entry outline ("Page one", "Page two"), for the PDF renderer test.
