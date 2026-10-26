@@ -178,6 +178,26 @@ test('Library updated hides itself after a few seconds', async () => {
   await expect.element(app.screen.getByText('Library updated')).not.toBeInTheDocument();
 });
 
+test('Library updated stays while searching and goes away on moving to another page', async () => {
+  const storage = await libraryOf(brontës);
+  const app = await renderApp({ storage, connected: true });
+  await expect.element(app.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
+  await withNewBook(storage, '2');
+  await chooseFromMenu(app.screen, 'Refresh library');
+  await expect.element(app.screen.getByRole('status')).toHaveTextContent('Library updated');
+  await userEvent.type(app.screen.getByRole('searchbox', { name: 'Search books' }), 'Shirley');
+  await expect.element(app.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).not.toBeInTheDocument();
+  await expect.element(app.screen.getByRole('status')).toHaveTextContent('Library updated');
+
+  await userEvent.click(app.screen.getByRole('link', { name: /Shirley/ }));
+
+  await expect.element(app.screen.getByRole('heading', { level: 1, name: 'Shirley' })).toBeVisible();
+  expect(app.screen.getByText('Library updated').query()).toBeNull();
+  app.back();
+  await expect.element(app.screen.getByRole('heading', { level: 2, name: 'Shirley' })).toBeVisible();
+  expect(app.screen.getByText('Library updated').query()).toBeNull();
+});
+
 test('a failed download of a changed library keeps the cached one browsable with a banner', async () => {
   const storage = await libraryOf(brontës);
   const app = await renderApp({ storage, connected: true });

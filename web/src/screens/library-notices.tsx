@@ -1,3 +1,4 @@
+import { useRouter } from '@tanstack/react-router';
 import { useEffect } from 'react';
 import { useDismissLibraryUpdate, type LibraryUpdate } from '../library/use-library-update.ts';
 import { describeError } from './describe-error.ts';
@@ -27,10 +28,17 @@ const autoHideAfter = 5_000;
 
 function LibraryUpdated() {
   const dismiss = useDismissLibraryUpdate();
+  const router = useRouter();
   useEffect(() => {
     const timer = setTimeout(dismiss, autoHideAfter);
-    return () => clearTimeout(timer);
-  }, [dismiss]);
+    const unsubscribe = router.subscribe('onBeforeNavigate', ({ pathChanged }) => {
+      if (pathChanged) dismiss();
+    });
+    return () => {
+      clearTimeout(timer);
+      unsubscribe();
+    };
+  }, [dismiss, router]);
   return (
     <div className="mb-4 flex items-center justify-between gap-2 rounded bg-emerald-50 pl-3 text-emerald-900">
       <p role="status">Library updated</p>
