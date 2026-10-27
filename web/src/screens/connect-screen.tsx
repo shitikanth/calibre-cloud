@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import { useConnection } from '../connection/context.tsx';
 import type { StorageProvider } from '../storage/provider.ts';
-import { providers } from '../storage/providers.ts';
+import { providers, resolveConnectInput } from '../storage/providers.ts';
+import { useConnectLinkInput } from './connect-link.tsx';
 
 export function ConnectScreen() {
+  const linked = useLinkedInput();
   return (
     <div className="flex justify-center sm:py-12">
       <section
@@ -15,16 +17,25 @@ export function ConnectScreen() {
         </h1>
         <p className="mt-2 text-neutral-600">Browse your Calibre library straight from the cloud storage it lives in.</p>
         {providers.map((provider) => (
-          <ConnectForm key={provider.id} provider={provider} />
+          <ConnectForm key={provider.id} provider={provider} initial={linked?.provider === provider ? linked : undefined} />
         ))}
       </section>
     </div>
   );
 }
 
-function ConnectForm({ provider }: { provider: StorageProvider }) {
+type InitialInput = { input: string; problem: string | undefined };
+
+function useLinkedInput(): (InitialInput & { provider: StorageProvider }) | undefined {
+  const input = useConnectLinkInput();
+  if (input === undefined) return undefined;
+  const { provider, parsed } = resolveConnectInput(input);
+  return { provider, input, problem: parsed.ok ? undefined : parsed.problem };
+}
+
+function ConnectForm({ provider, initial }: { provider: StorageProvider; initial: InitialInput | undefined }) {
   const { connect } = useConnection();
-  const [problem, setProblem] = useState<string | undefined>();
+  const [problem, setProblem] = useState(initial?.problem);
   const { name, label, placeholder } = provider.connectForm;
   const inputId = `${provider.id}-connect`;
   const problemId = `${provider.id}-connect-problem`;
@@ -48,6 +59,7 @@ function ConnectForm({ provider }: { provider: StorageProvider }) {
         autoComplete="off"
         spellCheck={false}
         placeholder={placeholder}
+        defaultValue={initial?.input}
         aria-invalid={problem !== undefined}
         aria-describedby={problem ? problemId : undefined}
         className="rounded border border-neutral-400 px-3 py-2"

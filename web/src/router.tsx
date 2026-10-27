@@ -8,6 +8,7 @@ import {
 } from '@tanstack/react-router';
 import { useConnection } from './connection/context.tsx';
 import { BookScreen } from './screens/book-screen.tsx';
+import { ConnectLink } from './screens/connect-link.tsx';
 import { ConnectScreen } from './screens/connect-screen.tsx';
 import { ConnectedShell } from './screens/connected-shell.tsx';
 import { LibraryScreen } from './screens/library-screen.tsx';
@@ -19,6 +20,14 @@ const rootRoute = createRootRoute({
 });
 
 function RootLayout() {
+  return (
+    <ConnectLink>
+      <Layout />
+    </ConnectLink>
+  );
+}
+
+function Layout() {
   const { connection } = useConnection();
   const reading = useMatch({ from: '/books/$bookId/read/$format', shouldThrow: false }) !== undefined;
   const library = useMatch({ from: '/', shouldThrow: false }) !== undefined;
