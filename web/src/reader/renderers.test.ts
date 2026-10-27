@@ -3,9 +3,9 @@ import { renderers } from './renderers.ts';
 
 test.each(['EPUB', 'KEPUB', 'MOBI', 'AZW', 'AZW3', 'KF8', 'PRC', 'FB2', 'FBZ', 'CBZ', 'PDF'])('%s resolves to a renderer', async (format) => {
   const factory = renderers[format];
-  expect(factory).toBeDefined();
+  if (!factory) throw new Error(`No renderer for ${format}`);
 
-  const renderer = await factory!();
+  const renderer = await factory();
 
   try {
     expect(renderer).toMatchObject({ open: expect.any(Function), goTo: expect.any(Function), destroy: expect.any(Function) });
