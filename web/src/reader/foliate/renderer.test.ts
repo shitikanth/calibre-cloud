@@ -87,13 +87,13 @@ test('exposes the TOC, and goTo on a TOC entry lands in chapter two', async () =
   ]);
   const opening = relocations[0]?.fraction ?? Number.NaN;
 
-  expect(relocations[0]?.tocLocation).toBe('OEBPS/text/chapter-one.xhtml');
+  expect(relocations[0]?.tocEntry).toBe(renderer.toc[0]);
 
   await goToChapterTwo(renderer);
 
   expect(renderer.sectionDocument?.getElementById('chapter-two')?.textContent).toBe('Two: The Unsent Letters');
   expect(relocations.at(-1)?.fraction).toBeGreaterThan(opening);
-  expect(relocations.at(-1)?.tocLocation).toBe('OEBPS/text/chapter-two.xhtml');
+  expect(relocations.at(-1)?.tocEntry).toBe(renderer.toc[1]);
 });
 
 test('setStyles applies the font size as a percentage and the theme colours to the section document', async () => {
@@ -209,7 +209,7 @@ test.each(reflowable)('$extension: TOC goes to chapter two, text settings apply,
   await goToChapterTwo(first.renderer);
   await settled(first.relocations);
   expect(first.renderer.sectionDocument?.body.textContent).toContain('tin box of letters');
-  expect(first.relocations.at(-1)?.tocLocation).toBe(first.renderer.toc[1]?.location);
+  expect(first.relocations.at(-1)?.tocEntry).toBe(first.renderer.toc[1]);
   first.renderer.setStyles?.({ fontSize: 100, theme: 'dark' });
   await vi.waitFor(() => expect(computed(first.renderer.sectionDocument, 'body')?.backgroundColor).toBe('rgb(18, 18, 18)'));
   const saved = first.relocations.at(-1)?.location ?? '';

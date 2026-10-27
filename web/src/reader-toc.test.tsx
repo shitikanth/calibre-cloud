@@ -116,6 +116,10 @@ test('a long list opens scrolled to the current chapter', async () => {
   expect(currentEntries(toc)).toEqual(['Chapter 50']);
   await expect.element(toc.getByRole('button', { name: 'Chapter 50', exact: true })).toBeInViewport({ ratio: 1 });
   await expect.element(toc.getByRole('button', { name: 'Chapter 1', exact: true })).not.toBeInViewport();
+
+  await fake.latest.goTo('5');
+  await expect.poll(() => currentEntries(toc)).toEqual(['Chapter 5']);
+  await expect.element(toc.getByRole('button', { name: 'Chapter 5', exact: true })).toBeInViewport({ ratio: 1 });
 });
 
 test('a nested entry can be current without marking its parent, and nothing is marked before the first entry', async () => {

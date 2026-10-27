@@ -2,13 +2,13 @@ import { useEffect, useRef } from 'react';
 import type { BookRenderer, TocEntry } from '../reader/renderer.ts';
 import { panelClass, ReaderPopover } from './reader-popover.tsx';
 
-export function TocTool({ renderer, tocLocation }: { renderer: BookRenderer; tocLocation: string | undefined }) {
+export function TocTool({ renderer, current }: { renderer: BookRenderer; current: TocEntry | undefined }) {
   return (
     <ReaderPopover label="Table of contents" icon={<path d="M4 6h16M4 12h16M4 18h10" />}>
       {(close) => (
         <TocPanel
           entries={renderer.toc}
-          current={tocLocation === undefined ? undefined : lastMatch(renderer.toc, tocLocation)}
+          current={current}
           jump={(entry) => {
             close();
             void renderer.goTo(entry.location);
@@ -24,8 +24,12 @@ type TocProps = { entries: TocEntry[]; current: TocEntry | undefined; jump: (ent
 function TocPanel({ entries, current, jump }: TocProps) {
   const nav = useRef<HTMLElement>(null);
   useEffect(() => {
-    nav.current?.querySelector('[aria-current="true"]')?.scrollIntoView({ block: 'center' });
-  }, []);
+    const panel = nav.current;
+    const marked = panel?.querySelector<HTMLElement>('[aria-current="true"]');
+    if (!panel || !marked) return;
+    const offset = marked.getBoundingClientRect().top - panel.getBoundingClientRect().top + panel.scrollTop;
+    panel.scrollTop = offset - (panel.clientHeight - marked.offsetHeight) / 2;
+  }, [current]);
 
   return (
     <nav ref={nav} aria-label="Table of contents" className={`${panelClass} py-1`}>
@@ -60,10 +64,4 @@ function TocList({ entries, current, jump }: TocProps) {
       ))}
     </ul>
   );
-}
-
-function lastMatch(entries: TocEntry[], location: string): TocEntry | undefined {
-  let match: TocEntry | undefined;
-  for (const entry of entries) match = lastMatch(entry.children ?? [], location) ?? (entry.location === location ? entry : match);
-  return match;
 }

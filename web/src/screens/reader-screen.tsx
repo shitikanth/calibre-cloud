@@ -291,7 +291,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
         status === 'open' &&
         renderer && (
           <>
-            <TocTool renderer={renderer} tocLocation={relocation?.tocLocation} />
+            <TocTool renderer={renderer} current={relocation?.tocEntry} />
             {(renderer.setStyles || renderer.setZoom) && (
               <SettingsTool
                 renderer={renderer}

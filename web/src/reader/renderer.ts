@@ -1,6 +1,6 @@
 export type TocEntry = { label: string; location: string; children?: TocEntry[] };
 
-export type Relocation = { location: string; fraction: number; page?: { current: number; total: number }; tocLocation?: string };
+export type Relocation = { location: string; fraction: number; page?: { current: number; total: number }; tocEntry?: TocEntry };
 
 export type ReaderTheme = 'light' | 'sepia' | 'dark';
 

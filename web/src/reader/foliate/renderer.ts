@@ -43,6 +43,7 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
   let opening = false;
   const destroyed = new AbortController();
   let toc: TocEntry[] = [];
+  let tocEntries = new WeakMap<TocItem, TocEntry>();
   let sectionDocument: Document | undefined;
   const refusedResources: string[] = [];
 
@@ -54,7 +55,8 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
     if (destroyed.signal.aborted) return;
     const { cfi: rangeCfi, fraction, tocItem } = (event as CustomEvent<Location>).detail;
     if (!Number.isFinite(fraction)) return;
-    const relocation: Relocation = { location: cfi.collapse(rangeCfi), fraction, ...(tocItem ? { tocLocation: tocItem.href } : {}) };
+    const tocEntry = tocItem ? tocEntries.get(tocItem) : undefined;
+    const relocation: Relocation = { location: cfi.collapse(rangeCfi), fraction, ...(tocEntry ? { tocEntry } : {}) };
     for (const listener of relocateListeners) listener(relocation);
   };
 
@@ -134,7 +136,7 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
         transforms?.addEventListener('load', refuseScripts);
         transforms?.addEventListener('data', transformResource);
         created.renderer.setAttribute('flow', 'paginated');
-        toc = (created.book.toc ?? []).map(toTocEntry);
+        toc = (created.book.toc ?? []).map((item) => toTocEntry(item, tocEntries));
         const resumed =
           location !== undefined &&
           isResolvable(created, location) &&
@@ -177,6 +179,7 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
       }
       view = undefined;
       toc = [];
+      tocEntries = new WeakMap();
       sectionDocument = undefined;
       relocateListeners.clear();
       errorListeners.clear();
@@ -210,6 +213,11 @@ function isResolvable(view: FoliateView, location: string): boolean {
   return !!target && target.index >= 0 && target.index < view.book.sections.length;
 }
 
-function toTocEntry({ label, href, subitems }: TocItem): TocEntry {
-  return subitems?.length ? { label, location: href, children: subitems.map(toTocEntry) } : { label, location: href };
+function toTocEntry(item: TocItem, entries: WeakMap<TocItem, TocEntry>): TocEntry {
+  const { label, href, subitems } = item;
+  const entry: TocEntry = subitems?.length
+    ? { label, location: href, children: subitems.map((subitem) => toTocEntry(subitem, entries)) }
+    : { label, location: href };
+  entries.set(item, entry);
+  return entry;
 }
