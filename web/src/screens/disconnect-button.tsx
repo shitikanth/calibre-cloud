@@ -13,7 +13,7 @@ export function DisconnectButton({ className, children }: { className: string; c
   );
 }
 
-export function DisconnectFailure({ disconnect, className }: { disconnect: Disconnect; className: string }) {
+export function DisconnectFailure({ disconnect, className = '' }: { disconnect: Disconnect; className?: string }) {
   if (!disconnect.isError) return null;
   return (
     <p role="alert" className={`${className} text-sm text-red-700`}>

@@ -10,6 +10,7 @@ export interface StorageProvider {
   readonly id: string;
   readonly connectForm: ConnectForm;
   parseConnectInput(input: string): ParsedConnectInput;
+  connectInput?(connection: Connection): string;
   isConnection(value: unknown): value is Connection;
   open(connection: Connection): StorageAdapter;
 }

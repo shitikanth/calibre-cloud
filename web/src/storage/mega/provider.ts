@@ -24,6 +24,10 @@ export const megaProvider: StorageProvider = {
     const connection: MegaConnection = { provider: 'mega', link: parsed.link };
     return { ok: true, connection };
   },
+  connectInput(connection) {
+    if (!isMegaConnection(connection)) throw new Error('Not a MEGA connection');
+    return connection.link;
+  },
   isConnection: (value): value is Connection => isMegaConnection(value),
   open(connection) {
     if (!isMegaConnection(connection)) throw new Error('Not a MEGA connection');

@@ -1,12 +1,14 @@
 import { useRef, useState } from 'react';
 import { useLibrarySession } from '../library/session.tsx';
 import type { Disconnect } from '../library/use-disconnect.ts';
+import type { CopyConnectLink } from './copy-connect-link.tsx';
 import { useDismiss } from './use-dismiss.ts';
 
 const menuId = 'app-menu';
 const itemClass = 'block w-full px-4 py-2 text-left text-sm hover:bg-neutral-100 disabled:opacity-60 disabled:hover:bg-transparent';
 
-export function OverflowMenu({ disconnect }: { disconnect: Disconnect }) {
+export function OverflowMenu({ disconnect, copyLink }: { disconnect: Disconnect; copyLink: CopyConnectLink }) {
+  const { copy } = copyLink;
   const { library, update } = useLibrarySession();
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
@@ -45,6 +47,11 @@ export function OverflowMenu({ disconnect }: { disconnect: Disconnect }) {
           >
             {update.isFetching ? 'Checking for changes…' : 'Refresh library'}
           </button>
+          {copy && (
+            <button type="button" role="menuitem" className={itemClass} onClick={() => choose(() => void copy())}>
+              Copy connect link
+            </button>
+          )}
           <button
             type="button"
             role="menuitem"

@@ -101,7 +101,7 @@ test('going back from a search to the book it started on empties the box', async
   await expect.element(searchBox(app.screen)).toHaveValue('');
 });
 
-test('the overflow menu opens on More, lists Refresh library and Disconnect, and closes on Escape', async () => {
+test('the overflow menu opens on More, lists Refresh library, Copy connect link and Disconnect, and closes on Escape', async () => {
   const app = await renderApp({ storage: await bronteLibrary(), connected: true });
   await expectBooks(app.screen, ['Jane Eyre', 'A Wizard of Earthsea', 'Wuthering Heights']);
   expect(app.screen.getByRole('menu').query()).toBeNull();
@@ -111,6 +111,7 @@ test('the overflow menu opens on More, lists Refresh library and Disconnect, and
   await expect.element(app.screen.getByRole('menu')).toBeVisible();
   expect(app.screen.getByRole('menuitem').elements().map((item) => item.textContent)).toEqual([
     'Refresh library',
+    'Copy connect link',
     'Disconnect',
   ]);
 

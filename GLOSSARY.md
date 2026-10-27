@@ -32,6 +32,10 @@ _Avoid_: backend, cloud, drive
 The app's read-only access to one library in one storage provider. Ending it is a disconnect, which also forgets the library on this device.
 _Avoid_: session, account, login, sign-in
 
+**Connect link**:
+A link to the app that carries a storage provider's connect input in its fragment, so opening it fills in the connect screen for one library. It still needs a click on Connect.
+_Avoid_: share link, invite link, magic link
+
 **Reader**:
 The screen where a book's format is read in the browser.
 _Avoid_: viewer, player, ebook reader
