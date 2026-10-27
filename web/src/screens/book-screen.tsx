@@ -8,12 +8,16 @@ import { LoadingLibrary } from './library-screen.tsx';
 import { StorageErrorScreen } from './storage-error-screen.tsx';
 
 export function BookScreen({ bookId }: { bookId: string }) {
-  return <OpenBook bookId={bookId}>{(book) => (
+  return (
+    <OpenBook bookId={bookId}>
+      {(book) => (
         <>
           <LibraryNotices />
           <BookDetails book={book} />
         </>
-      )}</OpenBook>;
+      )}
+    </OpenBook>
+  );
 }
 
 type OpenBookProps = {
