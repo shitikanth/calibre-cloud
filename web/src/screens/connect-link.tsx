@@ -33,7 +33,7 @@ export function ConnectLinkHandler({ children }: { children: ReactNode }) {
     if (pending?.kind === 'connect') connect(pending.connection);
   }, [pending, connect]);
 
-  if (pending && pending.kind !== 'switch' && connection) setPending(undefined);
+  if ((pending?.kind === 'fill' || pending?.kind === 'connect') && connection) setPending(undefined);
 
   return (
     <ConnectLinkInput value={pending?.kind === 'fill' ? pending.input : undefined}>

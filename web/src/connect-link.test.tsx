@@ -93,7 +93,9 @@ test('cancelling the switch keeps the library connected now', async () => {
 });
 
 test('once connected, the link no longer fills the connect screen', async () => {
-  const app = await renderApp({ storage: new FakeStorage(), path: `/#connect=${testLink}` });
+  const app = await renderApp({ storage: new FakeStorage(), path: '/#connect=https://mega.nz/folder/TestHandle%' });
+  await userEvent.fill(linkInput(app.screen), testLink);
+  await userEvent.click(app.screen.getByRole('button', { name: 'Connect' }));
 
   await userEvent.click(app.screen.getByRole('button', { name: 'Connect a different library' }));
 
