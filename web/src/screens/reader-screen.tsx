@@ -13,7 +13,9 @@ import { NotFound, OpenBook } from './book-screen.tsx';
 import { ConnectedShell } from './connected-shell.tsx';
 import { describeError } from './describe-error.ts';
 import { ExternalLinkDialog } from './external-link-dialog.tsx';
+import { formatSize } from './format.ts';
 import { ProgressBar } from './progress-bar.tsx';
+import { PageControls } from './reader-page-controls.tsx';
 import { SettingsTool } from './reader-settings-tool.tsx';
 import { TocTool } from './reader-toc.tsx';
 
@@ -60,11 +62,13 @@ function Reader({ book, format }: { book: BookDetail; format: BookFormat }) {
       file.cancel();
       void navigate({ to: '/books/$bookId', params: { bookId: String(book.id) } });
     };
+    const label = format.size > 0 ? `Downloading ${format.format} · ${formatSize(format.size)}` : `Downloading ${format.format}`;
     return (
       <ReaderShell book={book} theme={settings.theme}>
         <section className="mx-auto flex w-full max-w-md flex-col items-center gap-4 px-4 py-12">
+          <p className="text-sm text-(--reader-muted)">{label}</p>
           <ProgressBar
-            label={`Downloading ${format.format}`}
+            label={label}
             loaded={state.status === 'fetching' ? state.loaded : 0}
             total={state.status === 'fetching' ? state.total : 0}
             className="w-full"
@@ -277,7 +281,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
   useEffect(() => {
     if (!renderer) return;
     const turnPage = (event: KeyboardEvent) => {
-      if (shell.current?.querySelector('[aria-expanded="true"], dialog[open]')) return;
+      if (shell.current?.querySelector('[aria-expanded="true"], dialog[open]') || event.target instanceof HTMLInputElement) return;
       if (event.key === 'ArrowRight') void renderer.next();
       else if (event.key === 'ArrowLeft') void renderer.previous();
     };
@@ -316,24 +320,8 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
         </p>
       )}
       <div ref={container} className="min-h-0 flex-1 overflow-hidden" hidden={status === 'unopenable' || status === 'renderer-unavailable'} />
-      {status === 'open' && renderer && (
-        <nav aria-label="Pages" className="flex items-center justify-between gap-2 border-t border-(--reader-line) px-2 py-1">
-          <button type="button" className="min-h-11 rounded px-3 py-1 hover:bg-(--reader-hover)" onClick={() => void renderer.previous()}>
-            Previous
-          </button>
-          <span className="text-sm text-(--reader-muted)">{progressText(relocation)}</span>
-          <button type="button" className="min-h-11 rounded px-3 py-1 hover:bg-(--reader-hover)" onClick={() => void renderer.next()}>
-            Next
-          </button>
-        </nav>
-      )}
+      {status === 'open' && renderer && <PageControls renderer={renderer} relocation={relocation} />}
       {externalLink !== undefined && <ExternalLinkDialog url={externalLink} onClose={() => setExternalLink(undefined)} />}
     </ReaderShell>
   );
-}
-
-function progressText(relocation: Relocation | undefined): string {
-  if (!relocation) return '';
-  if (relocation.page) return `page ${relocation.page.current} of ${relocation.page.total}`;
-  return `${Math.round(relocation.fraction * 100)}%`;
 }

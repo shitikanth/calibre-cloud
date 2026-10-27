@@ -13,6 +13,8 @@ export interface BookRenderer {
   onRenderError(listener: (error: Error) => void): () => void;
   onExternalLink(listener: (url: string) => void): () => void;
   goTo(location: string): Promise<void>;
+  goToFraction(fraction: number): Promise<void>;
+  tocEntryAt(fraction: number): TocEntry | undefined;
   next(): Promise<void>;
   previous(): Promise<void>;
   // Read once open resolves: a renderer can drop a capability when the book turns out to be fixed-layout.

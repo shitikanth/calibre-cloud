@@ -70,6 +70,14 @@ class PdfRenderer implements BookRenderer {
     if (this.isPage(page)) await this.show(page);
   }
 
+  async goToFraction(fraction: number): Promise<void> {
+    if (this.doc) await this.show(this.pageAt(fraction, this.doc.numPages));
+  }
+
+  tocEntryAt(fraction: number): TocEntry | undefined {
+    return this.doc && entryStartingAt(this.toc, this.pageAt(fraction, this.doc.numPages));
+  }
+
   async next(): Promise<void> {
     if (this.doc && this.currentPage < this.doc.numPages) await this.show(this.currentPage + 1);
   }
@@ -101,6 +109,10 @@ class PdfRenderer implements BookRenderer {
 
   private isPage(page: number): boolean {
     return Number.isInteger(page) && page >= 1 && page <= (this.doc?.numPages ?? 0);
+  }
+
+  private pageAt(fraction: number, total: number): number {
+    return Math.min(Math.max(Math.round(fraction * (total - 1)) + 1, 1), total);
   }
 
   private resolve(location: string | undefined): number {

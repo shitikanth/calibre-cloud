@@ -54,7 +54,8 @@ test('the book file downloads with progress, and Cancel goes back to the book pa
   const app = await renderApp({ storage, connected: true, path: '/books/1/read/EPUB', renderers: fake.renderers });
 
   await held.started;
-  await expect.element(app.screen.getByRole('progressbar', { name: 'Downloading EPUB' })).toBeVisible();
+  await expect.element(app.screen.getByRole('progressbar', { name: 'Downloading EPUB · 56 B' })).toBeVisible();
+  await expect.element(app.screen.getByText('Downloading EPUB · 56 B', { exact: true })).toBeVisible();
   await expect.element(app.screen.getByText('50%')).toBeVisible();
   await expect.element(app.screen.getByRole('heading', { level: 1, name: 'Jane Eyre' })).toBeVisible();
 
@@ -66,6 +67,17 @@ test('the book file downloads with progress, and Cancel goes back to the book pa
   await new Promise((resolve) => setTimeout(resolve, 100));
   expect(fake.instances).toEqual([]);
   expect(app.screen.getByRole('alert').query()).toBeNull();
+});
+
+test('a format of unknown size downloads under its name alone', async () => {
+  const storage = new FakeStorage(await buildCalibreLibrary([{ title: 'Jane Eyre', authors: ['Charlotte Brontë'], formats: { PDF: '' } }]));
+  const held = storage.holdNextRead('Charlotte Bronte/Jane Eyre (1)/Jane Eyre - Charlotte Bronte.pdf');
+  const app = await renderApp({ storage, connected: true, path: '/books/1/read/PDF', renderers: fakeRenderers(['PDF']).renderers });
+
+  await held.started;
+  await expect.element(app.screen.getByRole('progressbar', { name: 'Downloading PDF' })).toBeVisible();
+  await expect.element(app.screen.getByText('Downloading PDF', { exact: true })).toBeVisible();
+  held.release();
 });
 
 test('Previous, Next and the arrow keys turn pages, and the chrome shows how far along the reader is', async () => {
