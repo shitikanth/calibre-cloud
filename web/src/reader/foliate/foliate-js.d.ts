@@ -1,7 +1,7 @@
 declare module 'foliate-js/view.js' {
   export type TocItem = { label: string; href: string; subitems?: TocItem[] };
 
-  export type Location = { cfi: string; fraction: number };
+  export type Location = { cfi: string; fraction: number; tocItem?: TocItem | null };
 
   export type ResourceLoad = { type: string; isScript: boolean; allow: boolean | Promise<boolean> };
 

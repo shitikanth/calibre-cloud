@@ -48,7 +48,7 @@ function canvasIn(container: HTMLElement): HTMLCanvasElement {
 test('opens on page 1 of 2 at fit-width and reports it as the first relocation', async () => {
   const { container, relocations } = await openFixture();
 
-  expect(relocations[0]).toEqual({ location: '1', fraction: 0, page: { current: 1, total: 2 } });
+  expect(relocations[0]).toEqual({ location: '1', fraction: 0, page: { current: 1, total: 2 }, tocEntry: { label: 'Page one', location: '1' } });
   const canvas = canvasIn(container);
   const viewportWidth = canvas.parentElement?.clientWidth ?? 0;
   expect(viewportWidth).toBeGreaterThan(500);
@@ -73,7 +73,8 @@ test('the outline becomes the TOC with page numbers as locations, and an entry n
 
   await renderer.goTo(renderer.toc[1]!.location);
 
-  expect(relocations.at(-1)).toEqual({ location: '2', fraction: 1, page: { current: 2, total: 2 } });
+  expect(relocations.at(-1)).toEqual({ location: '2', fraction: 1, page: { current: 2, total: 2 }, tocEntry: { label: 'Page two', location: '2' } });
+  expect(relocations.at(-1)?.tocEntry).toBe(renderer.toc[1]);
 });
 
 test('next and previous turn one page at a time and stop at the ends', async () => {

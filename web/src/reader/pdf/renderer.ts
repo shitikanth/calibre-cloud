@@ -2,6 +2,7 @@ import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 import type { PDFDocumentLoadingTask, PDFDocumentProxy, PDFPageProxy, RenderTask } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import workerSrc from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
 import type { BookRenderer, Relocation, TocEntry } from '../renderer.ts';
+import { entryStartingAt } from '../toc.ts';
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
 
@@ -140,10 +141,12 @@ class PdfRenderer implements BookRenderer {
   }
 
   private emitRelocation(page: number, total: number): void {
+    const tocEntry = entryStartingAt(this.toc, page);
     const relocation: Relocation = {
       location: String(page),
       fraction: total > 1 ? (page - 1) / (total - 1) : 0,
       page: { current: page, total },
+      ...(tocEntry ? { tocEntry } : {}),
     };
     for (const listener of this.relocateListeners) listener(relocation);
   }

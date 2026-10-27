@@ -1,4 +1,5 @@
 import type { BookRenderer, ReaderStyles, Relocation, Renderers, TocEntry } from '../reader/renderer.ts';
+import { entryStartingAt } from '../reader/toc.ts';
 
 export type RendererCall =
   | { op: 'goTo'; location: string }
@@ -95,10 +96,12 @@ export class FakeRenderer implements BookRenderer {
     this.index = index;
     if (this.container) this.container.textContent = this.lines[index] ?? '';
     const total = this.lines.length;
+    const tocEntry = entryStartingAt(this.toc, index + 1);
     const relocation: Relocation = {
       location: String(index + 1),
       fraction: total > 1 ? index / (total - 1) : 0,
       ...(this.reportsPages ? { page: { current: index + 1, total } } : {}),
+      ...(tocEntry ? { tocEntry } : {}),
     };
     this.emitRelocation(relocation);
   }
