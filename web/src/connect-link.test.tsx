@@ -1,8 +1,9 @@
 import { userEvent } from 'vitest/browser';
 import { expect, onTestFinished, test, vi } from 'vitest';
+import { chooseFromMenu } from './test/app-bar.ts';
 import { buildCalibreLibrary } from './test/calibre-library.ts';
 import { FakeStorage } from './test/fake-storage.ts';
-import { renderApp, testLink } from './test/render-app.tsx';
+import { renderApp, testLink, unmountApps } from './test/render-app.tsx';
 import type { Screen } from './test/screen.ts';
 
 async function oneBookLibrary() {
@@ -114,6 +115,39 @@ test('a switch that cannot forget the current library says so and stays connecte
   await expectLibraryShown(app.screen);
   expect(app.opened).toEqual([{ provider: 'mega', link: testLink }]);
   forget.mockRestore();
+});
+
+test('Copy connect link copies a link that fills in this library on a fresh browser', async () => {
+  const write = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
+  onTestFinished(() => write.mockRestore());
+  const app = await renderApp({ storage: await oneBookLibrary(), connected: true });
+  await expectLibraryShown(app.screen);
+
+  await chooseFromMenu(app.screen, 'Copy connect link');
+
+  await expect.element(app.screen.getByRole('status')).toHaveTextContent('Link copied');
+  const href = `${location.origin}/#connect=${encodeURIComponent(testLink)}`;
+  expect(write).toHaveBeenCalledExactlyOnceWith(href);
+  await expect.element(app.screen.getByText('Link copied'), { timeout: 5000 }).not.toBeInTheDocument();
+
+  await unmountApps();
+  localStorage.clear();
+  const fresh = await renderApp({ storage: await oneBookLibrary(), path: href.slice(location.origin.length) });
+  await expect.element(linkInput(fresh.screen)).toHaveValue(testLink);
+});
+
+test('when the clipboard refuses, Copy connect link shows the link to copy by hand', async () => {
+  const write = vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(new DOMException('Denied', 'NotAllowedError'));
+  onTestFinished(() => write.mockRestore());
+  const app = await renderApp({ storage: await oneBookLibrary(), connected: true });
+  await expectLibraryShown(app.screen);
+
+  await chooseFromMenu(app.screen, 'Copy connect link');
+
+  const shown = app.screen.getByRole('textbox', { name: 'Connect link' });
+  await expect.element(shown).toHaveValue(`${location.origin}/#connect=${encodeURIComponent(testLink)}`);
+  await userEvent.click(app.screen.getByRole('button', { name: 'Close' }));
+  await expect.element(shown).not.toBeInTheDocument();
 });
 
 test('a connect link no provider accepts is ignored while connected', async () => {

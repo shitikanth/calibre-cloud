@@ -15,6 +15,10 @@ export function readConnection(value: unknown): Connection | undefined {
   return providers.some((provider) => provider.isConnection(value)) ? (value as Connection) : undefined;
 }
 
+export function connectInputFor(connection: Connection): string | undefined {
+  return providers.find(({ id }) => id === connection.provider)?.connectInput?.(connection);
+}
+
 export function openStorage(connection: Connection): StorageAdapter {
   const provider = providers.find(({ id }) => id === connection.provider);
   if (!provider) throw new Error(`No storage provider called ${connection.provider}`);
