@@ -190,9 +190,13 @@ test('destroy during open leaves nothing behind', async () => {
   expect(relocations).toEqual([]);
 });
 
-const reflowable: Fixture[] = [
+const mobiFamily: Fixture[] = [
   { extension: 'mobi', url: mobiUrl },
   { extension: 'azw3', url: azw3Url },
+];
+
+const reflowable: Fixture[] = [
+  ...mobiFamily,
   { extension: 'fb2', url: fb2Url },
   { extension: 'fbz', url: fbzUrl },
 ];
@@ -214,6 +218,20 @@ test.each(reflowable)('$extension: TOC goes to chapter two, text settings apply,
   const resumed = await openFixture(saved, fixture);
   expect(resumed.relocations[0]?.location).toBe(saved);
   expect(resumed.renderer.sectionDocument?.body.textContent).toContain('tin box of letters');
+});
+
+test.each(mobiFamily)("$extension: chapter two's scripts and handlers are stripped and no marker appears", async (fixture) => {
+  const { renderer, relocations } = await openFixture(undefined, fixture);
+
+  await goToChapterTwo(renderer);
+  await settled(relocations);
+  const doc = renderer.sectionDocument;
+
+  expect(doc?.body.textContent).toContain('tin box of letters');
+  expect(doc?.querySelector('script')).toBeNull();
+  expect([...(doc?.querySelectorAll('*') ?? [])].flatMap((element) => element.getAttributeNames().filter((name) => /^on/i.test(name)))).toEqual([]);
+  expect(doc?.getElementById('ran-inline')).toBeNull();
+  expect(doc?.getElementById('ran-handler')).toBeNull();
 });
 
 const fixedLayout = [
