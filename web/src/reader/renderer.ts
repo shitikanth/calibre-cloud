@@ -12,6 +12,10 @@ export interface BookRenderer {
   onRelocate(listener: (relocation: Relocation) => void): () => void;
   onRenderError(listener: (error: Error) => void): () => void;
   onExternalLink(listener: (url: string) => void): () => void;
+  // A tap or click on the page that is not on a link and does not end a text selection.
+  onTap(listener: () => void): () => void;
+  // The page turned from input inside the book (a key or a swipe), not from a call on this interface.
+  onTurn(listener: () => void): () => void;
   goTo(location: string): Promise<void>;
   goToFraction(fraction: number): Promise<void>;
   tocEntryAt(fraction: number): TocEntry | undefined;

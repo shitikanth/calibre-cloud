@@ -24,6 +24,11 @@ export class FakeRenderer implements BookRenderer {
   private readonly relocateListeners = new Set<(relocation: Relocation) => void>();
   private readonly errorListeners = new Set<(error: Error) => void>();
   private readonly externalLinkListeners = new Set<(url: string) => void>();
+  private readonly tapListeners = new Set<() => void>();
+  private readonly turnListeners = new Set<() => void>();
+  private readonly reportTap = () => {
+    for (const listener of this.tapListeners) listener();
+  };
 
   constructor({ pages = false }: FakeRendererOptions = {}) {
     this.reportsPages = pages;
@@ -33,6 +38,7 @@ export class FakeRenderer implements BookRenderer {
     if (this.failOpen) throw new Error('Not a book');
     this.lines = (await blob.text()).split('\n');
     this.container = container;
+    container.addEventListener('click', this.reportTap);
     this.opened = { blob, location };
     this.toc = this.lines.flatMap((line, index) =>
       line.startsWith('# ') ? [{ label: line.slice(2), location: String(index + 1) }] : [],
@@ -53,6 +59,16 @@ export class FakeRenderer implements BookRenderer {
   onExternalLink(listener: (url: string) => void): () => void {
     this.externalLinkListeners.add(listener);
     return () => this.externalLinkListeners.delete(listener);
+  }
+
+  onTap(listener: () => void): () => void {
+    this.tapListeners.add(listener);
+    return () => this.tapListeners.delete(listener);
+  }
+
+  onTurn(listener: () => void): () => void {
+    this.turnListeners.add(listener);
+    return () => this.turnListeners.delete(listener);
   }
 
   async goTo(location: string): Promise<void> {
@@ -89,11 +105,14 @@ export class FakeRenderer implements BookRenderer {
 
   destroy(): void {
     this.calls.push({ op: 'destroy' });
+    this.container?.removeEventListener('click', this.reportTap);
     this.container?.replaceChildren();
     this.container = undefined;
     this.relocateListeners.clear();
     this.errorListeners.clear();
     this.externalLinkListeners.clear();
+    this.tapListeners.clear();
+    this.turnListeners.clear();
   }
 
   emitRelocation(relocation: Relocation): void {
@@ -106,6 +125,11 @@ export class FakeRenderer implements BookRenderer {
 
   emitExternalLink(url: string): void {
     for (const listener of this.externalLinkListeners) listener(url);
+  }
+
+  swipe(direction: 'next' | 'previous'): void {
+    this.show(direction === 'next' ? Math.min(this.index + 1, this.lines.length - 1) : Math.max(this.index - 1, 0));
+    for (const listener of this.turnListeners) listener();
   }
 
   private indexAt(fraction: number): number {

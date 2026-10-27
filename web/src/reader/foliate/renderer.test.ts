@@ -1,5 +1,6 @@
 import { afterEach, expect, test, vi } from 'vitest';
 import type { Relocation } from '../renderer.ts';
+import { swipe } from '../../test/swipe.ts';
 import { createFoliateRenderer, type FoliateRenderer } from './renderer.ts';
 import fixtureUrl from '../../test/fixtures/two-chapters.epub?url';
 import azw3Url from '../../test/fixtures/two-chapters.azw3?url';
@@ -175,9 +176,11 @@ test('open rejects when the file is not a book', async () => {
   await expect(renderer.open(new Blob(['not a book']), container, {})).rejects.toThrow();
 });
 
-test('arrow keys pressed inside the section document turn the page', async () => {
+test('arrow keys pressed inside the section document turn the page, and each is reported as a turn', async () => {
   const { renderer, relocations } = await openFixture();
   const opening = relocations.at(-1)?.fraction ?? Number.NaN;
+  let turns = 0;
+  renderer.onTurn(() => (turns += 1));
   const press = (key: string) => {
     for (const type of ['keydown', 'keyup']) renderer.sectionDocument?.dispatchEvent(new KeyboardEvent(type, { key, bubbles: true }));
   };
@@ -189,6 +192,7 @@ test('arrow keys pressed inside the section document turn the page', async () =>
 
   press('ArrowLeft');
   await vi.waitFor(() => expect(relocations.at(-1)?.fraction).toBeLessThan(turned));
+  expect(turns).toBe(2);
 });
 
 test('destroy during open leaves nothing behind', async () => {
@@ -308,4 +312,33 @@ test.each(fixedLayout)('fixed-layout $extension: goToFraction jumps to the last 
   await settled(relocations);
 
   expect(relocations.at(-1)?.tocEntry?.label).toBe(toc[1]);
+});
+
+test('a swipe inside the section document turns the page and is reported as a turn', async () => {
+  const { renderer, relocations } = await openFixture();
+  const opening = relocations.at(-1)?.fraction ?? Number.NaN;
+  let turns = 0;
+  renderer.onTurn(() => (turns += 1));
+
+  await swipe(renderer.sectionDocument?.body as Element, 500, 100);
+
+  await vi.waitFor(() => expect(relocations.at(-1)?.fraction).toBeGreaterThan(opening));
+  expect(turns).toBe(1);
+});
+
+test('a tap on the page is reported, but not a tap on a link or one that ends a text selection', async () => {
+  vi.spyOn(window, 'open').mockReturnValue(null);
+  const { renderer } = await openFixture();
+  let taps = 0;
+  renderer.onTap(() => (taps += 1));
+  const doc = renderer.sectionDocument;
+
+  doc?.querySelector('p')?.click();
+  expect(taps).toBe(1);
+
+  doc?.getElementById('links')?.querySelector('a')?.click();
+  const paragraph = doc?.querySelector('p');
+  if (paragraph) doc?.getSelection()?.selectAllChildren(paragraph);
+  paragraph?.click();
+  expect(taps).toBe(1);
 });
