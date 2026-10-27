@@ -14,23 +14,25 @@ function linkInput(screen: Screen) {
   return screen.getByRole('textbox', { name: 'MEGA folder link' });
 }
 
-test('a connect link fills in the connect screen and waits for Connect', async () => {
+async function expectLibraryShown(screen: Screen) {
+  await expect.element(screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
+}
+
+test('a connect link connects and shows the library', async () => {
   const app = await renderApp({ storage: await oneBookLibrary(), path: `/#connect=${encodeURIComponent(testLink)}` });
 
-  await expect.element(linkInput(app.screen)).toHaveValue(testLink);
-  expect(app.opened).toEqual([]);
-  expect(app.url).toBe('/');
-
-  await userEvent.click(app.screen.getByRole('button', { name: 'Connect' }));
-
-  await expect.element(app.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
+  await expectLibraryShown(app.screen);
   expect(app.opened).toEqual([{ provider: 'mega', link: testLink }]);
+  expect(app.url).toBe('/');
+  await app.reload();
+  expect(app.opened.at(-1)).toEqual({ provider: 'mega', link: testLink });
 });
 
 test('a connect link works unencoded, the MEGA key’s own # included', async () => {
   const app = await renderApp({ storage: await oneBookLibrary(), path: `/books/1#connect=${testLink}` });
 
-  await expect.element(linkInput(app.screen)).toHaveValue(testLink);
+  await expect.element(app.screen.getByRole('heading', { level: 1, name: 'Jane Eyre' })).toBeVisible();
+  expect(app.opened).toEqual([{ provider: 'mega', link: testLink }]);
   expect(app.url).toBe('/books/1');
 });
 
@@ -44,10 +46,6 @@ test('a connect link no provider accepts shows the MEGA problem message', async 
 });
 
 const otherLink = 'https://mega.nz/folder/OtherHandle#OtherKey';
-
-async function expectLibraryShown(screen: Screen) {
-  await expect.element(screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
-}
 
 test('a connect link for the library already connected changes nothing', async () => {
   const app = await renderApp({ storage: await oneBookLibrary(), connected: true, path: `/#connect=${testLink}` });
@@ -96,7 +94,6 @@ test('cancelling the switch keeps the library connected now', async () => {
 
 test('once connected, the link no longer fills the connect screen', async () => {
   const app = await renderApp({ storage: new FakeStorage(), path: `/#connect=${testLink}` });
-  await userEvent.click(app.screen.getByRole('button', { name: 'Connect' }));
 
   await userEvent.click(app.screen.getByRole('button', { name: 'Connect a different library' }));
 
@@ -140,7 +137,7 @@ test('a switch that cannot forget the current library says so and stays connecte
   forget.mockRestore();
 });
 
-test('Copy connect link copies a link that fills in this library on a fresh browser', async () => {
+test('Copy connect link copies a link that connects this library on a fresh browser', async () => {
   const write = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
   onTestFinished(() => write.mockRestore());
   const app = await renderApp({ storage: await oneBookLibrary(), connected: true });
@@ -156,7 +153,8 @@ test('Copy connect link copies a link that fills in this library on a fresh brow
   await unmountApps();
   localStorage.clear();
   const fresh = await renderApp({ storage: await oneBookLibrary(), path: href.slice(location.origin.length) });
-  await expect.element(linkInput(fresh.screen)).toHaveValue(testLink);
+  await expectLibraryShown(fresh.screen);
+  expect(fresh.opened).toEqual([{ provider: 'mega', link: testLink }]);
 });
 
 test('when the clipboard refuses, Copy connect link shows the link to copy by hand', async () => {
