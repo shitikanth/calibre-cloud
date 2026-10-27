@@ -80,26 +80,18 @@ function Stepper({ label, value, decrease, increase }: { label: string; value: s
     <div className="flex items-center justify-between gap-2">
       <span>{label}</span>
       <span className="flex items-center gap-2">
-        <button
-          type="button"
-          aria-label={decrease.label}
-          className={stepButtonClass}
-          disabled={decrease.disabled}
-          onClick={decrease.act}
-        >
-          −
-        </button>
+        <StepButton step={decrease} glyph="−" />
         <span className="w-12 text-center tabular-nums">{value}</span>
-        <button
-          type="button"
-          aria-label={increase.label}
-          className={stepButtonClass}
-          disabled={increase.disabled}
-          onClick={increase.act}
-        >
-          +
-        </button>
+        <StepButton step={increase} glyph="+" />
       </span>
     </div>
+  );
+}
+
+function StepButton({ step, glyph }: { step: Step; glyph: string }) {
+  return (
+    <button type="button" aria-label={step.label} className={stepButtonClass} disabled={step.disabled} onClick={step.act}>
+      {glyph}
+    </button>
   );
 }
