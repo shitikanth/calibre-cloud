@@ -5,7 +5,7 @@ import { buildCalibreLibrary } from './test/calibre-library.ts';
 import { fakeRenderers } from './test/fake-renderer.ts';
 import { FakeStorage } from './test/fake-storage.ts';
 import { renderApp } from './test/render-app.tsx';
-import { showControls } from './test/reader.ts';
+import { showControls, tapZone } from './test/reader.ts';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -88,7 +88,7 @@ test('Previous, Next and the arrow keys turn pages, and the chrome shows how far
   await expect.element(app.screen.getByText('# Chapter 1')).toBeVisible();
   await expect.element(app.screen.getByText('0%')).toBeVisible();
 
-  await userEvent.click(app.screen.getByRole('button', { name: 'Next page' }));
+  await tapZone(app.screen, 'Next page');
   await expect.element(app.screen.getByText('Reader, I married him.')).toBeVisible();
   await expect.element(app.screen.getByText('33%')).toBeVisible();
 
@@ -96,7 +96,7 @@ test('Previous, Next and the arrow keys turn pages, and the chrome shows how far
   await expect.element(app.screen.getByText('# Chapter II')).toBeVisible();
   await userEvent.keyboard('{ArrowLeft}');
   await expect.element(app.screen.getByText('Reader, I married him.')).toBeVisible();
-  await userEvent.click(app.screen.getByRole('button', { name: 'Previous page' }));
+  await tapZone(app.screen, 'Previous page');
   await expect.element(app.screen.getByText('# Chapter 1')).toBeVisible();
   expect(fake.latest.calls.map(({ op }) => op).filter((op) => op === 'next' || op === 'previous')).toEqual(['next', 'next', 'previous', 'previous']);
 
@@ -141,7 +141,7 @@ test('a PDF shows its page count instead of a percentage', async () => {
 
   await expect.element(app.screen.getByText('Page one')).toBeVisible();
   await expect.element(app.screen.getByRole('main').getByText('page 1 of 3', { exact: true })).toBeVisible();
-  await userEvent.click(app.screen.getByRole('button', { name: 'Next page' }));
+  await tapZone(app.screen, 'Next page');
   await expect.element(app.screen.getByRole('main').getByText('page 2 of 3', { exact: true })).toBeVisible();
 });
 
@@ -240,7 +240,7 @@ test('a page that fails to render shows a notice while the book stays open', asy
   fake.latest.emitRenderError(new Error('Bad section'));
 
   await expect.element(app.screen.getByRole('alert')).toMatchTextContent(/couldn’t be shown/);
-  await userEvent.click(app.screen.getByRole('button', { name: 'Next page' }));
+  await tapZone(app.screen, 'Next page');
   await expect.element(app.screen.getByText('Reader, I married him.')).toBeVisible();
   expect(app.screen.getByRole('alert').query()).toBeNull();
 });

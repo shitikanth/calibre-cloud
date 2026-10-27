@@ -3,7 +3,7 @@ import { afterEach, expect, test } from 'vitest';
 import { buildCalibreLibrary } from './test/calibre-library.ts';
 import { fakeRenderers } from './test/fake-renderer.ts';
 import { FakeStorage } from './test/fake-storage.ts';
-import { showControls } from './test/reader.ts';
+import { showControls, tapZone } from './test/reader.ts';
 import { renderApp } from './test/render-app.tsx';
 import type { Screen } from './test/screen.ts';
 
@@ -39,7 +39,7 @@ test('the bar is a slider showing how far through the book, and it follows page 
   const { app, bar } = await openReader('/books/1/read/EPUB');
   await expect.element(bar).toHaveAttribute('aria-valuetext', '0%');
 
-  await userEvent.click(app.screen.getByRole('button', { name: 'Next page' }));
+  await tapZone(app.screen, 'Next page');
 
   await expect.element(bar).toHaveAttribute('aria-valuetext', '25%');
   await expect.element(bar).toHaveValue('25');
@@ -49,7 +49,7 @@ test('in a paged book the bar counts pages', async () => {
   const { app, bar } = await openReader('/books/1/read/PDF');
   await expect.element(bar).toHaveAttribute('aria-valuetext', 'page 1 of 3');
 
-  await userEvent.click(app.screen.getByRole('button', { name: 'Next page' }));
+  await tapZone(app.screen, 'Next page');
 
   await expect.element(bar).toHaveAttribute('aria-valuetext', 'page 2 of 3');
   await expect.element(bar).toHaveValue('2');
@@ -116,7 +116,7 @@ test('dragging away and back to where it started leaves the bar following page t
   await expect.element(place.getByText('Chapter two · 75%')).toBeVisible();
   drag(bar, 0);
   await expect.poll(() => place.getByText('Chapter two · 75%').query()).toBeNull();
-  await userEvent.click(app.screen.getByRole('button', { name: 'Next page' }));
+  await tapZone(app.screen, 'Next page');
 
   await expect.element(bar).toHaveAttribute('aria-valuetext', '25%');
   await expect.element(app.screen.getByRole('main').getByText('25%', { exact: true })).toBeVisible();
@@ -150,7 +150,7 @@ test('clicking the bar jumps there, and the jump is saved like a page turn', asy
 test('arrow keys step the focused bar without also turning the page', async () => {
   const { fake, app, bar } = await openReader('/books/1/read/PDF');
 
-  await userEvent.click(app.screen.getByRole('button', { name: 'Next page' }));
+  await tapZone(app.screen, 'Next page');
   await expect.element(bar).toHaveAttribute('aria-valuetext', 'page 2 of 3');
   (bar.element() as HTMLInputElement).focus();
   await userEvent.keyboard('{ArrowLeft}');
@@ -202,8 +202,8 @@ async function chooseTheme(screen: Screen, theme: string) {
 test.each(['Light', 'Sepia', 'Dark'])('in %s, the bar is a thin track in the muted colour, filled up to a thumb centred on it', async (theme) => {
   const { app, bar, place } = await openReader('/books/1/read/EPUB');
   await chooseTheme(app.screen, theme);
-  await userEvent.click(app.screen.getByRole('button', { name: 'Next page' }));
-  await userEvent.click(app.screen.getByRole('button', { name: 'Next page' }));
+  await tapZone(app.screen, 'Next page');
+  await tapZone(app.screen, 'Next page');
   await showControls(app.screen);
   await expect.element(bar).toHaveAttribute('aria-valuetext', '50%');
   const muted = rgbOf(getComputedStyle(place.getByText('Chapter one · 50%').element()).color);

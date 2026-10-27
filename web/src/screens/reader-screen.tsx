@@ -1,5 +1,5 @@
 import { Link, useNavigate } from '@tanstack/react-router';
-import { useCallback, useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type MouseEvent, type PointerEvent, type ReactNode } from 'react';
 import { bookFilename } from '../download/save-blob.ts';
 import { useDownload } from '../download/use-download.ts';
 import type { BookDetail, BookFormat } from '../library/protocol.ts';
@@ -16,7 +16,7 @@ import { describeError } from './describe-error.ts';
 import { ExternalLinkDialog } from './external-link-dialog.tsx';
 import { formatSize } from './format.ts';
 import { ProgressBar } from './progress-bar.tsx';
-import { BackToBookLink, BottomBar, TapZone, TopBar, type ControlsState } from './reader-controls.tsx';
+import { BackToBookLink, BottomBar, TapZone, TopBar, zoneAt, type ControlsState } from './reader-controls.tsx';
 import { whereYouAreLabel, positionLabel, SeekBar } from './reader-seek-bar.tsx';
 import { SettingsTool } from './reader-settings-tool.tsx';
 import { TocTool } from './reader-toc.tsx';
@@ -181,6 +181,10 @@ function toggled(state: ControlsState): ControlsState {
   return state === 'hidden' ? 'pinned' : 'hidden';
 }
 
+function turnPage(renderer: BookRenderer, direction: SwipeDirection) {
+  return direction === 'next' ? renderer.next() : renderer.previous();
+}
+
 type OpenedBookProps = {
   book: BookDetail;
   format: BookFormat;
@@ -235,7 +239,11 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
           }),
           created.onRenderError(setRenderError),
           created.onExternalLink(setExternalLink),
-          created.onTap(() => setControls(toggled)),
+          created.onTap(({ x }) => {
+            const zone = zoneAt(x, host);
+            setControls(zone ? 'hidden' : toggled);
+            if (zone) void turnPage(created, zone);
+          }),
           created.onTurn(() => setControls('hidden')),
         );
         await created.open(blob, host, saved ? { location: saved.location } : {});
@@ -274,7 +282,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
   const turn = useCallback(
     (direction: SwipeDirection) => {
       setControls('hidden');
-      void (direction === 'next' ? renderer?.next() : renderer?.previous());
+      if (renderer) void turnPage(renderer, direction);
     },
     [renderer],
   );
@@ -295,7 +303,11 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
 
   const reading = status === 'open' && renderer ? renderer : undefined;
   const shown = !reading || controls !== 'hidden';
-  const toggle = () => setControls(toggled);
+  const tapMargin = (event: MouseEvent<HTMLElement>) => {
+    const zone = zoneAt(event.clientX, container.current);
+    if (zone) turn(zone);
+    else setControls(toggled);
+  };
   const pin = () => setControls('pinned');
   const unpeek = () => setControls((state) => (state === 'peek' ? 'hidden' : state));
   const peekAtEdge = (event: PointerEvent<HTMLElement>) => {
@@ -325,7 +337,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
     <div ref={shell} className="reader relative h-dvh overflow-hidden" data-theme={settings.theme}>
       <TopBar book={book} tools={tools} wide={wide} shown={shown} onPin={pin} onLeave={unpeek} />
       <main className="group/page relative flex h-full flex-col" onPointerEnter={unpeek} onPointerMove={peekAtEdge}>
-        <p aria-hidden="true" className={runningHeadAndFolioClass} onClick={toggle}>
+        <p aria-hidden="true" className={runningHeadAndFolioClass} onClick={tapMargin}>
           {reading && (relocation?.tocEntry?.label ?? book.title)}
         </p>
         {status === 'unopenable' && <Unopenable book={book} format={format} />}
@@ -336,7 +348,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
           </p>
         )}
         <div ref={container} className="min-h-0 flex-1 overflow-hidden" hidden={status === 'unopenable' || status === 'renderer-unavailable'} />
-        <p aria-hidden="true" className={runningHeadAndFolioClass} onClick={toggle}>
+        <p aria-hidden="true" className={runningHeadAndFolioClass} onClick={tapMargin}>
           {reading && positionLabel(relocation)}
         </p>
         {reading && (

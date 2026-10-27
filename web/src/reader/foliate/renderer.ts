@@ -1,5 +1,5 @@
 import type { ExternalLink, FoliateView, Location, ResourceData, ResourceLoad, TocItem } from 'foliate-js/view.js';
-import type { BookRenderer, ReaderStyles, ReaderTheme, Relocation, TocEntry } from '../renderer.ts';
+import type { BookRenderer, ReaderStyles, ReaderTheme, Relocation, Tap, TocEntry } from '../renderer.ts';
 import { onSwipe } from '../swipe.ts';
 
 export type FoliateRenderer = BookRenderer & {
@@ -43,7 +43,7 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
   const relocateListeners = new Set<(relocation: Relocation) => void>();
   const errorListeners = new Set<(error: Error) => void>();
   const externalLinkListeners = new Set<(url: string) => void>();
-  const tapListeners = new Set<() => void>();
+  const tapListeners = new Set<(tap: Tap) => void>();
   const turnListeners = new Set<() => void>();
   let view: FoliateView | undefined;
   let host: HTMLElement | undefined;
@@ -97,7 +97,7 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
   const reportTap = (event: MouseEvent) => {
     const target = event.target as Element;
     if (target.closest?.('a') || target.ownerDocument.getSelection()?.isCollapsed === false) return;
-    for (const listener of tapListeners) listener();
+    for (const listener of tapListeners) listener({ x: tapX(event, host) });
   };
 
   const sectionLoaded = (event: Event) => {
@@ -266,6 +266,14 @@ function laidOut(element: Element, signal: AbortSignal): Promise<void> {
       { once: true },
     );
   });
+}
+
+function tapX(event: MouseEvent, host: HTMLElement | undefined): number {
+  const doc = (event.target as Node).ownerDocument;
+  const frame = doc && doc !== host?.ownerDocument ? (doc.defaultView?.frameElement as HTMLElement | null) : null;
+  if (!frame) return event.clientX;
+  const { left, width } = frame.getBoundingClientRect();
+  return left + event.clientX * (frame.offsetWidth ? width / frame.offsetWidth : 1);
 }
 
 async function isResolvable(view: FoliateView, location: string): Promise<boolean> {

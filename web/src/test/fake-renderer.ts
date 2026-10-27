@@ -1,4 +1,4 @@
-import type { BookRenderer, ReaderStyles, Relocation, Renderers, TocEntry } from '../reader/renderer.ts';
+import type { BookRenderer, ReaderStyles, Relocation, Renderers, Tap, TocEntry } from '../reader/renderer.ts';
 import type { SwipeDirection } from '../reader/swipe.ts';
 import { entryStartingAt } from '../reader/toc.ts';
 
@@ -25,10 +25,10 @@ export class FakeRenderer implements BookRenderer {
   private readonly relocateListeners = new Set<(relocation: Relocation) => void>();
   private readonly errorListeners = new Set<(error: Error) => void>();
   private readonly externalLinkListeners = new Set<(url: string) => void>();
-  private readonly tapListeners = new Set<() => void>();
+  private readonly tapListeners = new Set<(tap: Tap) => void>();
   private readonly turnListeners = new Set<() => void>();
-  private readonly reportTap = () => {
-    for (const listener of this.tapListeners) listener();
+  private readonly reportTap = (event: MouseEvent) => {
+    for (const listener of this.tapListeners) listener({ x: event.clientX });
   };
 
   constructor({ pages = false }: FakeRendererOptions = {}) {
@@ -62,7 +62,7 @@ export class FakeRenderer implements BookRenderer {
     return () => this.externalLinkListeners.delete(listener);
   }
 
-  onTap(listener: () => void): () => void {
+  onTap(listener: (tap: Tap) => void): () => void {
     this.tapListeners.add(listener);
     return () => this.tapListeners.delete(listener);
   }

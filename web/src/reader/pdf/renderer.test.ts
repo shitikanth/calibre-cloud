@@ -103,14 +103,14 @@ test('next and previous turn one page at a time and stop at the ends', async () 
   expect(relocations.map((relocation) => relocation.page?.current)).toEqual([1, 2, 1]);
 });
 
-test('a tap on the page is reported', async () => {
+test('a tap on the page is reported with where it landed across the screen', async () => {
   const { renderer, container } = await openFixture();
-  let taps = 0;
-  renderer.onTap(() => (taps += 1));
+  const taps: number[] = [];
+  renderer.onTap(({ x }) => taps.push(x));
 
-  canvasIn(container).click();
+  canvasIn(container).dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 40 }));
 
-  expect(taps).toBe(1);
+  expect(taps).toEqual([40]);
 });
 
 test('a swipe turns the page and is reported as a turn, unless it pans a zoomed page sideways', async () => {

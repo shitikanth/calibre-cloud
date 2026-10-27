@@ -1,3 +1,4 @@
+import { userEvent } from 'vitest/browser';
 import { expect } from 'vitest';
 import type { Screen } from './screen.ts';
 
@@ -10,4 +11,11 @@ export async function showControls(screen: Screen) {
   back.blur();
   back.focus();
   await expectControls(screen, true);
+}
+
+export async function tapZone(screen: Screen, name: 'Previous page' | 'Next page') {
+  const zone = screen.getByRole('button', { name }).element().getBoundingClientRect();
+  const main = screen.getByRole('main');
+  const { left, height } = main.element().getBoundingClientRect();
+  await userEvent.click(main, { position: { x: zone.left - left + zone.width / 2, y: height / 2 } });
 }

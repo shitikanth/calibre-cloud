@@ -7,7 +7,7 @@ import { FakeStorage } from './test/fake-storage.ts';
 import { chooseFromMenu } from './test/app-bar.ts';
 import { renderApp, testLink } from './test/render-app.tsx';
 import type { Screen } from './test/screen.ts';
-import { showControls } from './test/reader.ts';
+import { showControls, tapZone } from './test/reader.ts';
 
 const epub = ['# One', 'line 2', 'line 3', 'line 4', 'line 5'].join('\n');
 const pdf = ['Page one', 'Page two', 'Page three'].join('\n');
@@ -39,7 +39,7 @@ async function read({ fake, app }: Started, bookId: number, format: string, page
   await expect.poll(() => fake.instances.length === opened + 1 && fake.latest.opened !== undefined).toBe(true);
   const next = app.screen.getByRole('button', { name: 'Next page' });
   await expect.element(next).toBeVisible();
-  for (let page = 0; page < pages; page += 1) await userEvent.click(next);
+  for (let page = 0; page < pages; page += 1) await tapZone(app.screen, 'Next page');
 }
 
 function continueReading(screen: Screen) {

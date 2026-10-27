@@ -4,9 +4,8 @@ import { createFoliateRenderer, type FoliateRenderer } from './reader/foliate/re
 import { buildCalibreLibrary } from './test/calibre-library.ts';
 import { fakeRenderers } from './test/fake-renderer.ts';
 import { FakeStorage } from './test/fake-storage.ts';
-import { expectControls, showControls } from './test/reader.ts';
+import { expectControls, showControls, tapZone } from './test/reader.ts';
 import { renderApp } from './test/render-app.tsx';
-import { swipe } from './test/swipe.ts';
 import twoChaptersUrl from './test/fixtures/two-chapters.epub?url';
 
 const epub = ['# Chapter one', 'line 2', 'line 3', '# Chapter two', 'line 5'].join('\n');
@@ -69,7 +68,7 @@ test('the outer 22% on each side are Previous page and Next page buttons, and ev
   expect(rect(previous.element()).x).toBe(0);
   expect(rect(next.element()).x + rect(next.element()).width).toBe(window.innerWidth);
 
-  await userEvent.click(next);
+  await tapZone(screen, 'Next page');
   await expect.element(screen.getByText('line 2')).toBeVisible();
 
   await showControls(screen);
@@ -78,7 +77,7 @@ test('the outer 22% on each side are Previous page and Next page buttons, and ev
   await expectControls(screen, false);
 
   await showControls(screen);
-  await userEvent.click(previous);
+  await tapZone(screen, 'Previous page');
   await expect.element(screen.getByText('line 2')).toBeVisible();
   await expectControls(screen, false);
 
@@ -87,10 +86,19 @@ test('the outer 22% on each side are Previous page and Next page buttons, and ev
   await expect.element(screen.getByText('line 3')).toBeVisible();
   await expectControls(screen, false);
 
-  await swipe(next.element(), 300, 50);
-  await expect.element(screen.getByText('# Chapter two')).toBeVisible();
-  await swipe(previous.element(), 50, 300);
-  await expect.element(screen.getByText('line 3')).toBeVisible();
+  await userEvent.click(screen.getByRole('main'), { position: { x: 10, y: 10 } });
+  await expect.element(screen.getByText('line 2')).toBeVisible();
+  await expectControls(screen, false);
+});
+
+test('the page-turn zones are buttons a keyboard can press', async () => {
+  const { screen } = await openReader('/books/1/read/EPUB');
+  const next = screen.getByRole('button', { name: 'Next page' });
+
+  (next.element() as HTMLElement).focus();
+  await userEvent.keyboard('{Enter}');
+
+  await expect.element(screen.getByText('line 2')).toBeVisible();
 });
 
 test('Tab into the controls shows them and Esc hides them', async () => {
@@ -146,6 +154,12 @@ test('on a desktop, Contents and Settings sit at the top right and the bottom pa
   expect(rect(screen.getByRole('contentinfo').element()).width).toBeLessThanOrEqual(560);
 });
 
+function pressInBook(element: Element | null | undefined, x: number) {
+  const frame = (element?.ownerDocument.defaultView?.frameElement as HTMLElement).getBoundingClientRect();
+  element?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: x - frame.left }));
+  element?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: x - frame.left }));
+}
+
 async function openRealEpub() {
   const files = await buildCalibreLibrary([{ title: 'Two Chapters', authors: ['Calibre Cloud'], formats: { EPUB: '' } }]);
   files['Calibre Cloud/Two Chapters (1)/Two Chapters - Calibre Cloud.epub'] = new Uint8Array(await (await fetch(twoChaptersUrl)).arrayBuffer());
@@ -164,10 +178,7 @@ async function openRealEpub() {
 test('with the real EPUB renderer, a tap on the page shows the controls, a press on it closes an open Contents, and Esc inside the book hides them', async () => {
   const { screen, renderer } = await openRealEpub();
   const paragraph = renderer.sectionDocument?.querySelector('p') as HTMLElement;
-  const press = () => {
-    paragraph.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
-    paragraph.click();
-  };
+  const press = () => pressInBook(paragraph, window.innerWidth / 2);
 
   press();
   await expectControls(screen, true);
@@ -184,6 +195,45 @@ test('with the real EPUB renderer, a tap on the page shows the controls, a press
   (renderer.sectionDocument?.defaultView?.frameElement as HTMLElement).focus();
   await userEvent.keyboard('{Escape}');
   await expectControls(screen, false);
+});
+
+test('with the real EPUB renderer, a tap at the edge of the page turns it, but a click on a link there follows the link', async () => {
+  const { screen, renderer } = await openRealEpub();
+  const folio = screen.getByRole('main').getByText(/^\d+%$/);
+  await expect.element(folio).toBeVisible();
+  const opening = folio.element().textContent;
+
+  pressInBook(renderer.sectionDocument?.querySelector('p'), window.innerWidth - 10);
+
+  await expect.poll(() => folio.element().textContent).not.toBe(opening);
+  expect(renderer.sectionDocument?.getElementById('chapter-two')).toBeNull();
+  await expectControls(screen, false);
+
+  const linkInZone = () => {
+    const doc = renderer.sectionDocument;
+    const frame = (doc?.defaultView?.frameElement as HTMLElement).getBoundingClientRect();
+    return [...(doc?.getElementById('links')?.querySelectorAll('a') ?? [])]
+      .flatMap((link) => [...link.getClientRects()])
+      .map((line) => ({ x: frame.left + line.left + 4, y: frame.top + line.top + line.height / 2 }))
+      .find(({ x }) => x >= 0 && x < window.innerWidth * 0.22);
+  };
+  for (let turns = 0; !linkInZone() && turns < 6; turns += 1) {
+    const before = folio.element().textContent;
+    pressInBook(renderer.sectionDocument?.querySelector('p'), window.innerWidth - 10);
+    await expect.poll(() => folio.element().textContent).not.toBe(before);
+  }
+  const link = linkInZone();
+  expect(link).toBeDefined();
+  const main = screen.getByRole('main');
+  const { left, top } = main.element().getBoundingClientRect();
+  const position = folio.element().textContent;
+
+  await userEvent.click(main, { position: { x: (link?.x ?? 0) - left, y: (link?.y ?? 0) - top } });
+
+  await expect
+    .poll(() => screen.getByRole('dialog', { name: 'Open this link?' }).query() ?? renderer.sectionDocument?.getElementById('chapter-two'))
+    .toBeTruthy();
+  expect(folio.element().textContent === position || renderer.sectionDocument?.getElementById('chapter-two')).toBeTruthy();
 });
 
 test.each([

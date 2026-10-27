@@ -197,12 +197,12 @@ test('key presses and pointer presses inside the section document reach the page
 
 test('a click on the page outside the section document, such as its margin, is reported as a tap', async () => {
   const { renderer, container } = await openFixture();
-  let taps = 0;
-  renderer.onTap(() => (taps += 1));
+  const taps: number[] = [];
+  renderer.onTap(({ x }) => taps.push(x));
 
-  container.querySelector('foliate-view')?.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+  container.querySelector('foliate-view')?.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true, clientX: 300 }));
 
-  expect(taps).toBe(1);
+  expect(taps).toEqual([300]);
 });
 
 
@@ -337,19 +337,43 @@ test('a swipe inside the section document turns the page and is reported as a tu
   expect(turns).toBe(1);
 });
 
-test('a tap on the page is reported, but not a tap on a link or one that ends a text selection', async () => {
+function frameOf(doc: Document | undefined) {
+  return doc?.defaultView?.frameElement as HTMLElement;
+}
+
+function clickAt(element: Element | null | undefined, x: number) {
+  const frame = frameOf(element?.ownerDocument);
+  const { left, width } = frame.getBoundingClientRect();
+  element?.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: (x - left) / (width / frame.offsetWidth) }));
+}
+
+test('a tap on the page is reported with where it landed across the screen, but not a tap on a link or one that ends a text selection', async () => {
   vi.spyOn(window, 'open').mockReturnValue(null);
   const { renderer } = await openFixture();
-  let taps = 0;
-  renderer.onTap(() => (taps += 1));
+  const taps: number[] = [];
+  renderer.onTap(({ x }) => taps.push(x));
   const doc = renderer.sectionDocument;
-
-  doc?.querySelector('p')?.click();
-  expect(taps).toBe(1);
-
-  doc?.getElementById('links')?.querySelector('a')?.click();
   const paragraph = doc?.querySelector('p');
+
+  clickAt(paragraph, 50);
+  clickAt(paragraph, 550);
+  expect(taps).toEqual([50, 550]);
+
+  clickAt(doc?.getElementById('links')?.querySelector('a'), 50);
   if (paragraph) doc?.getSelection()?.selectAllChildren(paragraph);
-  paragraph?.click();
-  expect(taps).toBe(1);
+  clickAt(paragraph, 50);
+  expect(taps).toEqual([50, 550]);
+});
+
+test.each(fixedLayout)('fixed-layout $extension: a tap on a scaled page is reported where it landed across the screen', async (fixture) => {
+  const { renderer } = await openFixture(undefined, fixture);
+  const taps: number[] = [];
+  renderer.onTap(({ x }) => taps.push(x));
+  const page = renderer.sectionDocument?.body;
+  const { left, width } = frameOf(page?.ownerDocument).getBoundingClientRect();
+
+  clickAt(page, left + width / 4);
+
+  expect(taps).toHaveLength(1);
+  expect(taps[0]).toBeCloseTo(left + width / 4, 0);
 });

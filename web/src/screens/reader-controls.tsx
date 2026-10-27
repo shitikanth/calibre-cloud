@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router';
-import { useEffect, useRef, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import type { BookDetail } from '../library/protocol.ts';
-import { onSwipe, type SwipeDirection } from '../reader/swipe.ts';
+import type { SwipeDirection } from '../reader/swipe.ts';
 
 export type ControlsState = 'hidden' | 'peek' | 'pinned';
 
@@ -86,22 +86,28 @@ export function BottomBar({ seekBar, whereYouAre, tools, wide, ...bar }: BottomB
   );
 }
 
+const zoneShare = 0.22;
+
+export function zoneAt(x: number, page: HTMLElement | null): SwipeDirection | undefined {
+  if (!page) return undefined;
+  const { left, width } = page.getBoundingClientRect();
+  const across = (x - left) / width;
+  if (across < zoneShare) return 'previous';
+  if (across > 1 - zoneShare) return 'next';
+  return undefined;
+}
+
+// Pointer taps go through to the book, so a link under a zone still works; the screen turns the page from where a tap lands.
 export function TapZone({ direction, onTurn }: { direction: SwipeDirection; onTurn: (direction: SwipeDirection) => void }) {
-  const zone = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    const element = zone.current;
-    if (!element) return;
-    return onSwipe(element, onTurn);
-  }, [onTurn]);
   const previous = direction === 'previous';
   return (
     <button
-      ref={zone}
       type="button"
       aria-label={previous ? 'Previous page' : 'Next page'}
-      className={`group/zone absolute inset-y-0 z-10 flex w-[22%] touch-pan-y touch-pinch-zoom items-center focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--reader-muted) ${
+      className={`group/zone pointer-events-none absolute inset-y-0 z-10 flex items-center focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--reader-muted) ${
         previous ? 'left-0 justify-start pl-2' : 'right-0 justify-end pr-2'
       }`}
+      style={{ width: `${zoneShare * 100}%` }}
       onClick={() => onTurn(direction)}
     >
       <span
