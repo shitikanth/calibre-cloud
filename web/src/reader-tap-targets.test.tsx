@@ -42,6 +42,9 @@ test('on a phone, the reader’s buttons and links are at least 44 px tall', asy
 
   await expect.element(app.screen.getByText('# Chapter one')).toBeVisible();
   for (const name of ['Previous', 'Next']) expect(size(app.screen, 'button', name).height).toBeGreaterThanOrEqual(44);
+  const bar = app.screen.getByRole('slider', { name: 'Position in book' }).element().getBoundingClientRect();
+  expect(bar.height).toBeGreaterThanOrEqual(44);
+  expect(bar.width).toBeGreaterThanOrEqual(350);
   for (const name of ['Table of contents', 'Settings']) {
     const { width, height } = size(app.screen, 'button', name);
     expect(width).toBeGreaterThanOrEqual(44);

@@ -8,6 +8,8 @@ export type FoliateRenderer = BookRenderer & {
 
 type SectionLoad = { doc: Document; index: number };
 
+type TocSection = { entry: TocEntry; index: number };
+
 const themes: Record<ReaderTheme, { background: string; text: string; link: string }> = {
   light: { background: '#ffffff', text: '#171717', link: '#1d4ed8' },
   sepia: { background: '#f4ecd8', text: '#5b4636', link: '#8a4b08' },
@@ -44,6 +46,7 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
   const destroyed = new AbortController();
   let toc: TocEntry[] = [];
   let tocEntries = new WeakMap<TocItem, TocEntry>();
+  let tocSections: TocSection[] = [];
   let sectionDocument: Document | undefined;
   const refusedResources: string[] = [];
 
@@ -137,9 +140,11 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
         transforms?.addEventListener('data', transformResource);
         created.renderer.setAttribute('flow', 'paginated');
         toc = (created.book.toc ?? []).map((item) => toTocEntry(item, tocEntries));
+        tocSections = await tocSectionsOf(created, toc);
+        if (destroyed.signal.aborted) return;
         const resumed =
           location !== undefined &&
-          isResolvable(created, location) &&
+          (await isResolvable(created, location)) &&
           (await created.init({ lastLocation: location }).then(() => true, () => false));
         if (destroyed.signal.aborted) return;
         if (!resumed) await created.init({ showTextStart: true });
@@ -161,6 +166,12 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
     async goTo(location) {
       await navigate(`Could not go to ${location}`, async () => (await view?.goTo(location)) ?? false);
     },
+    async goToFraction(fraction) {
+      await navigate(`Could not go to ${Math.round(fraction * 100)}%`, () => view?.goToFraction(fraction));
+    },
+    tocEntryAt(fraction) {
+      return view && entryForSection(tocSections, sectionAt(view.getSectionFractions(), fraction));
+    },
     async next() {
       await navigate('Could not turn to the next page', () => view?.next());
     },
@@ -180,6 +191,7 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
       view = undefined;
       toc = [];
       tocEntries = new WeakMap();
+      tocSections = [];
       sectionDocument = undefined;
       relocateListeners.clear();
       errorListeners.clear();
@@ -208,9 +220,35 @@ function laidOut(element: Element, signal: AbortSignal): Promise<void> {
   });
 }
 
-function isResolvable(view: FoliateView, location: string): boolean {
-  const target = view.resolveNavigation(location);
+async function isResolvable(view: FoliateView, location: string): Promise<boolean> {
+  const target = await view.resolveNavigation(location);
   return !!target && target.index >= 0 && target.index < view.book.sections.length;
+}
+
+async function tocSectionsOf(view: FoliateView, toc: TocEntry[]): Promise<TocSection[]> {
+  const sections = await Promise.all(
+    toc.map(async (entry) => {
+      const index = (await view.resolveNavigation(entry.location))?.index;
+      const own = index === undefined ? [] : [{ entry, index }];
+      return [...own, ...(await tocSectionsOf(view, entry.children ?? []))];
+    }),
+  );
+  return sections.flat();
+}
+
+function sectionAt(starts: number[], fraction: number): number {
+  let section = 0;
+  for (let index = 0; index < starts.length - 1; index++) {
+    const start = starts[index] ?? 0;
+    if (start <= fraction && (starts[index + 1] ?? 0) > start) section = index;
+  }
+  return section;
+}
+
+function entryForSection(sections: TocSection[], section: number): TocEntry | undefined {
+  const startsHere = sections.find((candidate) => candidate.index === section);
+  if (startsHere) return startsHere.entry;
+  return sections.findLast((candidate) => candidate.index < section)?.entry;
 }
 
 function toTocEntry(item: TocItem, entries: WeakMap<TocItem, TocEntry>): TocEntry {

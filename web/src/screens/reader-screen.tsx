@@ -14,6 +14,7 @@ import { ConnectedShell } from './connected-shell.tsx';
 import { describeError } from './describe-error.ts';
 import { formatSize } from './format.ts';
 import { ProgressBar } from './progress-bar.tsx';
+import { PageControls } from './reader-page-controls.tsx';
 import { SettingsTool } from './reader-settings-tool.tsx';
 import { TocTool } from './reader-toc.tsx';
 
@@ -277,7 +278,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
   useEffect(() => {
     if (!renderer) return;
     const turnPage = (event: KeyboardEvent) => {
-      if (shell.current?.querySelector('[aria-expanded="true"]')) return;
+      if (shell.current?.querySelector('[aria-expanded="true"]') || event.target instanceof HTMLInputElement) return;
       if (event.key === 'ArrowRight') void renderer.next();
       else if (event.key === 'ArrowLeft') void renderer.previous();
     };
@@ -316,23 +317,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
         </p>
       )}
       <div ref={container} className="min-h-0 flex-1 overflow-hidden" hidden={status === 'unopenable' || status === 'renderer-unavailable'} />
-      {status === 'open' && renderer && (
-        <nav aria-label="Pages" className="flex items-center justify-between gap-2 border-t border-(--reader-line) px-2 py-1">
-          <button type="button" className="min-h-11 rounded px-3 py-1 hover:bg-(--reader-hover)" onClick={() => void renderer.previous()}>
-            Previous
-          </button>
-          <span className="text-sm text-(--reader-muted)">{progressText(relocation)}</span>
-          <button type="button" className="min-h-11 rounded px-3 py-1 hover:bg-(--reader-hover)" onClick={() => void renderer.next()}>
-            Next
-          </button>
-        </nav>
-      )}
+      {status === 'open' && renderer && <PageControls renderer={renderer} relocation={relocation} />}
     </ReaderShell>
   );
-}
-
-function progressText(relocation: Relocation | undefined): string {
-  if (!relocation) return '';
-  if (relocation.page) return `page ${relocation.page.current} of ${relocation.page.total}`;
-  return `${Math.round(relocation.fraction * 100)}%`;
 }

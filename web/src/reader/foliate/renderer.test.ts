@@ -208,6 +208,25 @@ test.each(reflowable)('$extension: TOC goes to chapter two, text settings apply,
   expect(resumed.renderer.sectionDocument?.body.textContent).toContain('tin box of letters');
 });
 
+test.each([epubFixture, ...reflowable])('$extension: goToFraction jumps into chapter two, and tocEntryAt names the chapter without moving', async (fixture) => {
+  const { renderer, relocations } = await openFixture(undefined, fixture);
+  await goToChapterTwo(renderer);
+  await settled(relocations);
+  const chapterTwo = relocations.at(-1)?.fraction ?? Number.NaN;
+  await renderer.goTo(renderer.toc[0]?.location ?? '');
+  await settled(relocations);
+  const before = relocations.length;
+
+  expect(renderer.tocEntryAt(0)).toBe(renderer.toc[0]);
+  expect(renderer.tocEntryAt(chapterTwo)).toBe(renderer.toc[1]);
+  expect(relocations).toHaveLength(before);
+
+  await renderer.goToFraction(chapterTwo);
+  await settled(relocations);
+
+  expect(relocations.at(-1)?.tocEntry).toBe(renderer.toc[1]);
+});
+
 const scripted = [
   { ...epubFixture, chapterTwo: 'The first letter was addressed', refused: ['application/javascript'] },
   ...mobiFamily.map((fixture) => ({ ...fixture, chapterTwo: 'tin box of letters', refused: [] })),
@@ -249,4 +268,15 @@ test.each(fixedLayout)('fixed-layout $extension: pages open without text setting
 
   const resumed = await openFixture(saved, fixture);
   expect(resumed.relocations[0]?.location).toBe(saved);
+});
+
+test.each(fixedLayout)('fixed-layout $extension: goToFraction jumps to the last page and tocEntryAt names it', async ({ toc, ...fixture }) => {
+  const { renderer, relocations } = await openFixture(undefined, fixture);
+
+  expect(renderer.tocEntryAt(1)?.label).toBe(toc[1]);
+
+  await renderer.goToFraction(1);
+  await settled(relocations);
+
+  expect(relocations.at(-1)?.tocEntry?.label).toBe(toc[1]);
 });

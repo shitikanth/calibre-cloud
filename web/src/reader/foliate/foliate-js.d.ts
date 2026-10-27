@@ -26,8 +26,10 @@ declare module 'foliate-js/view.js' {
     open(book: File): Promise<void>;
     close(): void;
     init(options: { lastLocation?: string; showTextStart?: boolean }): Promise<void>;
-    resolveNavigation(target: string | number): NavigationTarget | null | undefined;
+    resolveNavigation(target: string | number): NavigationTarget | Promise<NavigationTarget | null> | null | undefined;
     goTo(target: string | number): Promise<NavigationTarget | undefined>;
+    goToFraction(fraction: number): Promise<void>;
+    getSectionFractions(): number[];
     prev(): Promise<void>;
     next(): Promise<void>;
   }
