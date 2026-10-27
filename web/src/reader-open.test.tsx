@@ -5,6 +5,7 @@ import { buildCalibreLibrary } from './test/calibre-library.ts';
 import { fakeRenderers } from './test/fake-renderer.ts';
 import { FakeStorage } from './test/fake-storage.ts';
 import { renderApp } from './test/render-app.tsx';
+import { showControls, tapZone } from './test/reader.ts';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -87,7 +88,7 @@ test('Previous, Next and the arrow keys turn pages, and the chrome shows how far
   await expect.element(app.screen.getByText('# Chapter 1')).toBeVisible();
   await expect.element(app.screen.getByText('0%')).toBeVisible();
 
-  await userEvent.click(app.screen.getByRole('button', { name: 'Next' }));
+  await tapZone(app.screen, 'Next page');
   await expect.element(app.screen.getByText('Reader, I married him.')).toBeVisible();
   await expect.element(app.screen.getByText('33%')).toBeVisible();
 
@@ -95,10 +96,11 @@ test('Previous, Next and the arrow keys turn pages, and the chrome shows how far
   await expect.element(app.screen.getByText('# Chapter II')).toBeVisible();
   await userEvent.keyboard('{ArrowLeft}');
   await expect.element(app.screen.getByText('Reader, I married him.')).toBeVisible();
-  await userEvent.click(app.screen.getByRole('button', { name: 'Previous' }));
+  await tapZone(app.screen, 'Previous page');
   await expect.element(app.screen.getByText('# Chapter 1')).toBeVisible();
   expect(fake.latest.calls.map(({ op }) => op).filter((op) => op === 'next' || op === 'previous')).toEqual(['next', 'next', 'previous', 'previous']);
 
+  await showControls(app.screen);
   await userEvent.click(app.screen.getByRole('link', { name: 'Back to book' }));
   await expect.element(app.screen.getByRole('button', { name: 'Download EPUB' })).toBeVisible();
   expect(app.url).toBe('/books/1');
@@ -111,11 +113,13 @@ test('the arrow keys leave the page alone while the table of contents or Setting
   await expect.element(app.screen.getByText('# Chapter 1')).toBeVisible();
   const turns = () => fake.latest.calls.filter(({ op }) => op === 'next' || op === 'previous');
 
+  await showControls(app.screen);
   await userEvent.click(app.screen.getByRole('button', { name: 'Table of contents' }));
   await expect.element(app.screen.getByRole('navigation', { name: 'Table of contents' })).toBeVisible();
   await userEvent.keyboard('{ArrowRight}');
   await userEvent.keyboard('{Escape}');
 
+  await showControls(app.screen);
   await userEvent.click(app.screen.getByRole('button', { name: 'Settings' }));
   const settings = app.screen.getByRole('dialog', { name: 'Settings' });
   await expect.element(settings).toBeVisible();
@@ -136,9 +140,9 @@ test('a PDF shows its page count instead of a percentage', async () => {
   const app = await renderApp({ storage: await janeEyreLibrary(), connected: true, path: '/books/1/read/PDF', renderers: fake.renderers });
 
   await expect.element(app.screen.getByText('Page one')).toBeVisible();
-  await expect.element(app.screen.getByText('page 1 of 3')).toBeVisible();
-  await userEvent.click(app.screen.getByRole('button', { name: 'Next' }));
-  await expect.element(app.screen.getByText('page 2 of 3')).toBeVisible();
+  await expect.element(app.screen.getByRole('main').getByText('page 1 of 3', { exact: true })).toBeVisible();
+  await tapZone(app.screen, 'Next page');
+  await expect.element(app.screen.getByRole('main').getByText('page 2 of 3', { exact: true })).toBeVisible();
 });
 
 test.each(['/books/99/read/EPUB', '/books/nope/read/EPUB'])('%s says the book was not found', async (path) => {
@@ -203,7 +207,7 @@ test('a file the renderer cannot open offers Download instead of Retry', async (
   await expect.element(alert).toMatchTextContent(/Couldn’t open this book/);
   await expect.element(alert.getByRole('link', { name: 'Back to book' })).toBeVisible();
   expect(alert.getByRole('button', { name: 'Retry' }).query()).toBeNull();
-  expect(app.screen.getByRole('button', { name: 'Next' }).query()).toBeNull();
+  expect(app.screen.getByRole('button', { name: 'Next page' }).query()).toBeNull();
 
   await userEvent.click(alert.getByRole('button', { name: 'Download EPUB' }));
 
@@ -236,7 +240,7 @@ test('a page that fails to render shows a notice while the book stays open', asy
   fake.latest.emitRenderError(new Error('Bad section'));
 
   await expect.element(app.screen.getByRole('alert')).toMatchTextContent(/couldn’t be shown/);
-  await userEvent.click(app.screen.getByRole('button', { name: 'Next' }));
+  await tapZone(app.screen, 'Next page');
   await expect.element(app.screen.getByText('Reader, I married him.')).toBeVisible();
   expect(app.screen.getByRole('alert').query()).toBeNull();
 });

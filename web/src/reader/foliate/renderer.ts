@@ -1,5 +1,6 @@
 import type { ExternalLink, FoliateView, Location, ResourceData, ResourceLoad, TocItem } from 'foliate-js/view.js';
-import type { BookRenderer, ReaderStyles, ReaderTheme, Relocation, TocEntry } from '../renderer.ts';
+import type { BookRenderer, ReaderStyles, ReaderTheme, Relocation, Tap, TocEntry } from '../renderer.ts';
+import { onSwipe } from '../swipe.ts';
 
 export type FoliateRenderer = BookRenderer & {
   readonly sectionDocument: Document | undefined;
@@ -42,7 +43,10 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
   const relocateListeners = new Set<(relocation: Relocation) => void>();
   const errorListeners = new Set<(error: Error) => void>();
   const externalLinkListeners = new Set<(url: string) => void>();
+  const tapListeners = new Set<(tap: Tap) => void>();
+  const turnListeners = new Set<() => void>();
   let view: FoliateView | undefined;
+  let host: HTMLElement | undefined;
   let opening = false;
   const destroyed = new AbortController();
   let toc: TocEntry[] = [];
@@ -78,16 +82,33 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
     }
   };
 
-  const turnPage = (event: Event) => {
-    const { key } = event as KeyboardEvent;
-    if (key === 'ArrowRight') void renderer.next();
-    else if (key === 'ArrowLeft') void renderer.previous();
+  const reportTurn = () => {
+    for (const listener of turnListeners) listener();
+  };
+
+  const passKeyOut = (event: KeyboardEvent) => {
+    host?.dispatchEvent(new KeyboardEvent(event.type, event));
+  };
+
+  const passPressOut = (event: PointerEvent) => {
+    host?.dispatchEvent(new PointerEvent(event.type, event));
+  };
+
+  const reportTap = (event: MouseEvent) => {
+    const target = event.target as Element;
+    if (target.closest?.('a') || target.ownerDocument.getSelection()?.isCollapsed === false) return;
+    for (const listener of tapListeners) listener({ x: tapX(event, host) });
   };
 
   const sectionLoaded = (event: Event) => {
     if (destroyed.signal.aborted) return;
-    sectionDocument = (event as CustomEvent<SectionLoad>).detail.doc;
-    sectionDocument.addEventListener('keydown', turnPage);
+    const doc = (event as CustomEvent<SectionLoad>).detail.doc;
+    sectionDocument = doc;
+    doc.addEventListener('keydown', passKeyOut);
+    doc.addEventListener('pointerdown', passPressOut);
+    doc.addEventListener('click', reportTap);
+    // foliate-js turns the page on a swipe itself; this only reports it.
+    onSwipe(doc, reportTurn);
   };
 
   const teardown = (created: FoliateView) => {
@@ -135,8 +156,10 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
       created.addEventListener('relocate', relocate);
       created.addEventListener('load', sectionLoaded);
       created.addEventListener('external-link', reportExternalLink);
+      created.addEventListener('click', reportTap);
       container.replaceChildren(created);
       view = created;
+      host = container;
       opening = true;
       try {
         await created.open(new File([blob], `book.${extension}`, { type: blob.type }));
@@ -156,6 +179,7 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
           (await created.init({ lastLocation: location }).then(() => true, () => false));
         if (destroyed.signal.aborted) return;
         if (!resumed) await created.init({ showTextStart: true });
+        if (!destroyed.signal.aborted) created.renderer.setAttribute('margin', '16px');
       } catch (error) {
         if (!destroyed.signal.aborted) throw error;
       } finally {
@@ -174,6 +198,14 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
     onExternalLink(listener) {
       externalLinkListeners.add(listener);
       return () => externalLinkListeners.delete(listener);
+    },
+    onTap(listener) {
+      tapListeners.add(listener);
+      return () => tapListeners.delete(listener);
+    },
+    onTurn(listener) {
+      turnListeners.add(listener);
+      return () => turnListeners.delete(listener);
     },
     async goTo(location) {
       await navigate(`Could not go to ${location}`, async () => (await view?.goTo(location)) ?? false);
@@ -201,6 +233,7 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
         else teardown(view);
       }
       view = undefined;
+      host = undefined;
       toc = [];
       tocEntries = new WeakMap();
       tocSections = [];
@@ -208,6 +241,8 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
       relocateListeners.clear();
       errorListeners.clear();
       externalLinkListeners.clear();
+      tapListeners.clear();
+      turnListeners.clear();
     },
   };
   return renderer;
@@ -231,6 +266,14 @@ function laidOut(element: Element, signal: AbortSignal): Promise<void> {
       { once: true },
     );
   });
+}
+
+function tapX(event: MouseEvent, host: HTMLElement | undefined): number {
+  const doc = (event.target as Node).ownerDocument;
+  const frame = doc && doc !== host?.ownerDocument ? (doc.defaultView?.frameElement as HTMLElement | null) : null;
+  if (!frame) return event.clientX;
+  const { left, width } = frame.getBoundingClientRect();
+  return left + event.clientX * (frame.offsetWidth ? width / frame.offsetWidth : 1);
 }
 
 async function isResolvable(view: FoliateView, location: string): Promise<boolean> {

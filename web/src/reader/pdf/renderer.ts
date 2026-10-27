@@ -1,7 +1,8 @@
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 import type { PDFDocumentLoadingTask, PDFDocumentProxy, PDFPageProxy, RenderTask } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import workerSrc from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
-import type { BookRenderer, Relocation, TocEntry } from '../renderer.ts';
+import type { BookRenderer, Relocation, Tap, TocEntry } from '../renderer.ts';
+import { onSwipe } from '../swipe.ts';
 import { entryStartingAt } from '../toc.ts';
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
@@ -28,6 +29,8 @@ class PdfRenderer implements BookRenderer {
   private generation = 0;
   private readonly relocateListeners = new Set<(relocation: Relocation) => void>();
   private readonly errorListeners = new Set<(error: Error) => void>();
+  private readonly tapListeners = new Set<(tap: Tap) => void>();
+  private readonly turnListeners = new Set<() => void>();
 
   async open(blob: Blob, container: HTMLElement, { location }: { location?: string }): Promise<void> {
     const generation = this.generation;
@@ -44,6 +47,7 @@ class PdfRenderer implements BookRenderer {
     this.canvas = document.createElement('canvas');
     this.canvas.style.display = 'block';
     this.scroller.append(this.canvas);
+    this.listenForGestures(this.scroller);
     container.replaceChildren(this.scroller);
     this.toc = await mapOutline(doc, (await doc.getOutline()) ?? []);
     if (generation !== this.generation) return;
@@ -63,6 +67,16 @@ class PdfRenderer implements BookRenderer {
 
   onExternalLink(): () => void {
     return () => {};
+  }
+
+  onTap(listener: (tap: Tap) => void): () => void {
+    this.tapListeners.add(listener);
+    return () => this.tapListeners.delete(listener);
+  }
+
+  onTurn(listener: () => void): () => void {
+    this.turnListeners.add(listener);
+    return () => this.turnListeners.delete(listener);
   }
 
   async goTo(location: string): Promise<void> {
@@ -105,6 +119,21 @@ class PdfRenderer implements BookRenderer {
     this.canvas = undefined;
     this.relocateListeners.clear();
     this.errorListeners.clear();
+    this.tapListeners.clear();
+    this.turnListeners.clear();
+  }
+
+  private listenForGestures(scroller: HTMLElement): void {
+    scroller.addEventListener('click', (event) => {
+      for (const listener of this.tapListeners) listener({ x: event.clientX });
+    });
+    let scrolledFrom = 0;
+    scroller.addEventListener('touchstart', () => (scrolledFrom = scroller.scrollLeft), { passive: true });
+    onSwipe(scroller, (direction) => {
+      if (scroller.scrollLeft !== scrolledFrom) return;
+      void (direction === 'next' ? this.next() : this.previous());
+      for (const listener of this.turnListeners) listener();
+    });
   }
 
   private isPage(page: number): boolean {

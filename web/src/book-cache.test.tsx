@@ -6,6 +6,7 @@ import { buildCalibreLibrary } from './test/calibre-library.ts';
 import { fakeRenderers } from './test/fake-renderer.ts';
 import { FakeStorage } from './test/fake-storage.ts';
 import { renderApp, testLink, unmountApps } from './test/render-app.tsx';
+import { showControls } from './test/reader.ts';
 
 const janeEyreEpub = '# Chapter 1\nReader, I married him.';
 const janeEyrePdf = 'Page one\nPage two';
@@ -210,6 +211,7 @@ test('Download reads from the library even when the reader has the file on the d
   await expect.element(app.screen.getByText('# Chapter 1')).toBeVisible();
   storage.calls.length = 0;
 
+  await showControls(app.screen);
   await userEvent.click(app.screen.getByRole('link', { name: 'Back to book' }));
   await userEvent.click(app.screen.getByRole('button', { name: 'Download EPUB' }));
 
@@ -236,6 +238,7 @@ test('Refresh library drops the files of formats that left the library, and keep
   const fake = fakeRenderers(['EPUB', 'PDF']);
   await openReader(storage, fake, { path: '/books/1/read/EPUB', firstLine: '# Chapter 1' });
   const app = await openReader(storage, fake, { path: '/books/2/read/EPUB', firstLine: '# Chapter 1' });
+  await showControls(app.screen);
   await userEvent.click(app.screen.getByRole('link', { name: 'Back to book' }));
   await expect.element(app.screen.getByRole('link', { name: 'Read EPUB' })).toBeVisible();
 
@@ -263,6 +266,7 @@ test('Disconnect forgets the book files on this device', async () => {
   const fake = fakeRenderers(['EPUB', 'PDF']);
   const app = await renderApp({ storage, connected: true, path: '/books/1/read/EPUB', renderers: fake.renderers });
   await expect.element(app.screen.getByText('# Chapter 1')).toBeVisible();
+  await showControls(app.screen);
   await userEvent.click(app.screen.getByRole('link', { name: 'Back to book' }));
 
   await chooseFromMenu(app.screen, 'Disconnect');

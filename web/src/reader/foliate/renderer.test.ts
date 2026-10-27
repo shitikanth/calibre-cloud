@@ -1,5 +1,6 @@
 import { afterEach, expect, test, vi } from 'vitest';
 import type { Relocation } from '../renderer.ts';
+import { swipe } from '../../test/swipe.ts';
 import { createFoliateRenderer, type FoliateRenderer } from './renderer.ts';
 import fixtureUrl from '../../test/fixtures/two-chapters.epub?url';
 import azw3Url from '../../test/fixtures/two-chapters.azw3?url';
@@ -175,21 +176,35 @@ test('open rejects when the file is not a book', async () => {
   await expect(renderer.open(new Blob(['not a book']), container, {})).rejects.toThrow();
 });
 
-test('arrow keys pressed inside the section document turn the page', async () => {
-  const { renderer, relocations } = await openFixture();
-  const opening = relocations.at(-1)?.fraction ?? Number.NaN;
-  const press = (key: string) => {
-    for (const type of ['keydown', 'keyup']) renderer.sectionDocument?.dispatchEvent(new KeyboardEvent(type, { key, bubbles: true }));
-  };
-
-  press('ArrowRight');
-  await vi.waitFor(() => expect(relocations.at(-1)?.fraction).toBeGreaterThan(opening));
+test('key presses and pointer presses inside the section document reach the page around the book, which decides what they do', async () => {
+  const { renderer, relocations, container } = await openFixture();
+  const reached: string[] = [];
+  for (const type of ['keydown', 'pointerdown']) {
+    container.parentElement?.addEventListener(type, (event) => reached.push(`${type} ${(event as KeyboardEvent).key ?? ''}`.trim()));
+  }
+  const doc = renderer.sectionDocument;
   await settled(relocations);
-  const turned = relocations.at(-1)?.fraction ?? Number.NaN;
+  const before = relocations.length;
 
-  press('ArrowLeft');
-  await vi.waitFor(() => expect(relocations.at(-1)?.fraction).toBeLessThan(turned));
+  doc?.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  doc?.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  doc?.querySelector('p')?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+
+  expect(reached).toEqual(['keydown ArrowRight', 'keydown Escape', 'pointerdown']);
+  await settled(relocations);
+  expect(relocations).toHaveLength(before);
 });
+
+test('a click on the page outside the section document, such as its margin, is reported as a tap', async () => {
+  const { renderer, container } = await openFixture();
+  const taps: number[] = [];
+  renderer.onTap(({ x }) => taps.push(x));
+
+  container.querySelector('foliate-view')?.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true, clientX: 300 }));
+
+  expect(taps).toEqual([300]);
+});
+
 
 test('destroy during open leaves nothing behind', async () => {
   const { renderer, relocations, container } = await createInContainer();
@@ -308,4 +323,57 @@ test.each(fixedLayout)('fixed-layout $extension: goToFraction jumps to the last 
   await settled(relocations);
 
   expect(relocations.at(-1)?.tocEntry?.label).toBe(toc[1]);
+});
+
+test('a swipe inside the section document turns the page and is reported as a turn', async () => {
+  const { renderer, relocations } = await openFixture();
+  const opening = relocations.at(-1)?.fraction ?? Number.NaN;
+  let turns = 0;
+  renderer.onTurn(() => (turns += 1));
+
+  await swipe(renderer.sectionDocument?.body as Element, 500, 100);
+
+  await vi.waitFor(() => expect(relocations.at(-1)?.fraction).toBeGreaterThan(opening));
+  expect(turns).toBe(1);
+});
+
+function frameOf(doc: Document | undefined) {
+  return doc?.defaultView?.frameElement as HTMLElement;
+}
+
+function clickAt(element: Element | null | undefined, x: number) {
+  const frame = frameOf(element?.ownerDocument);
+  const { left, width } = frame.getBoundingClientRect();
+  element?.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: (x - left) / (width / frame.offsetWidth) }));
+}
+
+test('a tap on the page is reported with where it landed across the screen, but not a tap on a link or one that ends a text selection', async () => {
+  vi.spyOn(window, 'open').mockReturnValue(null);
+  const { renderer } = await openFixture();
+  const taps: number[] = [];
+  renderer.onTap(({ x }) => taps.push(x));
+  const doc = renderer.sectionDocument;
+  const paragraph = doc?.querySelector('p');
+
+  clickAt(paragraph, 50);
+  clickAt(paragraph, 550);
+  expect(taps).toEqual([50, 550]);
+
+  clickAt(doc?.getElementById('links')?.querySelector('a'), 50);
+  if (paragraph) doc?.getSelection()?.selectAllChildren(paragraph);
+  clickAt(paragraph, 50);
+  expect(taps).toEqual([50, 550]);
+});
+
+test.each(fixedLayout)('fixed-layout $extension: a tap on a scaled page is reported where it landed across the screen', async (fixture) => {
+  const { renderer } = await openFixture(undefined, fixture);
+  const taps: number[] = [];
+  renderer.onTap(({ x }) => taps.push(x));
+  const page = renderer.sectionDocument?.body;
+  const { left, width } = frameOf(page?.ownerDocument).getBoundingClientRect();
+
+  clickAt(page, left + width / 4);
+
+  expect(taps).toHaveLength(1);
+  expect(taps[0]).toBeCloseTo(left + width / 4, 0);
 });

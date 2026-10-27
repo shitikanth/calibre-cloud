@@ -4,6 +4,7 @@ import { buildCalibreLibrary } from './test/calibre-library.ts';
 import { fakeRenderers } from './test/fake-renderer.ts';
 import { FakeStorage } from './test/fake-storage.ts';
 import { renderApp } from './test/render-app.tsx';
+import { showControls } from './test/reader.ts';
 
 const epub = ['# Chapter one', 'some text', '# Chapter two', 'more text'].join('\n');
 
@@ -26,6 +27,7 @@ test('the table of contents lists the chapters and jumps to the one tapped', asy
   const { fake, app } = await openReader('/books/1/read/EPUB');
   await expect.element(app.screen.getByText('# Chapter one')).toBeVisible();
 
+  await showControls(app.screen);
   await userEvent.click(app.screen.getByRole('button', { name: 'Table of contents' }));
   const toc = app.screen.getByRole('navigation', { name: 'Table of contents' });
   await expect.element(toc).toBeVisible();
@@ -41,6 +43,7 @@ test('the table of contents lists the chapters and jumps to the one tapped', asy
 test('a book without a table of contents says so, and Escape closes the list', async () => {
   const { app } = await openReader('/books/1/read/PDF');
 
+  await showControls(app.screen);
   await userEvent.click(app.screen.getByRole('button', { name: 'Table of contents' }));
   await expect.element(app.screen.getByRole('navigation', { name: 'Table of contents' })).toMatchTextContent(/No table of contents/);
 
@@ -55,6 +58,7 @@ test('nested entries are listed under their parent, and a tap outside closes the
     { label: 'Part two', location: '4' },
   ];
 
+  await showControls(app.screen);
   await userEvent.click(app.screen.getByRole('button', { name: 'Table of contents' }));
   const toc = app.screen.getByRole('navigation', { name: 'Table of contents' });
   await expect.element(toc).toBeVisible();
@@ -81,6 +85,7 @@ function currentEntries(toc: Locator) {
 }
 
 async function openToc(app: Awaited<ReturnType<typeof openReader>>['app']) {
+  await showControls(app.screen);
   await userEvent.click(app.screen.getByRole('button', { name: 'Table of contents' }));
   const toc = app.screen.getByRole('navigation', { name: 'Table of contents' });
   await expect.element(toc).toBeVisible();

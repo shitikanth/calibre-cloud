@@ -6,6 +6,7 @@ import { fakeRenderers, type FakeRenderer } from './test/fake-renderer.ts';
 import { FakeStorage } from './test/fake-storage.ts';
 import { renderApp, testLink } from './test/render-app.tsx';
 import type { Screen } from './test/screen.ts';
+import { showControls } from './test/reader.ts';
 
 const epub = ['# Chapter one', 'some text', '# Chapter two', 'more text'].join('\n');
 
@@ -34,6 +35,7 @@ function zoomCalls(renderer: FakeRenderer) {
 }
 
 async function openSettings(screen: Screen) {
+  await showControls(screen);
   await userEvent.click(screen.getByRole('button', { name: 'Settings' }));
   const settings = screen.getByRole('dialog', { name: 'Settings' });
   await expect.element(settings).toBeVisible();
@@ -47,6 +49,7 @@ function readerRoot(screen: Screen) {
 test('Larger and Smaller text step the font size and tell the renderer', async () => {
   const { fake, app } = await openReader('/books/1/read/EPUB');
 
+  await showControls(app.screen);
   await userEvent.click(app.screen.getByRole('button', { name: 'Settings' }));
   const settings = app.screen.getByRole('dialog', { name: 'Settings' });
   await expect.element(settings).toMatchTextContent(/100%/);
@@ -96,6 +99,7 @@ test('choosing Dark themes the book and the reader screen, and nothing outside i
   expect(getComputedStyle(document.body).backgroundColor).not.toBe('rgb(18, 18, 18)');
 
   await userEvent.keyboard('{Escape}');
+  await showControls(app.screen);
   await userEvent.click(app.screen.getByRole('link', { name: 'Back to book' }));
   await expect.element(app.screen.getByRole('button', { name: 'Download EPUB' })).toBeVisible();
   expect(document.querySelector('[data-theme]')).toBeNull();
@@ -122,6 +126,7 @@ test('Disconnect keeps the reader settings', async () => {
   await userEvent.click(settings.getByRole('button', { name: 'Larger text' }));
   await userEvent.click(settings.getByRole('radiogroup', { name: 'Theme' }).getByRole('radio', { name: 'Sepia' }));
   await userEvent.keyboard('{Escape}');
+  await showControls(app.screen);
   await userEvent.click(app.screen.getByRole('link', { name: 'Back to book' }));
   await expect.element(app.screen.getByRole('button', { name: 'Download EPUB' })).toBeVisible();
 

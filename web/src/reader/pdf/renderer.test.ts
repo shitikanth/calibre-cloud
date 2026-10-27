@@ -2,6 +2,7 @@ import { afterEach, expect, test, vi } from 'vitest';
 import { getDocument, type PDFDocumentProxy, type PDFPageProxy } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import fixtureUrl from '../../test/fixtures/two-pages.pdf?url';
 import type { BookRenderer, Relocation } from '../renderer.ts';
+import { swipe } from '../../test/swipe.ts';
 import { createPdfRenderer } from './renderer.ts';
 
 const opened: { renderer: BookRenderer; container: HTMLElement }[] = [];
@@ -100,6 +101,40 @@ test('next and previous turn one page at a time and stop at the ends', async () 
   await renderer.previous();
 
   expect(relocations.map((relocation) => relocation.page?.current)).toEqual([1, 2, 1]);
+});
+
+test('a tap on the page is reported with where it landed across the screen', async () => {
+  const { renderer, container } = await openFixture();
+  const taps: number[] = [];
+  renderer.onTap(({ x }) => taps.push(x));
+
+  canvasIn(container).dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 40 }));
+
+  expect(taps).toEqual([40]);
+});
+
+test('a swipe turns the page and is reported as a turn, unless it pans a zoomed page sideways', async () => {
+  const { renderer, container, relocations } = await openFixture();
+  let turns = 0;
+  renderer.onTurn(() => (turns += 1));
+
+  await swipe(canvasIn(container), 500, 100);
+  await expect.poll(() => relocations.at(-1)?.page?.current).toBe(2);
+  await swipe(canvasIn(container), 100, 500);
+  await expect.poll(() => relocations.at(-1)?.page?.current).toBe(1);
+  expect(turns).toBe(2);
+
+  renderer.setZoom?.(2);
+  await expect.poll(() => relocations.length).toBe(4);
+  const scroller = canvasIn(container).parentElement as HTMLElement;
+  const panning = () => (scroller.scrollLeft += 100);
+  scroller.addEventListener('touchmove', panning);
+  await swipe(canvasIn(container), 500, 100);
+  scroller.removeEventListener('touchmove', panning);
+
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  expect(relocations.at(-1)?.page?.current).toBe(1);
+  expect(turns).toBe(2);
 });
 
 test('setZoom scales the page from fit-width and re-renders it', async () => {

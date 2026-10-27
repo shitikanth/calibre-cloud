@@ -5,6 +5,7 @@ import { fakeRenderers } from './test/fake-renderer.ts';
 import { FakeStorage } from './test/fake-storage.ts';
 import { renderApp } from './test/render-app.tsx';
 import type { Screen } from './test/screen.ts';
+import { showControls } from './test/reader.ts';
 
 const epub = ['# Chapter one', 'some text', '# Chapter two', 'more text'].join('\n');
 const epubPath = 'Charlotte Bronte/Jane Eyre (1)/Jane Eyre - Charlotte Bronte.epub';
@@ -41,7 +42,11 @@ test('on a phone, the reader’s buttons and links are at least 44 px tall', asy
   held.release();
 
   await expect.element(app.screen.getByText('# Chapter one')).toBeVisible();
-  for (const name of ['Previous', 'Next']) expect(size(app.screen, 'button', name).height).toBeGreaterThanOrEqual(44);
+  for (const name of ['Previous page', 'Next page']) {
+    const { width, height } = size(app.screen, 'button', name);
+    expect(width).toBeGreaterThanOrEqual(44);
+    expect(height).toBeGreaterThanOrEqual(44);
+  }
   const bar = app.screen.getByRole('slider', { name: 'Position in book' }).element().getBoundingClientRect();
   expect(bar.height).toBeGreaterThanOrEqual(44);
   expect(bar.width).toBeGreaterThanOrEqual(350);
@@ -54,11 +59,13 @@ test('on a phone, the reader’s buttons and links are at least 44 px tall', asy
   expect(back.width).toBeGreaterThanOrEqual(44);
   expect(back.height).toBeGreaterThanOrEqual(44);
 
+  await showControls(app.screen);
   await userEvent.click(app.screen.getByRole('button', { name: 'Table of contents' }));
   const toc = app.screen.getByRole('navigation', { name: 'Table of contents' });
   await expect.element(toc).toBeVisible();
   expect(toc.getByRole('button', { name: 'Chapter one' }).element().getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
 
+  await showControls(app.screen);
   await userEvent.click(app.screen.getByRole('button', { name: 'Settings' }));
   await expect.element(app.screen.getByRole('dialog', { name: 'Settings' })).toBeVisible();
   for (const name of ['Smaller text', 'Larger text']) {
