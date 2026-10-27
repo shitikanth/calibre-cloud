@@ -7,6 +7,7 @@ import { FakeStorage } from './test/fake-storage.ts';
 import { chooseFromMenu } from './test/app-bar.ts';
 import { renderApp, testLink } from './test/render-app.tsx';
 import type { Screen } from './test/screen.ts';
+import { showControls } from './test/reader.ts';
 
 const epub = ['# One', 'line 2', 'line 3', 'line 4', 'line 5'].join('\n');
 const pdf = ['Page one', 'Page two', 'Page three'].join('\n');
@@ -36,7 +37,7 @@ async function read({ fake, app }: Started, bookId: number, format: string, page
   const opened = fake.instances.length;
   app.navigate(`/books/${bookId}/read/${format}`);
   await expect.poll(() => fake.instances.length === opened + 1 && fake.latest.opened !== undefined).toBe(true);
-  const next = app.screen.getByRole('button', { name: 'Next' });
+  const next = app.screen.getByRole('button', { name: 'Next page' });
   await expect.element(next).toBeVisible();
   for (let page = 0; page < pages; page += 1) await userEvent.click(next);
 }
@@ -131,7 +132,7 @@ test('tapping a card opens the reader at the saved position', async () => {
   app.navigate('/');
   await userEvent.click(continueReading(app.screen).getByRole('link', { name: /Wuthering Heights/ }));
 
-  await expect.element(app.screen.getByText('page 2 of 3')).toBeVisible();
+  await expect.element(app.screen.getByRole('main').getByText('page 2 of 3', { exact: true })).toBeVisible();
   expect(app.url).toBe('/books/2/read/PDF');
 });
 
@@ -156,6 +157,7 @@ test('Disconnect forgets every position but keeps the reader settings', async ()
   const started = await startApp(await bronteLibrary());
   const { fake, app } = started;
   await read(started, 1, 'EPUB', 2);
+  await showControls(app.screen);
   await userEvent.click(app.screen.getByRole('button', { name: 'Settings' }));
   await userEvent.click(app.screen.getByRole('dialog', { name: 'Settings' }).getByRole('button', { name: 'Larger text' }));
   await userEvent.keyboard('{Escape}');

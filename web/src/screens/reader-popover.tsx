@@ -2,9 +2,15 @@ import { useRef, useState, type ReactNode } from 'react';
 import { useDismiss } from './use-dismiss.ts';
 
 export const panelClass =
-  'absolute right-0 z-20 mt-1 max-h-[70dvh] w-72 overflow-y-auto rounded border border-(--reader-line) bg-(--reader-bg) text-(--reader-fg) shadow-lg';
+  'max-h-[70dvh] w-72 overflow-y-auto rounded border border-(--reader-line) bg-(--reader-bg) text-(--reader-fg) shadow-lg';
 
-export function ReaderPopover({ label, icon, children }: { label: string; icon: ReactNode; children: (close: () => void) => ReactNode }) {
+export type PopoverPlacement = 'below' | 'above';
+
+const placements: Record<PopoverPlacement, string> = { below: 'top-full mt-1', above: 'bottom-full mb-1' };
+
+type ReaderPopoverProps = { label: string; icon: ReactNode; placement: PopoverPlacement; children: (close: () => void) => ReactNode };
+
+export function ReaderPopover({ label, icon, placement, children }: ReaderPopoverProps) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   useDismiss(open, setOpen, root);
@@ -22,7 +28,7 @@ export function ReaderPopover({ label, icon, children }: { label: string; icon: 
           {icon}
         </svg>
       </button>
-      {open && children(() => setOpen(false))}
+      {open && <div className={`absolute right-0 z-20 ${placements[placement]}`}>{children(() => setOpen(false))}</div>}
     </div>
   );
 }

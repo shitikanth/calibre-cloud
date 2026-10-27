@@ -33,4 +33,41 @@
     --reader-bg: #121212;
     --reader-fg: #e0e0e0;
   }
+
+  .seek-bar {
+    --track: 4px;
+    --fill: calc(var(--thumb) / 2 + (100% - var(--thumb)) * var(--fraction));
+    appearance: none;
+    background: transparent;
+  }
+  .seek-bar::-webkit-slider-runnable-track {
+    height: var(--track);
+    border-radius: 9999px;
+    background: linear-gradient(to right, var(--reader-muted) var(--fill), var(--reader-line) var(--fill));
+  }
+  .seek-bar::-webkit-slider-thumb {
+    appearance: none;
+    width: var(--thumb);
+    height: var(--thumb);
+    margin-top: calc((var(--track) - var(--thumb)) / 2);
+    border-radius: 9999px;
+    background: var(--reader-muted);
+  }
+  .seek-bar::-moz-range-track {
+    height: var(--track);
+    border-radius: 9999px;
+    background: var(--reader-line);
+  }
+  .seek-bar::-moz-range-progress {
+    height: var(--track);
+    border-radius: 9999px;
+    background: var(--reader-muted);
+  }
+  .seek-bar::-moz-range-thumb {
+    width: var(--thumb);
+    height: var(--thumb);
+    border: 0;
+    border-radius: 9999px;
+    background: var(--reader-muted);
+  }
 }

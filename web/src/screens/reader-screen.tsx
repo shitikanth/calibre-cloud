@@ -1,5 +1,5 @@
 import { Link, useNavigate } from '@tanstack/react-router';
-import { useEffect, useRef, useState, type ReactNode, type Ref } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { bookFilename } from '../download/save-blob.ts';
 import { useDownload } from '../download/use-download.ts';
 import type { BookDetail, BookFormat } from '../library/protocol.ts';
@@ -8,6 +8,7 @@ import { useRenderers } from '../reader/context.tsx';
 import { loadPosition, trackPosition } from '../reader/positions.ts';
 import { loadReaderSettings, saveReaderSettings, type ReaderSettings } from '../reader/reader-settings.ts';
 import type { BookRenderer, ReaderTheme, Relocation } from '../reader/renderer.ts';
+import type { SwipeDirection } from '../reader/swipe.ts';
 import { useBookFile } from '../reader/use-book-file.ts';
 import { NotFound, OpenBook } from './book-screen.tsx';
 import { ConnectedShell } from './connected-shell.tsx';
@@ -15,9 +16,11 @@ import { describeError } from './describe-error.ts';
 import { ExternalLinkDialog } from './external-link-dialog.tsx';
 import { formatSize } from './format.ts';
 import { ProgressBar } from './progress-bar.tsx';
-import { PageControls } from './reader-page-controls.tsx';
+import { BackToBookLink, BottomBar, HotEdge, TapZone, TopBar, type ControlsState } from './reader-controls.tsx';
+import { placeLabel, positionLabel, SeekBar } from './reader-seek-bar.tsx';
 import { SettingsTool } from './reader-settings-tool.tsx';
 import { TocTool } from './reader-toc.tsx';
+import { useWide } from './use-wide.ts';
 
 export function ReaderScreen({ bookId, format }: { bookId: string; format: string }) {
   return (
@@ -91,30 +94,12 @@ function Reader({ book, format }: { book: BookDetail; format: BookFormat }) {
   );
 }
 
-type ReaderShellProps = {
-  book: BookDetail;
-  theme: ReaderTheme;
-  tools?: ReactNode;
-  children: ReactNode;
-  ref?: Ref<HTMLDivElement>;
-};
-
-function ReaderShell({ book, theme, tools, children, ref }: ReaderShellProps) {
+function ReaderShell({ book, theme, children }: { book: BookDetail; theme: ReaderTheme; children: ReactNode }) {
   return (
-    <div ref={ref} className="reader flex h-dvh flex-col" data-theme={theme}>
+    <div className="reader flex h-dvh flex-col" data-theme={theme}>
       <header className="flex items-center gap-2 border-b border-(--reader-line) px-2 py-1">
-        <Link
-          to="/books/$bookId"
-          params={{ bookId: String(book.id) }}
-          aria-label="Back to book"
-          className="flex min-h-11 min-w-11 items-center justify-center rounded hover:bg-(--reader-hover)"
-        >
-          <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 fill-none stroke-current stroke-2">
-            <path d="M15 5l-7 7 7 7" />
-          </svg>
-        </Link>
+        <BackToBookLink book={book} />
         <h1 className="min-w-0 flex-1 truncate text-sm font-medium">{book.title}</h1>
-        {tools}
       </header>
       {children}
     </div>
@@ -211,6 +196,8 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
   const [externalLink, setExternalLink] = useState<string | undefined>(undefined);
   const [zoom, setZoom] = useState(1);
   const [attempt, setAttempt] = useState(0);
+  const [controls, setControls] = useState<ControlsState>('hidden');
+  const wide = useWide();
 
   useEffect(() => {
     const factory = renderers[format.format];
@@ -278,50 +265,104 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
     renderer?.setZoom?.(next);
   };
 
+  const turn = useCallback(
+    (direction: SwipeDirection) => {
+      setControls('hidden');
+      void (direction === 'next' ? renderer?.next() : renderer?.previous());
+    },
+    [renderer],
+  );
+
   useEffect(() => {
     if (!renderer) return;
-    const turnPage = (event: KeyboardEvent) => {
-      if (shell.current?.querySelector('[aria-expanded="true"], dialog[open]') || event.target instanceof HTMLInputElement) return;
-      if (event.key === 'ArrowRight') void renderer.next();
-      else if (event.key === 'ArrowLeft') void renderer.previous();
+    const offs = [
+      renderer.onTap(() => setControls((state) => (state === 'hidden' ? 'pinned' : 'hidden'))),
+      renderer.onTurn(() => setControls('hidden')),
+    ];
+    return () => {
+      for (const off of offs) off();
     };
-    window.addEventListener('keydown', turnPage);
-    return () => window.removeEventListener('keydown', turnPage);
   }, [renderer]);
 
-  return (
-    <ReaderShell
-      ref={shell}
-      book={book}
-      theme={settings.theme}
-      tools={
-        status === 'open' &&
-        renderer && (
-          <>
-            <TocTool renderer={renderer} current={relocation?.tocEntry} />
-            {(renderer.setStyles || renderer.setZoom) && (
-              <SettingsTool
-                renderer={renderer}
-                settings={settings}
-                onSettingsChange={onSettingsChange}
-                zoom={zoom}
-                onZoomChange={changeZoom}
-              />
-            )}
-          </>
-        )
-      }
-    >
-      {status === 'unopenable' && <Unopenable book={book} format={format} />}
-      {status === 'renderer-unavailable' && <RendererUnavailable book={book} retry={retryLoading} />}
-      {renderError && status === 'open' && (
-        <p role="alert" className="bg-amber-50 px-4 py-2 text-sm text-amber-900">
-          This page couldn’t be shown. Keep reading from the next one.
-        </p>
+  useEffect(() => {
+    if (!renderer) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (shell.current?.querySelector('[aria-expanded="true"], dialog[open]')) return;
+      if (event.key === 'Escape') setControls('hidden');
+      else if (event.target instanceof HTMLInputElement) return;
+      else if (event.key === 'ArrowRight') turn('next');
+      else if (event.key === 'ArrowLeft') turn('previous');
+    };
+    // Capture: a popover's own Escape handler closes it first otherwise, and this would hide the controls too.
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [renderer, turn]);
+
+  const reading = status === 'open' && renderer ? renderer : undefined;
+  const shown = !reading || controls !== 'hidden';
+  const toggle = () => setControls((state) => (state === 'hidden' ? 'pinned' : 'hidden'));
+  const pin = () => setControls('pinned');
+  const peek = () => setControls((state) => (state === 'hidden' ? 'peek' : state));
+  const unpeek = () => setControls((state) => (state === 'peek' ? 'hidden' : state));
+  const placement = wide ? 'below' : 'above';
+  const tools = reading && (
+    <>
+      <TocTool renderer={reading} current={relocation?.tocEntry} placement={placement} />
+      {(reading.setStyles || reading.setZoom) && (
+        <SettingsTool
+          renderer={reading}
+          settings={settings}
+          onSettingsChange={onSettingsChange}
+          zoom={zoom}
+          onZoomChange={changeZoom}
+          placement={placement}
+        />
       )}
-      <div ref={container} className="min-h-0 flex-1 overflow-hidden" hidden={status === 'unopenable' || status === 'renderer-unavailable'} />
-      {status === 'open' && renderer && <PageControls renderer={renderer} relocation={relocation} />}
+    </>
+  );
+  const marginClass = `h-8 shrink-0 truncate px-16 text-center text-xs leading-8 text-(--reader-muted) ${shown ? 'invisible' : ''}`;
+
+  return (
+    <div ref={shell} className="reader relative h-dvh overflow-hidden" data-theme={settings.theme}>
+      <TopBar book={book} tools={tools} wide={wide} shown={shown} onPin={pin} onLeave={unpeek} />
+      <main className="group/page relative flex h-full flex-col" onPointerEnter={unpeek}>
+        <p aria-hidden="true" className={marginClass} onClick={toggle}>
+          {reading && (relocation?.tocEntry?.label ?? book.title)}
+        </p>
+        {status === 'unopenable' && <Unopenable book={book} format={format} />}
+        {status === 'renderer-unavailable' && <RendererUnavailable book={book} retry={retryLoading} />}
+        {renderError && reading && (
+          <p role="alert" className="bg-amber-50 px-4 py-2 text-sm text-amber-900">
+            This page couldn’t be shown. Keep reading from the next one.
+          </p>
+        )}
+        <div ref={container} className="min-h-0 flex-1 overflow-hidden" hidden={status === 'unopenable' || status === 'renderer-unavailable'} />
+        <p aria-hidden="true" className={marginClass} onClick={toggle}>
+          {reading && positionLabel(relocation)}
+        </p>
+        {reading && (
+          <>
+            <TapZone direction="previous" onTurn={turn} />
+            <TapZone direction="next" onTurn={turn} />
+          </>
+        )}
+      </main>
+      {reading && (
+        <>
+          {wide && <HotEdge edge="top" onReach={peek} />}
+          {wide && <HotEdge edge="bottom" onReach={peek} />}
+          <BottomBar
+            seekBar={<SeekBar renderer={reading} relocation={relocation} />}
+            place={placeLabel(relocation)}
+            tools={tools}
+            wide={wide}
+            shown={shown}
+            onPin={pin}
+            onLeave={unpeek}
+          />
+        </>
+      )}
       {externalLink !== undefined && <ExternalLinkDialog url={externalLink} onClose={() => setExternalLink(undefined)} />}
-    </ReaderShell>
+    </div>
   );
 }

@@ -1,10 +1,12 @@
 import { useEffect, useRef } from 'react';
 import type { BookRenderer, TocEntry } from '../reader/renderer.ts';
-import { panelClass, ReaderPopover } from './reader-popover.tsx';
+import { panelClass, ReaderPopover, type PopoverPlacement } from './reader-popover.tsx';
 
-export function TocTool({ renderer, current }: { renderer: BookRenderer; current: TocEntry | undefined }) {
+type TocToolProps = { renderer: BookRenderer; current: TocEntry | undefined; placement: PopoverPlacement };
+
+export function TocTool({ renderer, current, placement }: TocToolProps) {
   return (
-    <ReaderPopover label="Table of contents" icon={<path d="M4 6h16M4 12h16M4 18h10" />}>
+    <ReaderPopover label="Table of contents" icon={<path d="M4 6h16M4 12h16M4 18h10" />} placement={placement}>
       {(close) => (
         <TocPanel
           entries={renderer.toc}
