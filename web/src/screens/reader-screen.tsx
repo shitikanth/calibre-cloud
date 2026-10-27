@@ -15,7 +15,7 @@ import { ConnectedShell } from './connected-shell.tsx';
 import { describeError } from './describe-error.ts';
 import { ExternalLinkDialog } from './external-link-dialog.tsx';
 import { formatSize } from './format.ts';
-import { ProgressBar } from './progress-bar.tsx';
+import { describeProgress, TopProgressBar } from './progress-bar.tsx';
 import { BackToBookLink, BottomBar, TapZone, TopBar, zoneAt, type ControlsState } from './reader-controls.tsx';
 import { whereYouAreLabel, positionLabel, SeekBar } from './reader-seek-bar.tsx';
 import { SettingsTool } from './reader-settings-tool.tsx';
@@ -66,16 +66,19 @@ function Reader({ book, format }: { book: BookDetail; format: BookFormat }) {
       void navigate({ to: '/books/$bookId', params: { bookId: String(book.id) } });
     };
     const label = format.size > 0 ? `Downloading ${format.format} · ${formatSize(format.size)}` : `Downloading ${format.format}`;
+    const progress = state.status === 'fetching' ? { loaded: state.loaded, total: state.total } : { loaded: 0, total: 0 };
     return (
       <ReaderShell book={book} theme={settings.theme}>
-        <section className="mx-auto flex w-full max-w-md flex-col items-center gap-4 px-4 py-12">
-          <p className="text-sm text-(--reader-muted)">{label}</p>
-          <ProgressBar
-            label={label}
-            loaded={state.status === 'fetching' ? state.loaded : 0}
-            total={state.status === 'fetching' ? state.total : 0}
-            className="w-full"
-          />
+        <TopProgressBar
+          label={label}
+          {...progress}
+          className="text-[color-mix(in_srgb,var(--reader-fg)_40%,var(--reader-bg))]"
+        />
+        <section className="mx-auto flex w-full max-w-md flex-col items-center gap-4 px-4 pt-[18vh] text-center">
+          <div className="flex flex-col items-center gap-1">
+            <p className="font-semibold">{label}</p>
+            <p className="min-h-5 text-sm text-(--reader-muted) tabular-nums">{describeProgress(progress, { withTotal: format.size === 0 })}</p>
+          </div>
           <button type="button" className="min-h-11 rounded border border-(--reader-line) px-3 py-1 text-sm" onClick={cancel}>
             Cancel
           </button>
