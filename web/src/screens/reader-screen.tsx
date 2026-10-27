@@ -235,6 +235,8 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
           }),
           created.onRenderError(setRenderError),
           created.onExternalLink(setExternalLink),
+          created.onTap(() => setControls(toggled)),
+          created.onTurn(() => setControls('hidden')),
         );
         await created.open(blob, host, saved ? { location: saved.location } : {});
         if (cancelled) return;
@@ -276,17 +278,6 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
     },
     [renderer],
   );
-
-  useEffect(() => {
-    if (!renderer) return;
-    const unsubscribe = [
-      renderer.onTap(() => setControls(toggled)),
-      renderer.onTurn(() => setControls('hidden')),
-    ];
-    return () => {
-      for (const off of unsubscribe) off();
-    };
-  }, [renderer]);
 
   useEffect(() => {
     if (!renderer) return;
