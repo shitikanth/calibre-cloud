@@ -24,8 +24,12 @@ test('a connect link connects and shows the library', async () => {
   await expectLibraryShown(app.screen);
   expect(app.opened).toEqual([{ provider: 'mega', link: testLink }]);
   expect(app.url).toBe('/');
-  await app.reload();
-  expect(app.opened.at(-1)).toEqual({ provider: 'mega', link: testLink });
+
+  await expectLibraryShown(await app.reload());
+  expect(app.opened).toEqual([
+    { provider: 'mega', link: testLink },
+    { provider: 'mega', link: testLink },
+  ]);
 });
 
 test('a connect link works unencoded, the MEGA key’s own # included', async () => {
