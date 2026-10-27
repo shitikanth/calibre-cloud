@@ -65,17 +65,31 @@ function release(bar: Locator) {
   bar.element().dispatchEvent(new Event('change', { bubbles: true }));
 }
 
-test('dragging shows the chapter it would land in, in a popup over the thumb, and jumps only on release', async () => {
+function popupTitled(place: Locator, title: string) {
+  const heading = place.getByText(title, { exact: true });
+  return { heading, card: () => heading.element().parentElement as HTMLElement };
+}
+
+test('dragging shows a card over the thumb naming the chapter it would land in and the %, and jumps only on release', async () => {
   const { fake, app, bar, place } = await openReader('/books/1/read/EPUB');
 
   drag(bar, 75);
 
-  const popup = place.getByText('Chapter two · 75%');
-  await expect.element(popup).toBeVisible();
-  const { left, right, bottom } = popup.element().getBoundingClientRect();
+  const popup = popupTitled(place, 'Chapter two');
+  await expect.element(popup.heading).toBeVisible();
+  const card = popup.card();
+  const percent = card.lastElementChild as HTMLElement;
+  expect(percent.textContent).toBe('75%');
+  const { left, right, bottom } = card.getBoundingClientRect();
   expect((left + right) / 2).toBeCloseTo(thumbCentre(bar, 0.75), 0);
-  expect(bottom).toBeLessThanOrEqual(bar.element().getBoundingClientRect().top + 8);
-  await expect.element(place.getByText('Chapter one · 0%', { exact: true })).toBeVisible();
+  expect(bottom).toBeLessThanOrEqual(bar.element().getBoundingClientRect().top);
+  const where = place.getByText('Chapter one · 0%', { exact: true });
+  await expect.element(where).toBeVisible();
+  const page = getComputedStyle(app.screen.getByRole('main').element().parentElement as HTMLElement);
+  expect(getComputedStyle(card).backgroundColor).toBe(page.backgroundColor);
+  expect(Number(getComputedStyle(popup.heading.element()).fontWeight)).toBeGreaterThanOrEqual(600);
+  expect(getComputedStyle(popup.heading.element()).color).toBe(page.color);
+  expect(getComputedStyle(percent).color).toBe(getComputedStyle(where.element()).color);
   await expect.element(bar).toHaveAttribute('aria-valuetext', '75%');
   await expect.element(app.screen.getByText('# Chapter one')).toBeVisible();
   expect(fake.latest.calls.filter(({ op }) => op === 'goToFraction')).toEqual([]);
@@ -85,42 +99,43 @@ test('dragging shows the chapter it would land in, in a popup over the thumb, an
   await expect.element(app.screen.getByText('# Chapter two')).toBeVisible();
   expect(fake.latest.calls).toContainEqual({ op: 'goToFraction', fraction: 0.75 });
   await expect.element(place.getByText('Chapter two · 75%', { exact: true })).toBeVisible();
-  expect(place.getByText('Chapter two · 75%').elements()).toHaveLength(1);
+  await expect.poll(() => popup.heading.query()).toBeNull();
 });
 
-test('the popup stays on screen at both ends, and a long chapter title ends in an ellipsis', async () => {
+test('the card stays on screen at both ends, and a long chapter title ends in an ellipsis', async () => {
   await page.viewport(390, 844);
   const long = 'Chapter the second, in which a great many things happen to a great many people';
   const { bar, place } = await openReader('/books/1/read/EPUB', await janeEyreLibrary(epub.replace('Chapter two', long)));
 
   drag(bar, 100);
-  const end = place.getByText('· 100%');
-  await expect.element(end).toBeVisible();
-  const { left, right } = end.element().getBoundingClientRect();
+  const end = popupTitled(place, long);
+  await expect.element(end.heading).toBeVisible();
+  const { left, right } = end.card().getBoundingClientRect();
   expect(left).toBeGreaterThanOrEqual(0);
   expect(right).toBeLessThanOrEqual(390);
-  const title = place.getByText(long, { exact: true }).element() as HTMLElement;
+  const title = end.heading.element() as HTMLElement;
   expect(title.scrollWidth).toBeGreaterThan(title.clientWidth);
   expect(getComputedStyle(title).textOverflow).toBe('ellipsis');
 
   drag(bar, 1);
-  const start = place.getByText('Chapter one · 1%');
-  await expect.element(start).toBeVisible();
-  expect(start.element().getBoundingClientRect().left).toBeGreaterThanOrEqual(0);
+  const start = popupTitled(place, 'Chapter one');
+  await expect.element(start.heading).toBeVisible();
+  expect(start.card().getBoundingClientRect().left).toBeGreaterThanOrEqual(0);
 });
 
 test('dragging away and back to where it started leaves the bar following page turns', async () => {
   const { app, bar, place } = await openReader('/books/1/read/EPUB');
 
   drag(bar, 75);
-  await expect.element(place.getByText('Chapter two · 75%')).toBeVisible();
+  await expect.element(place.getByText('Chapter two', { exact: true })).toBeVisible();
   drag(bar, 0);
-  await expect.poll(() => place.getByText('Chapter two · 75%').query()).toBeNull();
+  await expect.poll(() => place.getByText('Chapter two', { exact: true }).query()).toBeNull();
   await tapZone(app.screen, 'Next page');
 
   await expect.element(bar).toHaveAttribute('aria-valuetext', '25%');
   await expect.element(app.screen.getByRole('main').getByText('25%', { exact: true })).toBeVisible();
 });
+
 
 test('dragging in a paged book previews the page number', async () => {
   const { app, bar, place } = await openReader('/books/1/read/PDF');

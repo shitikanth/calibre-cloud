@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import type { BookRenderer, Relocation } from '../reader/renderer.ts';
 
 const thumb = 16;
@@ -75,14 +75,28 @@ export function SeekBar({ renderer, relocation }: { renderer: BookRenderer; relo
 type DragPopupProps = { x: number; width: number; chapter: string | undefined; position: string };
 
 function DragPopup({ x, width, chapter, position }: DragPopupProps) {
+  const card = useRef<HTMLDivElement>(null);
+  const caret = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const element = card.current;
+    if (!element || !caret.current) return;
+    const left = Math.min(Math.max(x - element.offsetWidth / 2, 0), Math.max(width - element.offsetWidth, 0));
+    element.style.left = `${left}px`;
+    caret.current.style.left = `${x - left}px`;
+  }, [x, width, chapter, position]);
+
   return (
     <div
+      ref={card}
       aria-hidden="true"
-      className="pointer-events-none absolute bottom-full flex max-w-full rounded bg-(--reader-fg) px-2 py-1 text-xs whitespace-nowrap text-(--reader-bg) shadow-lg"
-      style={{ left: x, transform: `translateX(clamp(${-x}px, -50%, calc(${width - x}px - 100%)))` }}
+      className="pointer-events-none absolute bottom-full mb-2 max-w-full rounded-lg border border-(--reader-line) bg-(--reader-bg) px-4 py-1.5 text-center whitespace-nowrap shadow-lg"
     >
-      {chapter && <span className="min-w-0 truncate">{chapter}</span>}
-      <span className="shrink-0 whitespace-pre">{chapter ? ` · ${position}` : position}</span>
+      <span
+        ref={caret}
+        className="absolute top-full size-2.5 -translate-x-1/2 -translate-y-1/2 rotate-45 border-r border-b border-(--reader-line) bg-(--reader-bg)"
+      />
+      {chapter && <p className="truncate text-sm font-semibold text-(--reader-fg)">{chapter}</p>}
+      <p className={chapter ? 'text-xs text-(--reader-muted) tabular-nums' : 'text-sm font-semibold text-(--reader-fg)'}>{position}</p>
     </div>
   );
 }
