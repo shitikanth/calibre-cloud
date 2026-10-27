@@ -22,6 +22,7 @@ export class FakeRenderer implements BookRenderer {
   private container: HTMLElement | undefined;
   private readonly relocateListeners = new Set<(relocation: Relocation) => void>();
   private readonly errorListeners = new Set<(error: Error) => void>();
+  private readonly externalLinkListeners = new Set<(url: string) => void>();
 
   constructor({ pages = false }: FakeRendererOptions = {}) {
     this.reportsPages = pages;
@@ -46,6 +47,11 @@ export class FakeRenderer implements BookRenderer {
   onRenderError(listener: (error: Error) => void): () => void {
     this.errorListeners.add(listener);
     return () => this.errorListeners.delete(listener);
+  }
+
+  onExternalLink(listener: (url: string) => void): () => void {
+    this.externalLinkListeners.add(listener);
+    return () => this.externalLinkListeners.delete(listener);
   }
 
   async goTo(location: string): Promise<void> {
@@ -77,6 +83,7 @@ export class FakeRenderer implements BookRenderer {
     this.container = undefined;
     this.relocateListeners.clear();
     this.errorListeners.clear();
+    this.externalLinkListeners.clear();
   }
 
   emitRelocation(relocation: Relocation): void {
@@ -85,6 +92,10 @@ export class FakeRenderer implements BookRenderer {
 
   emitRenderError(error: Error): void {
     for (const listener of this.errorListeners) listener(error);
+  }
+
+  emitExternalLink(url: string): void {
+    for (const listener of this.externalLinkListeners) listener(url);
   }
 
   private resolve(location: string | undefined): number {

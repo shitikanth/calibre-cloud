@@ -3,6 +3,8 @@ declare module 'foliate-js/view.js' {
 
   export type Location = { cfi: string; fraction: number; tocItem?: TocItem | null };
 
+  export type ExternalLink = { a: HTMLAnchorElement; href_: string };
+
   export type ResourceLoad = { type: string; isScript: boolean; allow: boolean | Promise<boolean> };
 
   export type ResourceData = {

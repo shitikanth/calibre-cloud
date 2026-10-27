@@ -61,6 +61,10 @@ class PdfRenderer implements BookRenderer {
     return () => this.errorListeners.delete(listener);
   }
 
+  onExternalLink(): () => void {
+    return () => {};
+  }
+
   async goTo(location: string): Promise<void> {
     const page = Number(location);
     if (this.isPage(page)) await this.show(page);

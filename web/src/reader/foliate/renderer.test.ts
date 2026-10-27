@@ -14,6 +14,7 @@ type OpenedBook = { renderer: FoliateRenderer; relocations: Relocation[]; contai
 const opened: OpenedBook[] = [];
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   for (const book of opened.splice(0)) await close(book);
 });
 
@@ -138,6 +139,34 @@ test('a location that cannot be shown is reported through onRenderError and navi
   expect(errors.map((error) => error.message)).toEqual(['Could not go to OEBPS/text/missing.xhtml']);
   await goToChapterTwo(renderer);
   expect(renderer.sectionDocument?.getElementById('chapter-two')).not.toBeNull();
+});
+
+test('a tap on a link out of the book reports its URL and opens nothing, while a link within the book still navigates', async () => {
+  const open = vi.spyOn(window, 'open').mockReturnValue(null);
+  const { renderer } = await openFixture();
+  const reported: string[] = [];
+  renderer.onExternalLink((url) => reported.push(url));
+  const [service, inspector, smudged, torn, letters] = renderer.sectionDocument?.getElementById('links')?.querySelectorAll('a') ?? [];
+
+  for (const link of [service, inspector, smudged, torn]) link?.click();
+
+  await vi.waitFor(() =>
+    expect(reported).toEqual([
+      'https://example.com/lighthouse-service',
+      'mailto:inspector@example.com',
+      `javascript:document.body.insertAdjacentHTML('beforeend','<p id="ran-link"></p>')`,
+      'data:text/html,%3Cp%3Ecard%3C/p%3E',
+    ]),
+  );
+  await nextFrame();
+  expect(open).not.toHaveBeenCalled();
+  expect(renderer.sectionDocument?.getElementById('ran-link')).toBeNull();
+
+  letters?.click();
+
+  await vi.waitFor(() => expect(renderer.sectionDocument?.getElementById('chapter-two')).not.toBeNull());
+  expect(reported).toHaveLength(4);
+  expect(open).not.toHaveBeenCalled();
 });
 
 test('open rejects when the file is not a book', async () => {
