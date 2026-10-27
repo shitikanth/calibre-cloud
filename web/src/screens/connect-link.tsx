@@ -1,5 +1,5 @@
 import { useLocation, useRouter } from '@tanstack/react-router';
-import { createContext, useContext, useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { readConnectLink } from '../connection/connect-link.ts';
 import { sameConnection, type Connection } from '../connection/connection.ts';
 import { useConnection } from '../connection/context.tsx';
@@ -7,20 +7,20 @@ import { useDisconnect } from '../library/use-disconnect.ts';
 import { resolveConnectInput } from '../storage/providers.ts';
 import { DisconnectFailure } from './disconnect-button.tsx';
 
-type Pending = { kind: 'fill'; input: string } | { kind: 'switch'; connection: Connection };
+type Pending = { kind: 'fill'; input: string } | { kind: 'connect' | 'switch'; connection: Connection };
 
 const ConnectLinkInput = createContext<string | undefined>(undefined);
 
 function pendingFor(input: string | undefined, current: Connection | undefined): Pending | undefined {
   if (input === undefined) return undefined;
-  if (!current) return { kind: 'fill', input };
   const { parsed } = resolveConnectInput(input);
+  if (!current) return parsed.ok ? { kind: 'connect', connection: parsed.connection } : { kind: 'fill', input };
   if (!parsed.ok || sameConnection(parsed.connection, current)) return undefined;
   return { kind: 'switch', connection: parsed.connection };
 }
 
 export function ConnectLinkHandler({ children }: { children: ReactNode }) {
-  const { connection } = useConnection();
+  const { connection, connect } = useConnection();
   const { hash, pathname, searchStr } = useLocation();
   const { history } = useRouter();
   const [pending, setPending] = useState(() => pendingFor(readConnectLink(hash), connection));
@@ -29,7 +29,11 @@ export function ConnectLinkHandler({ children }: { children: ReactNode }) {
     if (readConnectLink(hash) !== undefined) history.replace(`${pathname}${searchStr}`);
   }, [hash, pathname, searchStr, history]);
 
-  if (pending?.kind === 'fill' && connection) setPending(undefined);
+  useLayoutEffect(() => {
+    if (pending?.kind === 'connect') connect(pending.connection);
+  }, [pending, connect]);
+
+  if ((pending?.kind === 'fill' || pending?.kind === 'connect') && connection) setPending(undefined);
 
   return (
     <ConnectLinkInput value={pending?.kind === 'fill' ? pending.input : undefined}>

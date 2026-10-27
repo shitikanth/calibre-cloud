@@ -33,7 +33,7 @@ The app's read-only access to one library in one storage provider. Ending it is 
 _Avoid_: session, account, login, sign-in
 
 **Connect link**:
-A link to the app that carries a storage provider's connect input in its fragment, so opening it fills in the connect screen for one library. It still needs a click on Connect.
+A link to the app that carries a storage provider's connect input in its fragment, so opening it connects that library.
 _Avoid_: share link, invite link, magic link
 
 **Reader**:
