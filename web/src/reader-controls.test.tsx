@@ -1,11 +1,13 @@
 import { page, userEvent } from 'vitest/browser';
 import { afterEach, expect, test } from 'vitest';
+import { createFoliateRenderer, type FoliateRenderer } from './reader/foliate/renderer.ts';
 import { buildCalibreLibrary } from './test/calibre-library.ts';
 import { fakeRenderers } from './test/fake-renderer.ts';
 import { FakeStorage } from './test/fake-storage.ts';
 import { expectControls, showControls } from './test/reader.ts';
 import { renderApp } from './test/render-app.tsx';
 import { swipe } from './test/swipe.ts';
+import twoChaptersUrl from './test/fixtures/two-chapters.epub?url';
 
 const epub = ['# Chapter one', 'line 2', 'line 3', '# Chapter two', 'line 5'].join('\n');
 const pdf = ['Page one', 'Page two', 'Page three'].join('\n');
@@ -142,6 +144,40 @@ test('on a desktop, Contents and Settings sit at the top right and the bottom pa
     expect(rect(tool.element()).x).toBeGreaterThan(1280 / 2);
   }
   expect(rect(screen.getByRole('contentinfo').element()).width).toBeLessThanOrEqual(560);
+});
+
+test.each([
+  [390, 844],
+  [1280, 800],
+])('at %i×%i, the running head and folio never overlap the real EPUB renderer’s text', async (width, height) => {
+  await page.viewport(width, height);
+  const files = await buildCalibreLibrary([{ title: 'Two Chapters', authors: ['Calibre Cloud'], formats: { EPUB: '' } }]);
+  files['Calibre Cloud/Two Chapters (1)/Two Chapters - Calibre Cloud.epub'] = new Uint8Array(await (await fetch(twoChaptersUrl)).arrayBuffer());
+  let renderer: FoliateRenderer | undefined;
+  const app = await renderApp({
+    storage: new FakeStorage(files),
+    connected: true,
+    path: '/books/1/read/EPUB',
+    renderers: { EPUB: async () => (renderer = await createFoliateRenderer('epub')) },
+  });
+  const runningHead = app.screen.getByText('One: The Lighthouse Ledger', { exact: true });
+  await expect.element(runningHead).toBeVisible();
+  await expect.poll(() => renderer?.sectionDocument?.querySelector('p')).toBeTruthy();
+  const folio = app.screen.getByRole('main').getByText(/^\d+%$/);
+  await expect.element(folio).toBeVisible();
+  const doc = renderer?.sectionDocument;
+  const frame = (doc?.defaultView?.frameElement as HTMLElement).getBoundingClientRect();
+
+  const lines = [...(doc?.querySelectorAll('h1, h2, p') ?? [])]
+    .flatMap((element) => [...element.getClientRects()])
+    .map((line) => ({ left: frame.left + line.left, top: frame.top + line.top, bottom: frame.top + line.bottom }))
+    .filter((line) => line.left >= 0 && line.left < width);
+
+  expect(lines.length).toBeGreaterThan(0);
+  for (const line of lines) {
+    expect(line.top).toBeGreaterThanOrEqual(runningHead.element().getBoundingClientRect().bottom);
+    expect(line.bottom).toBeLessThanOrEqual(folio.element().getBoundingClientRect().top);
+  }
 });
 
 test('on a desktop, the pointer at the top or bottom edge shows the controls, other movement does not, and they go once it leaves', async () => {

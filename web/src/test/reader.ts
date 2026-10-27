@@ -6,6 +6,8 @@ export async function expectControls(screen: Screen, shown: boolean) {
 }
 
 export async function showControls(screen: Screen) {
-  (screen.getByRole('link', { name: 'Back to book' }).element() as HTMLElement).focus();
+  const back = screen.getByRole('link', { name: 'Back to book' }).element() as HTMLElement;
+  back.blur();
+  back.focus();
   await expectControls(screen, true);
 }
