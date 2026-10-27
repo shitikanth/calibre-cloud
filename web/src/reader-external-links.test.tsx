@@ -1,9 +1,11 @@
 import { page, userEvent, type Locator } from 'vitest/browser';
 import { afterEach, expect, test, vi } from 'vitest';
+import { createFoliateRenderer, type FoliateRenderer } from './reader/foliate/renderer.ts';
 import { buildCalibreLibrary } from './test/calibre-library.ts';
 import { fakeRenderers } from './test/fake-renderer.ts';
 import { FakeStorage } from './test/fake-storage.ts';
 import { renderApp } from './test/render-app.tsx';
+import twoChaptersUrl from './test/fixtures/two-chapters.epub?url';
 
 const epub = ['# Chapter one', 'some text', '# Chapter two', 'more text'].join('\n');
 
@@ -73,6 +75,34 @@ test.each(['javascript:alert(1)', 'data:text/html,%3Cp%3Ecard%3C/p%3E'])('%s is 
 
   await expect.poll(() => app.screen.getByRole('dialog').query()).toBeNull();
   expect(open).not.toHaveBeenCalled();
+});
+
+test('with the real EPUB renderer, tapping a link out of the book asks first, and a link within the book just navigates', async () => {
+  const open = vi.spyOn(window, 'open').mockReturnValue(null);
+  const files = await buildCalibreLibrary([{ title: 'Two Chapters', authors: ['Calibre Cloud'], formats: { EPUB: '' } }]);
+  files['Calibre Cloud/Two Chapters (1)/Two Chapters - Calibre Cloud.epub'] = new Uint8Array(await (await fetch(twoChaptersUrl)).arrayBuffer());
+  let renderer: FoliateRenderer | undefined;
+  const renderers = {
+    EPUB: async () => (renderer = await createFoliateRenderer('epub')),
+  };
+  const app = await renderApp({ storage: new FakeStorage(files), connected: true, path: '/books/1/read/EPUB', renderers });
+  await expect.poll(() => renderer?.sectionDocument?.getElementById('links')).toBeTruthy();
+  const [service, , , , letters] = renderer?.sectionDocument?.getElementById('links')?.querySelectorAll('a') ?? [];
+
+  service?.click();
+
+  const dialog = app.screen.getByRole('dialog', { name: 'Open this link?' });
+  await expect.element(dialog.getByText('https://example.com/lighthouse-service', { exact: true })).toBeVisible();
+  expect(open).not.toHaveBeenCalled();
+  await userEvent.click(dialog.getByRole('button', { name: 'Open' }));
+  expect(open).toHaveBeenCalledExactlyOnceWith('https://example.com/lighthouse-service', '_blank', 'noopener,noreferrer');
+  await expect.poll(() => app.screen.getByRole('dialog').query()).toBeNull();
+
+  letters?.click();
+
+  await expect.poll(() => renderer?.sectionDocument?.getElementById('chapter-two')).toBeTruthy();
+  expect(app.screen.getByRole('dialog').query()).toBeNull();
+  expect(open).toHaveBeenCalledOnce();
 });
 
 test('a mailto: link offers Open', async () => {
