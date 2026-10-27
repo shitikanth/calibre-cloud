@@ -275,7 +275,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
   useEffect(() => {
     if (!renderer) return;
     const turnPage = (event: KeyboardEvent) => {
-      if (shell.current?.querySelector('[aria-expanded="true"]')) return;
+      if (shell.current?.querySelector('[aria-expanded="true"]') || event.target instanceof HTMLInputElement) return;
       if (event.key === 'ArrowRight') void renderer.next();
       else if (event.key === 'ArrowLeft') void renderer.previous();
     };
