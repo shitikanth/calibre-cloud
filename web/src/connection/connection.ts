@@ -17,6 +17,11 @@ export function saveConnection(connection: Connection): void {
   localStorage.setItem(storageKey, JSON.stringify(connection));
 }
 
+export function sameConnection(a: Connection, b: Connection): boolean {
+  const keys = Object.keys(a);
+  return keys.length === Object.keys(b).length && keys.every((key) => Object.is(a[key], b[key]));
+}
+
 export function clearConnection(): void {
   localStorage.removeItem(storageKey);
 }

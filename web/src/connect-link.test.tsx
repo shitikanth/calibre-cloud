@@ -1,5 +1,5 @@
 import { userEvent } from 'vitest/browser';
-import { expect, test } from 'vitest';
+import { expect, onTestFinished, test, vi } from 'vitest';
 import { buildCalibreLibrary } from './test/calibre-library.ts';
 import { FakeStorage } from './test/fake-storage.ts';
 import { renderApp, testLink } from './test/render-app.tsx';
@@ -40,4 +40,86 @@ test('a connect link no provider accepts shows the MEGA problem message', async 
   await expect.element(linkInput(app.screen)).toHaveAttribute('aria-invalid', 'true');
   await expect.element(app.screen.getByRole('alert')).toMatchTextContent(/isn’t a MEGA folder link/);
   expect(app.opened).toEqual([]);
+});
+
+const otherLink = 'https://mega.nz/folder/OtherHandle#OtherKey';
+
+async function expectLibraryShown(screen: Screen) {
+  await expect.element(screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
+}
+
+test('a connect link for the library already connected changes nothing', async () => {
+  const app = await renderApp({ storage: await oneBookLibrary(), connected: true, path: `/#connect=${testLink}` });
+
+  await expectLibraryShown(app.screen);
+  expect(app.url).toBe('/');
+  expect(app.screen.getByRole('dialog').query()).toBeNull();
+  expect(app.opened).toEqual([{ provider: 'mega', link: testLink }]);
+});
+
+test('a connect link for another library switches to it once confirmed', async () => {
+  const storage = await oneBookLibrary();
+  const app = await renderApp({ storage, connected: true, path: `/#connect=${encodeURIComponent(otherLink)}` });
+  await expectLibraryShown(app.screen);
+  const dialog = app.screen.getByRole('dialog', { name: 'Switch to this library?' });
+  await expect.element(dialog).toBeVisible();
+  storage.calls.length = 0;
+
+  await userEvent.click(dialog.getByRole('button', { name: 'Switch' }));
+
+  await expect.element(dialog).not.toBeInTheDocument();
+  await expectLibraryShown(app.screen);
+  expect(app.opened).toEqual([
+    { provider: 'mega', link: testLink },
+    { provider: 'mega', link: otherLink },
+  ]);
+  expect(storage.calls).toContainEqual({ op: 'read', path: 'metadata.db' });
+  await app.reload();
+  expect(app.opened.at(-1)).toEqual({ provider: 'mega', link: otherLink });
+});
+
+test('cancelling the switch keeps the library connected now', async () => {
+  const app = await renderApp({ storage: await oneBookLibrary(), connected: true, path: `/#connect=${otherLink}` });
+  const dialog = app.screen.getByRole('dialog', { name: 'Switch to this library?' });
+
+  await userEvent.click(dialog.getByRole('button', { name: 'Cancel' }));
+
+  await expect.element(dialog).not.toBeInTheDocument();
+  await expectLibraryShown(app.screen);
+  await app.reload();
+  expect(app.opened).toEqual([
+    { provider: 'mega', link: testLink },
+    { provider: 'mega', link: testLink },
+  ]);
+});
+
+test('once connected, the link no longer fills the connect screen', async () => {
+  const app = await renderApp({ storage: new FakeStorage(), path: `/#connect=${testLink}` });
+  await userEvent.click(app.screen.getByRole('button', { name: 'Connect' }));
+
+  await userEvent.click(app.screen.getByRole('button', { name: 'Connect a different library' }));
+
+  await expect.element(linkInput(app.screen)).toHaveValue('');
+});
+
+test('a switch that cannot forget the current library says so and stays connected', async () => {
+  const forget = vi.spyOn(caches, 'delete').mockRejectedValue(new DOMException('Storage is busy', 'InvalidStateError'));
+  onTestFinished(() => forget.mockRestore());
+  const app = await renderApp({ storage: await oneBookLibrary(), connected: true, path: `/#connect=${otherLink}` });
+  const dialog = app.screen.getByRole('dialog', { name: 'Switch to this library?' });
+
+  await userEvent.click(dialog.getByRole('button', { name: 'Switch' }));
+
+  await expect.element(dialog.getByRole('alert')).toMatchTextContent(/Couldn’t disconnect.*Storage is busy/);
+  await expectLibraryShown(app.screen);
+  expect(app.opened).toEqual([{ provider: 'mega', link: testLink }]);
+  forget.mockRestore();
+});
+
+test('a connect link no provider accepts is ignored while connected', async () => {
+  const app = await renderApp({ storage: await oneBookLibrary(), connected: true, path: '/#connect=not-a-link' });
+
+  await expectLibraryShown(app.screen);
+  expect(app.url).toBe('/');
+  expect(app.screen.getByRole('dialog').query()).toBeNull();
 });
