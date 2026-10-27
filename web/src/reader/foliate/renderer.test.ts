@@ -110,22 +110,6 @@ test('setStyles applies the font size as a percentage and the theme colours to t
   });
 });
 
-test("chapter two's scripts never run: the script resource is refused through the load event and no marker appears", async () => {
-  const { renderer } = await openFixture();
-
-  await goToChapterTwo(renderer);
-  const doc = renderer.sectionDocument;
-  doc?.getElementById('chapter-two')?.click();
-  await nextFrame();
-
-  expect(doc?.getElementById('chapter-two')).not.toBeNull();
-  expect(doc?.getElementById('ran-inline')).toBeNull();
-  expect(doc?.getElementById('ran-handler')).toBeNull();
-  expect(doc?.getElementById('ran-external')).toBeNull();
-  expect(doc?.querySelector('script')).toBeNull();
-  expect(renderer.refusedResources).toEqual(['application/javascript']);
-});
-
 test('opens at a saved CFI, and at the start when the location does not resolve', async () => {
   const first = await openFixture();
   await goToChapterTwo(first.renderer);
@@ -193,9 +177,13 @@ test('destroy during open leaves nothing behind', async () => {
   expect(relocations).toEqual([]);
 });
 
-const reflowable: Fixture[] = [
+const mobiFamily: Fixture[] = [
   { extension: 'mobi', url: mobiUrl },
   { extension: 'azw3', url: azw3Url },
+];
+
+const reflowable: Fixture[] = [
+  ...mobiFamily,
   { extension: 'fb2', url: fb2Url },
   { extension: 'fbz', url: fbzUrl },
 ];
@@ -218,6 +206,27 @@ test.each(reflowable)('$extension: TOC goes to chapter two, text settings apply,
   const resumed = await openFixture(saved, fixture);
   expect(resumed.relocations[0]?.location).toBe(saved);
   expect(resumed.renderer.sectionDocument?.body.textContent).toContain('tin box of letters');
+});
+
+const scripted = [
+  { ...epubFixture, chapterTwo: 'The first letter was addressed', refused: ['application/javascript'] },
+  ...mobiFamily.map((fixture) => ({ ...fixture, chapterTwo: 'tin box of letters', refused: [] })),
+];
+
+test.each(scripted)("$extension: chapter two's scripts never run: scripts, handlers and script resources are removed and no marker appears", async ({ chapterTwo, refused, ...fixture }) => {
+  const { renderer, relocations } = await openFixture(undefined, fixture);
+
+  await goToChapterTwo(renderer);
+  await settled(relocations);
+  const doc = renderer.sectionDocument;
+  doc?.querySelector('h1')?.click();
+  await nextFrame();
+
+  expect(doc?.body.textContent).toContain(chapterTwo);
+  expect(doc?.querySelector('script')).toBeNull();
+  expect([...(doc?.querySelectorAll('*') ?? [])].flatMap((element) => element.getAttributeNames().filter((name) => /^on/i.test(name)))).toEqual([]);
+  for (const marker of ['ran-inline', 'ran-handler', 'ran-external']) expect(doc?.getElementById(marker)).toBeNull();
+  expect(renderer.refusedResources).toEqual(refused);
 });
 
 const fixedLayout = [
