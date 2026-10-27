@@ -12,6 +12,7 @@ import { useBookFile } from '../reader/use-book-file.ts';
 import { NotFound, OpenBook } from './book-screen.tsx';
 import { ConnectedShell } from './connected-shell.tsx';
 import { describeError } from './describe-error.ts';
+import { formatSize } from './format.ts';
 import { ProgressBar } from './progress-bar.tsx';
 import { SettingsTool } from './reader-settings-tool.tsx';
 import { TocTool } from './reader-toc.tsx';
@@ -59,11 +60,13 @@ function Reader({ book, format }: { book: BookDetail; format: BookFormat }) {
       file.cancel();
       void navigate({ to: '/books/$bookId', params: { bookId: String(book.id) } });
     };
+    const label = format.size > 0 ? `Downloading ${format.format} · ${formatSize(format.size)}` : `Downloading ${format.format}`;
     return (
       <ReaderShell book={book} theme={settings.theme}>
         <section className="mx-auto flex w-full max-w-md flex-col items-center gap-4 px-4 py-12">
+          <p className="text-sm text-(--reader-muted)">{label}</p>
           <ProgressBar
-            label={`Downloading ${format.format}`}
+            label={label}
             loaded={state.status === 'fetching' ? state.loaded : 0}
             total={state.status === 'fetching' ? state.total : 0}
             className="w-full"
