@@ -15,7 +15,7 @@ import { ConnectedShell } from './connected-shell.tsx';
 import { describeError } from './describe-error.ts';
 import { ExternalLinkDialog } from './external-link-dialog.tsx';
 import { formatSize } from './format.ts';
-import { describeProgress, HeaderProgressBar } from './progress-bar.tsx';
+import { describeProgress, TopProgressBar } from './progress-bar.tsx';
 import { BackToBookLink, BottomBar, TapZone, TopBar, zoneAt, type ControlsState } from './reader-controls.tsx';
 import { whereYouAreLabel, positionLabel, SeekBar } from './reader-seek-bar.tsx';
 import { SettingsTool } from './reader-settings-tool.tsx';
@@ -69,7 +69,11 @@ function Reader({ book, format }: { book: BookDetail; format: BookFormat }) {
     const progress = state.status === 'fetching' ? { loaded: state.loaded, total: state.total } : { loaded: 0, total: 0 };
     return (
       <ReaderShell book={book} theme={settings.theme}>
-        <HeaderProgressBar label={label} {...progress} className="bg-(--reader-hover) text-(--reader-muted)" />
+        <TopProgressBar
+          label={label}
+          {...progress}
+          className="text-[color-mix(in_srgb,var(--reader-fg)_40%,var(--reader-bg))]"
+        />
         <section className="mx-auto flex w-full max-w-md flex-col items-center gap-4 px-4 pt-[18vh] text-center">
           <div className="flex flex-col items-center gap-1">
             <p className="font-semibold">{label}</p>
