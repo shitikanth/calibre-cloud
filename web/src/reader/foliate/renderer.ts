@@ -61,7 +61,7 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
     for (const listener of relocateListeners) listener(relocation);
   };
 
-  const followExternalLink = (event: Event) => {
+  const reportExternalLink = (event: Event) => {
     event.preventDefault();
     const { href_: url } = (event as CustomEvent<ExternalLink>).detail;
     for (const listener of externalLinkListeners) listener(url);
@@ -131,7 +131,7 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
       created.style.cssText = 'display: block; width: 100%; height: 100%';
       created.addEventListener('relocate', relocate);
       created.addEventListener('load', sectionLoaded);
-      created.addEventListener('external-link', followExternalLink);
+      created.addEventListener('external-link', reportExternalLink);
       container.replaceChildren(created);
       view = created;
       opening = true;

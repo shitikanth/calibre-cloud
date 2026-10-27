@@ -77,7 +77,7 @@ test.each(['javascript:alert(1)', 'data:text/html,%3Cp%3Ecard%3C/p%3E'])('%s is 
   expect(open).not.toHaveBeenCalled();
 });
 
-test('with the real EPUB renderer, tapping a link out of the book asks first, and a link within the book just navigates', async () => {
+async function openTwoChapters() {
   const open = vi.spyOn(window, 'open').mockReturnValue(null);
   const files = await buildCalibreLibrary([{ title: 'Two Chapters', authors: ['Calibre Cloud'], formats: { EPUB: '' } }]);
   files['Calibre Cloud/Two Chapters (1)/Two Chapters - Calibre Cloud.epub'] = new Uint8Array(await (await fetch(twoChaptersUrl)).arrayBuffer());
@@ -87,7 +87,13 @@ test('with the real EPUB renderer, tapping a link out of the book asks first, an
   };
   const app = await renderApp({ storage: new FakeStorage(files), connected: true, path: '/books/1/read/EPUB', renderers });
   await expect.poll(() => renderer?.sectionDocument?.getElementById('links')).toBeTruthy();
-  const [service, , , , letters] = renderer?.sectionDocument?.getElementById('links')?.querySelectorAll('a') ?? [];
+  const book = renderer?.sectionDocument;
+  const [service, , , , letters] = book?.getElementById('links')?.querySelectorAll('a') ?? [];
+  return { open, app, book, service, letters, chapterTwo: () => renderer?.sectionDocument?.getElementById('chapter-two') };
+}
+
+test('with the real EPUB renderer, tapping a link out of the book asks first, and a link within the book just navigates', async () => {
+  const { open, app, service, letters, chapterTwo } = await openTwoChapters();
 
   service?.click();
 
@@ -100,9 +106,26 @@ test('with the real EPUB renderer, tapping a link out of the book asks first, an
 
   letters?.click();
 
-  await expect.poll(() => renderer?.sectionDocument?.getElementById('chapter-two')).toBeTruthy();
+  await expect.poll(chapterTwo).toBeTruthy();
   expect(app.screen.getByRole('dialog').query()).toBeNull();
   expect(open).toHaveBeenCalledOnce();
+});
+
+test('with the real EPUB renderer, Escape gives focus back to the book, where the arrow keys turn pages', async () => {
+  const { open, app, book, service } = await openTwoChapters();
+  (book?.defaultView?.frameElement as HTMLElement | null)?.focus();
+
+  service?.click();
+  await expect.element(app.screen.getByRole('dialog', { name: 'Open this link?' })).toBeVisible();
+  await userEvent.keyboard('{Escape}');
+
+  await expect.poll(() => app.screen.getByRole('dialog').query()).toBeNull();
+  expect(book?.hasFocus()).toBe(true);
+  const progress = app.screen.getByRole('navigation', { name: 'Pages' });
+  const before = progress.element().textContent;
+  await userEvent.keyboard('{ArrowRight}');
+  await expect.poll(() => progress.element().textContent).not.toBe(before);
+  expect(open).not.toHaveBeenCalled();
 });
 
 test('a mailto: link offers Open', async () => {
