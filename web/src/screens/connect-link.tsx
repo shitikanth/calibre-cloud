@@ -19,7 +19,7 @@ function pendingFor(input: string | undefined, current: Connection | undefined):
   return { kind: 'switch', connection: parsed.connection };
 }
 
-export function ConnectLink({ children }: { children: ReactNode }) {
+export function ConnectLinkHandler({ children }: { children: ReactNode }) {
   const { connection } = useConnection();
   const { hash, pathname, searchStr } = useLocation();
   const { history } = useRouter();
@@ -73,6 +73,9 @@ function SwitchLibraryDialog({ connection, onClose }: { connection: Connection; 
       ref={dialog}
       aria-labelledby={titleId}
       onClose={onClose}
+      onCancel={(event) => {
+        if (disconnect.isPending) event.preventDefault();
+      }}
       className="m-auto w-[min(28rem,calc(100vw-2rem))] rounded border border-neutral-300 bg-white p-0 text-neutral-900 shadow-lg backdrop:bg-black/40"
     >
       <div className="flex flex-col gap-3 p-4">
@@ -83,7 +86,7 @@ function SwitchLibraryDialog({ connection, onClose }: { connection: Connection; 
           The link you opened is for a different library. Switching disconnects the library you have now and forgets
           its books, covers and reading positions on this device.
         </p>
-        <DisconnectFailure disconnect={disconnect} className="" />
+        <DisconnectFailure disconnect={disconnect} />
         <div className="flex justify-end gap-2">
           <button type="button" className={buttonClass} disabled={disconnect.isPending} onClick={close}>
             Cancel

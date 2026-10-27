@@ -103,6 +103,29 @@ test('once connected, the link no longer fills the connect screen', async () => 
   await expect.element(linkInput(app.screen)).toHaveValue('');
 });
 
+test('Escape cannot cancel a switch that has already started', async () => {
+  const deleteCache = caches.delete.bind(caches);
+  let release!: () => void;
+  const released = new Promise<void>((resolve) => (release = resolve));
+  const forget = vi.spyOn(caches, 'delete').mockImplementation(async (name) => {
+    await released;
+    return deleteCache(name);
+  });
+  onTestFinished(() => forget.mockRestore());
+  const app = await renderApp({ storage: await oneBookLibrary(), connected: true, path: `/#connect=${otherLink}` });
+  const dialog = app.screen.getByRole('dialog', { name: 'Switch to this library?' });
+  await userEvent.click(dialog.getByRole('button', { name: 'Switch' }));
+  await expect.poll(() => forget.mock.calls.length).toBeGreaterThan(0);
+
+  await userEvent.keyboard('{Escape}');
+
+  await expect.element(dialog).toBeVisible();
+  release();
+  await expect.element(dialog).not.toBeInTheDocument();
+  expect(app.opened.at(-1)).toEqual({ provider: 'mega', link: otherLink });
+  forget.mockRestore();
+});
+
 test('a switch that cannot forget the current library says so and stays connected', async () => {
   const forget = vi.spyOn(caches, 'delete').mockRejectedValue(new DOMException('Storage is busy', 'InvalidStateError'));
   onTestFinished(() => forget.mockRestore());

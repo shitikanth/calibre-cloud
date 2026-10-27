@@ -3,7 +3,7 @@ import { connectLinkHref } from '../connection/connect-link.ts';
 import { useConnection } from '../connection/context.tsx';
 import { connectInputFor } from '../storage/providers.ts';
 
-const copiedFor = 3000;
+const copiedMessageMs = 3000;
 
 type Outcome = { copied: true } | { copied: false; href: string };
 
@@ -14,7 +14,7 @@ export function useCopyConnectLink() {
 
   useEffect(() => {
     if (!outcome?.copied) return;
-    const timer = setTimeout(() => setOutcome(undefined), copiedFor);
+    const timer = setTimeout(() => setOutcome(undefined), copiedMessageMs);
     return () => clearTimeout(timer);
   }, [outcome]);
 
