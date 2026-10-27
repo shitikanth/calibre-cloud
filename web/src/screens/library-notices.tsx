@@ -1,10 +1,13 @@
 import { useRouter } from '@tanstack/react-router';
 import { useEffect } from 'react';
-import { useDismissLibraryUpdate, type LibraryUpdate } from '../library/use-library-update.ts';
+import { useLibrarySession } from '../library/session.tsx';
+import { useDismissLibraryUpdate } from '../library/use-library-update.ts';
 import { describeError } from './describe-error.ts';
 
-export function LibraryNotices({ update }: { update: LibraryUpdate }) {
+export function LibraryNotices({ showChecking = false }: { showChecking?: boolean }) {
+  const { update } = useLibrarySession();
   if (update.isFetching) {
+    if (!showChecking) return null;
     return (
       <p role="status" className="mb-4 text-sm text-neutral-600">
         Checking for changes…

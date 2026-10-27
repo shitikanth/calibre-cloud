@@ -3,6 +3,7 @@ import { useBooks, type LoadProgress } from '../library/use-library.ts';
 import { useSearch } from '@tanstack/react-router';
 import { BookGrid } from './book-grid.tsx';
 import { ContinueReading } from './continue-reading.tsx';
+import { LibraryNotices } from './library-notices.tsx';
 import { LoadMore } from './load-more.tsx';
 import { ProgressBar } from './progress-bar.tsx';
 import { StorageErrorScreen } from './storage-error-screen.tsx';
@@ -18,6 +19,7 @@ export function LibraryScreen() {
 
   return (
     <section>
+      <LibraryNotices showChecking />
       {!search.trim() && <ContinueReading />}
       {books.isSuccess &&
         (books.data.length === 0 && search.trim() ? (

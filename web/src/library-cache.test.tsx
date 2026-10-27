@@ -54,6 +54,40 @@ test('loading a book page directly checks the library for changes once', async (
   expect(metadataStats(storage)).toHaveLength(1);
 });
 
+test('a full load of a book page checks for changes without a banner and says when it found one', async () => {
+  const storage = await libraryOf(brontës);
+  const app = await renderApp({ storage, connected: true, path: '/books/2' });
+  await expect.element(app.screen.getByRole('heading', { level: 1, name: 'Wuthering Heights' })).toBeVisible();
+  await withNewBook(storage, '2');
+  const check = storage.holdNextStat('metadata.db');
+
+  const reloaded = await app.reload();
+
+  await check.started;
+  await expect.element(reloaded.getByRole('heading', { level: 1, name: 'Wuthering Heights' })).toBeVisible();
+  expect(reloaded.getByText('Checking for changes…').query()).toBeNull();
+  check.release();
+  await expect.element(reloaded.getByRole('status')).toHaveTextContent('Library updated');
+});
+
+test.each([
+  ['/books/99', 'Book not found'],
+  ['/books/2/read/DJVU', 'Format not found'],
+])('%s shows %s with no library notice while the check runs', async (path, heading) => {
+  const storage = await libraryOf(brontës);
+  const app = await renderApp({ storage, connected: true, path });
+  await expect.element(app.screen.getByRole('heading', { level: 1, name: heading })).toBeVisible();
+  const check = storage.holdNextStat('metadata.db');
+
+  const reloaded = await app.reload();
+
+  await check.started;
+  await expect.element(reloaded.getByRole('heading', { level: 1, name: heading })).toBeVisible();
+  expect(reloaded.getByRole('status').query()).toBeNull();
+  expect(reloaded.getByRole('alert').query()).toBeNull();
+  check.release();
+});
+
 test('going from the grid to a book and back does not check the library again', async () => {
   const storage = await libraryOf(brontës);
   const app = await renderApp({ storage, connected: true });
