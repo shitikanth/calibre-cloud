@@ -63,6 +63,16 @@ test('Larger and Smaller text step the font size and tell the renderer', async (
   await expect.poll(() => styleCalls(fake.latest).at(-1)).toEqual({ fontSize: 90, theme: 'light' });
 });
 
+test('the text size buttons show − and + and keep their words as accessible names', async () => {
+  const { app } = await openReader('/books/1/read/EPUB');
+  const settings = await openSettings(app.screen);
+
+  const smaller = settings.getByRole('button', { name: 'Smaller text' });
+  const larger = settings.getByRole('button', { name: 'Larger text' });
+  await expect.element(smaller).toBeVisible();
+  expect([smaller.element().textContent, larger.element().textContent]).toEqual(['−', '+']);
+});
+
 test('the book opens with the default text size and theme', async () => {
   const { fake } = await openReader('/books/1/read/EPUB');
 
