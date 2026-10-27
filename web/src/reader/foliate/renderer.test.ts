@@ -176,24 +176,35 @@ test('open rejects when the file is not a book', async () => {
   await expect(renderer.open(new Blob(['not a book']), container, {})).rejects.toThrow();
 });
 
-test('arrow keys pressed inside the section document turn the page, and each is reported as a turn', async () => {
-  const { renderer, relocations } = await openFixture();
-  const opening = relocations.at(-1)?.fraction ?? Number.NaN;
-  let turns = 0;
-  renderer.onTurn(() => (turns += 1));
-  const press = (key: string) => {
-    for (const type of ['keydown', 'keyup']) renderer.sectionDocument?.dispatchEvent(new KeyboardEvent(type, { key, bubbles: true }));
-  };
-
-  press('ArrowRight');
-  await vi.waitFor(() => expect(relocations.at(-1)?.fraction).toBeGreaterThan(opening));
+test('key presses and pointer presses inside the section document reach the page around the book, which decides what they do', async () => {
+  const { renderer, relocations, container } = await openFixture();
+  const reached: string[] = [];
+  for (const type of ['keydown', 'pointerdown']) {
+    container.parentElement?.addEventListener(type, (event) => reached.push(`${type} ${(event as KeyboardEvent).key ?? ''}`.trim()));
+  }
+  const doc = renderer.sectionDocument;
   await settled(relocations);
-  const turned = relocations.at(-1)?.fraction ?? Number.NaN;
+  const before = relocations.length;
 
-  press('ArrowLeft');
-  await vi.waitFor(() => expect(relocations.at(-1)?.fraction).toBeLessThan(turned));
-  expect(turns).toBe(2);
+  doc?.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  doc?.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  doc?.querySelector('p')?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+
+  expect(reached).toEqual(['keydown ArrowRight', 'keydown Escape', 'pointerdown']);
+  await settled(relocations);
+  expect(relocations).toHaveLength(before);
 });
+
+test('a click on the page outside the section document, such as its margin, is reported as a tap', async () => {
+  const { renderer, container } = await openFixture();
+  let taps = 0;
+  renderer.onTap(() => (taps += 1));
+
+  container.querySelector('foliate-view')?.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+
+  expect(taps).toBe(1);
+});
+
 
 test('destroy during open leaves nothing behind', async () => {
   const { renderer, relocations, container } = await createInContainer();

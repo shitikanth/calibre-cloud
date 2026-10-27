@@ -46,6 +46,7 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
   const tapListeners = new Set<() => void>();
   const turnListeners = new Set<() => void>();
   let view: FoliateView | undefined;
+  let host: HTMLElement | undefined;
   let opening = false;
   const destroyed = new AbortController();
   let toc: TocEntry[] = [];
@@ -85,11 +86,12 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
     for (const listener of turnListeners) listener();
   };
 
-  const turnPage = (event: Event) => {
-    const { key } = event as KeyboardEvent;
-    if (key !== 'ArrowRight' && key !== 'ArrowLeft') return;
-    void (key === 'ArrowRight' ? renderer.next() : renderer.previous());
-    reportTurn();
+  const passKeyOut = (event: KeyboardEvent) => {
+    host?.dispatchEvent(new KeyboardEvent(event.type, event));
+  };
+
+  const passPressOut = (event: PointerEvent) => {
+    host?.dispatchEvent(new PointerEvent(event.type, event));
   };
 
   const reportTap = (event: MouseEvent) => {
@@ -102,7 +104,8 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
     if (destroyed.signal.aborted) return;
     const doc = (event as CustomEvent<SectionLoad>).detail.doc;
     sectionDocument = doc;
-    doc.addEventListener('keydown', turnPage);
+    doc.addEventListener('keydown', passKeyOut);
+    doc.addEventListener('pointerdown', passPressOut);
     doc.addEventListener('click', reportTap);
     // foliate-js turns the page on a swipe itself; this only reports it.
     onSwipe(doc, reportTurn);
@@ -153,8 +156,10 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
       created.addEventListener('relocate', relocate);
       created.addEventListener('load', sectionLoaded);
       created.addEventListener('external-link', reportExternalLink);
+      created.addEventListener('click', reportTap);
       container.replaceChildren(created);
       view = created;
+      host = container;
       opening = true;
       try {
         await created.open(new File([blob], `book.${extension}`, { type: blob.type }));
@@ -228,6 +233,7 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
         else teardown(view);
       }
       view = undefined;
+      host = undefined;
       toc = [];
       tocEntries = new WeakMap();
       tocSections = [];

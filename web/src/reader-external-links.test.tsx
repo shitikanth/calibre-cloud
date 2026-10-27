@@ -121,10 +121,10 @@ test('with the real EPUB renderer, Escape gives focus back to the book, where th
 
   await expect.poll(() => app.screen.getByRole('dialog').query()).toBeNull();
   expect(book?.hasFocus()).toBe(true);
-  const progress = app.screen.getByRole('slider', { name: 'Position in book' });
-  const before = progress.element().getAttribute('aria-valuetext');
+  const position = app.screen.getByRole('slider', { name: 'Position in book' });
+  const before = position.element().getAttribute('aria-valuetext');
   await userEvent.keyboard('{ArrowRight}');
-  await expect.poll(() => progress.element().getAttribute('aria-valuetext')).not.toBe(before);
+  await expect.poll(() => position.element().getAttribute('aria-valuetext')).not.toBe(before);
   expect(open).not.toHaveBeenCalled();
 });
 

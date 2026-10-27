@@ -5,18 +5,24 @@ import { onSwipe, type SwipeDirection } from '../reader/swipe.ts';
 
 export type ControlsState = 'hidden' | 'peek' | 'pinned';
 
-const barClass = 'z-30 bg-(--reader-bg)/90 backdrop-blur-sm transition-opacity duration-150 motion-reduce:transition-none';
+type BarState = { shown: boolean; onPin: () => void; onLeave: () => void };
 
-function shownClass(shown: boolean) {
-  return shown ? 'opacity-100' : 'pointer-events-none opacity-0';
+type BarProps = BarState & { as: 'header' | 'footer'; className: string; children: ReactNode };
+
+function Bar({ as: Element, shown, onPin, onLeave, className, children }: BarProps) {
+  return (
+    <Element
+      className={`absolute z-30 bg-(--reader-bg)/90 backdrop-blur-sm transition-opacity duration-150 motion-reduce:transition-none ${
+        shown ? 'opacity-100' : 'pointer-events-none opacity-0'
+      } ${className}`}
+      onFocus={onPin}
+      onPointerDown={onPin}
+      onPointerLeave={onLeave}
+    >
+      {children}
+    </Element>
+  );
 }
-
-export type BarProps = {
-  shown: boolean;
-  onPin: () => void;
-  onLeave: () => void;
-  children: ReactNode;
-};
 
 export function BackToBookLink({ book }: { book: BookDetail }) {
   return (
@@ -33,42 +39,39 @@ export function BackToBookLink({ book }: { book: BookDetail }) {
   );
 }
 
-type TopBarProps = Omit<BarProps, 'children'> & { book: BookDetail; tools?: ReactNode | undefined; wide: boolean };
+type TopBarProps = BarState & { book: BookDetail; tools?: ReactNode | undefined; wide: boolean };
 
-export function TopBar({ book, tools, wide, shown, onPin, onLeave }: TopBarProps) {
-  const title = <h1 className="min-w-0 truncate text-sm font-medium">{book.title}</h1>;
+export function TopBar({ book, tools, wide, ...bar }: TopBarProps) {
   return (
-    <header
-      className={`absolute inset-x-0 top-0 border-b border-(--reader-line) px-2 py-1 ${barClass} ${shownClass(shown)} ${
+    <Bar
+      as="header"
+      {...bar}
+      className={`inset-x-0 top-0 border-b border-(--reader-line) px-2 py-1 ${
         wide ? 'grid grid-cols-[1fr_minmax(0,auto)_1fr] items-center gap-2' : 'flex items-center gap-2'
       }`}
-      onFocus={onPin}
-      onPointerDown={onPin}
-      onPointerLeave={onLeave}
     >
       <div className="flex">
         <BackToBookLink book={book} />
       </div>
-      {title}
+      <h1 className="min-w-0 truncate text-sm font-medium">{book.title}</h1>
       {wide && <div className="flex justify-end">{tools}</div>}
-    </header>
+    </Bar>
   );
 }
 
-type BottomBarProps = Omit<BarProps, 'children'> & { seekBar: ReactNode; place: string; tools?: ReactNode | undefined; wide: boolean };
+type BottomBarProps = BarState & { seekBar: ReactNode; whereYouAre: string; tools?: ReactNode | undefined; wide: boolean };
 
-export function BottomBar({ seekBar, place, tools, wide, shown, onPin, onLeave }: BottomBarProps) {
-  const where = <p className={`min-w-0 truncate text-sm text-(--reader-muted) ${wide ? 'text-center' : 'flex-1'}`}>{place}</p>;
+export function BottomBar({ seekBar, whereYouAre, tools, wide, ...bar }: BottomBarProps) {
+  const where = <p className={`min-w-0 truncate text-sm text-(--reader-muted) ${wide ? 'text-center' : 'flex-1'}`}>{whereYouAre}</p>;
   return (
-    <footer
-      className={`absolute ${barClass} ${shownClass(shown)} ${
+    <Bar
+      as="footer"
+      {...bar}
+      className={
         wide
           ? 'bottom-3 left-1/2 w-[calc(100%-2rem)] max-w-[560px] -translate-x-1/2 rounded-xl border border-(--reader-line) px-4 pb-2 shadow-lg'
           : 'inset-x-0 bottom-0 border-t border-(--reader-line) px-4 pb-[max(0.25rem,env(safe-area-inset-bottom))]'
-      }`}
-      onFocus={onPin}
-      onPointerDown={onPin}
-      onPointerLeave={onLeave}
+      }
     >
       {seekBar}
       {wide ? (
@@ -79,7 +82,7 @@ export function BottomBar({ seekBar, place, tools, wide, shown, onPin, onLeave }
           {tools}
         </div>
       )}
-    </footer>
+    </Bar>
   );
 }
 
@@ -108,17 +111,5 @@ export function TapZone({ direction, onTurn }: { direction: SwipeDirection; onTu
         {previous ? '‹' : '›'}
       </span>
     </button>
-  );
-}
-
-export function HotEdge({ edge, onReach }: { edge: 'top' | 'bottom'; onReach: () => void }) {
-  return (
-    <div
-      aria-hidden="true"
-      className={`absolute inset-x-0 z-20 h-6 ${edge === 'top' ? 'top-0' : 'bottom-0'}`}
-      onPointerEnter={(event) => {
-        if (event.pointerType === 'mouse') onReach();
-      }}
-    />
   );
 }

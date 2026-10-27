@@ -146,11 +146,7 @@ test('on a desktop, Contents and Settings sit at the top right and the bottom pa
   expect(rect(screen.getByRole('contentinfo').element()).width).toBeLessThanOrEqual(560);
 });
 
-test.each([
-  [390, 844],
-  [1280, 800],
-])('at %i×%i, the running head and folio never overlap the real EPUB renderer’s text', async (width, height) => {
-  await page.viewport(width, height);
+async function openRealEpub() {
   const files = await buildCalibreLibrary([{ title: 'Two Chapters', authors: ['Calibre Cloud'], formats: { EPUB: '' } }]);
   files['Calibre Cloud/Two Chapters (1)/Two Chapters - Calibre Cloud.epub'] = new Uint8Array(await (await fetch(twoChaptersUrl)).arrayBuffer());
   let renderer: FoliateRenderer | undefined;
@@ -160,9 +156,44 @@ test.each([
     path: '/books/1/read/EPUB',
     renderers: { EPUB: async () => (renderer = await createFoliateRenderer('epub')) },
   });
+  await expect.poll(() => renderer?.sectionDocument?.querySelector('p')).toBeTruthy();
+  await expect.element(app.screen.getByRole('button', { name: 'Next page' })).toBeInTheDocument();
+  return { app, screen: app.screen, renderer: renderer as FoliateRenderer };
+}
+
+test('with the real EPUB renderer, a tap on the page shows the controls, a press on it closes an open Contents, and Esc inside the book hides them', async () => {
+  const { screen, renderer } = await openRealEpub();
+  const paragraph = renderer.sectionDocument?.querySelector('p') as HTMLElement;
+  const press = () => {
+    paragraph.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    paragraph.click();
+  };
+
+  press();
+  await expectControls(screen, true);
+  await userEvent.click(screen.getByRole('button', { name: 'Table of contents' }));
+  const contents = screen.getByRole('navigation', { name: 'Table of contents' });
+  await expect.element(contents).toBeVisible();
+
+  press();
+  await expect.poll(() => contents.query()).toBeNull();
+  await expectControls(screen, false);
+
+  press();
+  await expectControls(screen, true);
+  (renderer.sectionDocument?.defaultView?.frameElement as HTMLElement).focus();
+  await userEvent.keyboard('{Escape}');
+  await expectControls(screen, false);
+});
+
+test.each([
+  [390, 844],
+  [1280, 800],
+])('at %i×%i, the running head and folio never overlap the real EPUB renderer’s text', async (width, height) => {
+  await page.viewport(width, height);
+  const { app, renderer } = await openRealEpub();
   const runningHead = app.screen.getByText('One: The Lighthouse Ledger', { exact: true });
   await expect.element(runningHead).toBeVisible();
-  await expect.poll(() => renderer?.sectionDocument?.querySelector('p')).toBeTruthy();
   const folio = app.screen.getByRole('main').getByText(/^\d+%$/);
   await expect.element(folio).toBeVisible();
   const doc = renderer?.sectionDocument;

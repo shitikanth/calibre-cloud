@@ -1,4 +1,5 @@
 import type { BookRenderer, ReaderStyles, Relocation, Renderers, TocEntry } from '../reader/renderer.ts';
+import type { SwipeDirection } from '../reader/swipe.ts';
 import { entryStartingAt } from '../reader/toc.ts';
 
 export type RendererCall =
@@ -127,7 +128,7 @@ export class FakeRenderer implements BookRenderer {
     for (const listener of this.externalLinkListeners) listener(url);
   }
 
-  swipe(direction: 'next' | 'previous'): void {
+  swipe(direction: SwipeDirection): void {
     this.show(direction === 'next' ? Math.min(this.index + 1, this.lines.length - 1) : Math.max(this.index - 1, 0));
     for (const listener of this.turnListeners) listener();
   }

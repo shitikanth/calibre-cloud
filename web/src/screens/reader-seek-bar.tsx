@@ -11,7 +11,7 @@ export function positionLabel(relocation: Relocation | undefined): string {
   return scale.label(scale.current);
 }
 
-export function placeLabel(relocation: Relocation | undefined): string {
+export function whereYouAreLabel(relocation: Relocation | undefined): string {
   const chapter = relocation?.tocEntry?.label;
   const position = positionLabel(relocation);
   return chapter ? `${chapter} · ${position}` : position;
