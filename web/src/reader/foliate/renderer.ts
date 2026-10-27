@@ -52,9 +52,9 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
 
   const relocate = (event: Event) => {
     if (destroyed.signal.aborted) return;
-    const { cfi: rangeCfi, fraction } = (event as CustomEvent<Location>).detail;
+    const { cfi: rangeCfi, fraction, tocItem } = (event as CustomEvent<Location>).detail;
     if (!Number.isFinite(fraction)) return;
-    const relocation = { location: cfi.collapse(rangeCfi), fraction };
+    const relocation: Relocation = { location: cfi.collapse(rangeCfi), fraction, ...(tocItem ? { tocLocation: tocItem.href } : {}) };
     for (const listener of relocateListeners) listener(relocation);
   };
 

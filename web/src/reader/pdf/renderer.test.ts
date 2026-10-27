@@ -2,7 +2,7 @@ import { afterEach, expect, test, vi } from 'vitest';
 import { getDocument, type PDFDocumentProxy, type PDFPageProxy } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import fixtureUrl from '../../test/fixtures/two-pages.pdf?url';
 import type { BookRenderer, Relocation } from '../renderer.ts';
-import { createPdfRenderer } from './renderer.ts';
+import { createPdfRenderer, outlineEntryAt } from './renderer.ts';
 
 const opened: { renderer: BookRenderer; container: HTMLElement }[] = [];
 
@@ -48,7 +48,7 @@ function canvasIn(container: HTMLElement): HTMLCanvasElement {
 test('opens on page 1 of 2 at fit-width and reports it as the first relocation', async () => {
   const { container, relocations } = await openFixture();
 
-  expect(relocations[0]).toEqual({ location: '1', fraction: 0, page: { current: 1, total: 2 } });
+  expect(relocations[0]).toEqual({ location: '1', fraction: 0, page: { current: 1, total: 2 }, tocLocation: '1' });
   const canvas = canvasIn(container);
   const viewportWidth = canvas.parentElement?.clientWidth ?? 0;
   expect(viewportWidth).toBeGreaterThan(500);
@@ -73,7 +73,7 @@ test('the outline becomes the TOC with page numbers as locations, and an entry n
 
   await renderer.goTo(renderer.toc[1]!.location);
 
-  expect(relocations.at(-1)).toEqual({ location: '2', fraction: 1, page: { current: 2, total: 2 } });
+  expect(relocations.at(-1)).toEqual({ location: '2', fraction: 1, page: { current: 2, total: 2 }, tocLocation: '2' });
 });
 
 test('next and previous turn one page at a time and stop at the ends', async () => {
@@ -151,4 +151,26 @@ test('destroy empties the container', async () => {
   renderer.destroy();
 
   expect(container.childElementCount).toBe(0);
+});
+
+test('the current outline entry is the last one, depth first, that starts on or before the page', () => {
+  const toc = [
+    { label: 'Front', location: '1' },
+    {
+      label: 'Part one',
+      location: '3',
+      children: [
+        { label: 'Chapter one', location: '3' },
+        { label: 'Chapter two', location: '7' },
+      ],
+    },
+    { label: 'Part two', location: '12' },
+  ];
+
+  expect(outlineEntryAt(toc, 2)?.label).toBe('Front');
+  expect(outlineEntryAt(toc, 3)?.label).toBe('Chapter one');
+  expect(outlineEntryAt(toc, 9)?.label).toBe('Chapter two');
+  expect(outlineEntryAt(toc, 12)?.label).toBe('Part two');
+  expect(outlineEntryAt(toc.slice(1), 2)).toBeUndefined();
+  expect(outlineEntryAt([], 5)).toBeUndefined();
 });

@@ -140,13 +140,24 @@ class PdfRenderer implements BookRenderer {
   }
 
   private emitRelocation(page: number, total: number): void {
+    const entry = outlineEntryAt(this.toc, page);
     const relocation: Relocation = {
       location: String(page),
       fraction: total > 1 ? (page - 1) / (total - 1) : 0,
       page: { current: page, total },
+      ...(entry ? { tocLocation: entry.location } : {}),
     };
     for (const listener of this.relocateListeners) listener(relocation);
   }
+}
+
+export function outlineEntryAt(toc: TocEntry[], page: number): TocEntry | undefined {
+  let current: TocEntry | undefined;
+  for (const entry of toc) {
+    if (Number(entry.location) > page) continue;
+    current = outlineEntryAt(entry.children ?? [], page) ?? entry;
+  }
+  return current;
 }
 
 async function mapOutline(doc: PDFDocumentProxy, items: OutlineItem[]): Promise<TocEntry[]> {

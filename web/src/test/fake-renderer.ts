@@ -95,13 +95,21 @@ export class FakeRenderer implements BookRenderer {
     this.index = index;
     if (this.container) this.container.textContent = this.lines[index] ?? '';
     const total = this.lines.length;
+    const entry = entryAt(this.toc, index + 1);
     const relocation: Relocation = {
       location: String(index + 1),
       fraction: total > 1 ? index / (total - 1) : 0,
       ...(this.reportsPages ? { page: { current: index + 1, total } } : {}),
+      ...(entry ? { tocLocation: entry.location } : {}),
     };
     this.emitRelocation(relocation);
   }
+}
+
+function entryAt(toc: TocEntry[], line: number): TocEntry | undefined {
+  let current: TocEntry | undefined;
+  for (const entry of toc) if (Number(entry.location) <= line) current = entryAt(entry.children ?? [], line) ?? entry;
+  return current;
 }
 
 export type FakeRenderers = {
