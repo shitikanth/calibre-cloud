@@ -11,6 +11,7 @@ export interface BookRenderer {
   open(blob: Blob, container: HTMLElement, options: { location?: string }): Promise<void>;
   onRelocate(listener: (relocation: Relocation) => void): () => void;
   onRenderError(listener: (error: Error) => void): () => void;
+  onExternalLink(listener: (url: string) => void): () => void;
   goTo(location: string): Promise<void>;
   goToFraction(fraction: number): Promise<void>;
   tocEntryAt(fraction: number): TocEntry | undefined;

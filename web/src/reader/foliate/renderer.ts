@@ -1,4 +1,4 @@
-import type { FoliateView, Location, ResourceData, ResourceLoad, TocItem } from 'foliate-js/view.js';
+import type { ExternalLink, FoliateView, Location, ResourceData, ResourceLoad, TocItem } from 'foliate-js/view.js';
 import type { BookRenderer, ReaderStyles, ReaderTheme, Relocation, TocEntry } from '../renderer.ts';
 
 export type FoliateRenderer = BookRenderer & {
@@ -41,6 +41,7 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
   const [, cfi] = await Promise.all([import('foliate-js/view.js'), import('foliate-js/epubcfi.js')]);
   const relocateListeners = new Set<(relocation: Relocation) => void>();
   const errorListeners = new Set<(error: Error) => void>();
+  const externalLinkListeners = new Set<(url: string) => void>();
   let view: FoliateView | undefined;
   let opening = false;
   const destroyed = new AbortController();
@@ -61,6 +62,12 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
     const tocEntry = tocItem ? tocEntries.get(tocItem) : undefined;
     const relocation: Relocation = { location: cfi.collapse(rangeCfi), fraction, ...(tocEntry ? { tocEntry } : {}) };
     for (const listener of relocateListeners) listener(relocation);
+  };
+
+  const reportExternalLink = (event: Event) => {
+    event.preventDefault();
+    const { href_: url } = (event as CustomEvent<ExternalLink>).detail;
+    for (const listener of externalLinkListeners) listener(url);
   };
 
   const navigate = async (failureMessage: string, action: () => Promise<unknown> | undefined) => {
@@ -127,6 +134,7 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
       created.style.cssText = 'display: block; width: 100%; height: 100%';
       created.addEventListener('relocate', relocate);
       created.addEventListener('load', sectionLoaded);
+      created.addEventListener('external-link', reportExternalLink);
       container.replaceChildren(created);
       view = created;
       opening = true;
@@ -163,6 +171,10 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
       errorListeners.add(listener);
       return () => errorListeners.delete(listener);
     },
+    onExternalLink(listener) {
+      externalLinkListeners.add(listener);
+      return () => externalLinkListeners.delete(listener);
+    },
     async goTo(location) {
       await navigate(`Could not go to ${location}`, async () => (await view?.goTo(location)) ?? false);
     },
@@ -195,6 +207,7 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
       sectionDocument = undefined;
       relocateListeners.clear();
       errorListeners.clear();
+      externalLinkListeners.clear();
     },
   };
   return renderer;

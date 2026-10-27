@@ -12,6 +12,7 @@ import { useBookFile } from '../reader/use-book-file.ts';
 import { NotFound, OpenBook } from './book-screen.tsx';
 import { ConnectedShell } from './connected-shell.tsx';
 import { describeError } from './describe-error.ts';
+import { ExternalLinkDialog } from './external-link-dialog.tsx';
 import { formatSize } from './format.ts';
 import { ProgressBar } from './progress-bar.tsx';
 import { PageControls } from './reader-page-controls.tsx';
@@ -207,6 +208,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
   const [status, setStatus] = useState<OpenStatus>('opening');
   const [relocation, setRelocation] = useState<Relocation | undefined>(undefined);
   const [renderError, setRenderError] = useState<Error | undefined>(undefined);
+  const [externalLink, setExternalLink] = useState<string | undefined>(undefined);
   const [zoom, setZoom] = useState(1);
   const [attempt, setAttempt] = useState(0);
 
@@ -241,6 +243,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
             setRenderError(undefined);
           }),
           created.onRenderError(setRenderError),
+          created.onExternalLink(setExternalLink),
         );
         await created.open(blob, host, saved ? { location: saved.location } : {});
         if (cancelled) return;
@@ -278,7 +281,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
   useEffect(() => {
     if (!renderer) return;
     const turnPage = (event: KeyboardEvent) => {
-      if (shell.current?.querySelector('[aria-expanded="true"]') || event.target instanceof HTMLInputElement) return;
+      if (shell.current?.querySelector('[aria-expanded="true"], dialog[open]') || event.target instanceof HTMLInputElement) return;
       if (event.key === 'ArrowRight') void renderer.next();
       else if (event.key === 'ArrowLeft') void renderer.previous();
     };
@@ -318,6 +321,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
       )}
       <div ref={container} className="min-h-0 flex-1 overflow-hidden" hidden={status === 'unopenable' || status === 'renderer-unavailable'} />
       {status === 'open' && renderer && <PageControls renderer={renderer} relocation={relocation} />}
+      {externalLink !== undefined && <ExternalLinkDialog url={externalLink} onClose={() => setExternalLink(undefined)} />}
     </ReaderShell>
   );
 }
