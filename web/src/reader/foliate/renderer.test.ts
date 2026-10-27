@@ -208,7 +208,7 @@ test.each(reflowable)('$extension: TOC goes to chapter two, text settings apply,
   expect(resumed.renderer.sectionDocument?.body.textContent).toContain('tin box of letters');
 });
 
-test.each([epubFixture, ...reflowable])('$extension: goToFraction jumps into chapter two, and positionAt names the chapter without moving', async (fixture) => {
+test.each([epubFixture, ...reflowable])('$extension: goToFraction jumps into chapter two, and tocEntryAt names the chapter without moving', async (fixture) => {
   const { renderer, relocations } = await openFixture(undefined, fixture);
   await goToChapterTwo(renderer);
   await settled(relocations);
@@ -217,8 +217,8 @@ test.each([epubFixture, ...reflowable])('$extension: goToFraction jumps into cha
   await settled(relocations);
   const before = relocations.length;
 
-  expect(renderer.positionAt(0)).toEqual({ tocEntry: renderer.toc[0] });
-  expect(renderer.positionAt(chapterTwo)).toEqual({ tocEntry: renderer.toc[1] });
+  expect(renderer.tocEntryAt(0)).toBe(renderer.toc[0]);
+  expect(renderer.tocEntryAt(chapterTwo)).toBe(renderer.toc[1]);
   expect(relocations).toHaveLength(before);
 
   await renderer.goToFraction(chapterTwo);
@@ -270,10 +270,10 @@ test.each(fixedLayout)('fixed-layout $extension: pages open without text setting
   expect(resumed.relocations[0]?.location).toBe(saved);
 });
 
-test.each(fixedLayout)('fixed-layout $extension: goToFraction jumps to the last page and positionAt names it', async ({ toc, ...fixture }) => {
+test.each(fixedLayout)('fixed-layout $extension: goToFraction jumps to the last page and tocEntryAt names it', async ({ toc, ...fixture }) => {
   const { renderer, relocations } = await openFixture(undefined, fixture);
 
-  expect(renderer.positionAt(1).tocEntry?.label).toBe(toc[1]);
+  expect(renderer.tocEntryAt(1)?.label).toBe(toc[1]);
 
   await renderer.goToFraction(1);
   await settled(relocations);

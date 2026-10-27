@@ -1,7 +1,7 @@
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 import type { PDFDocumentLoadingTask, PDFDocumentProxy, PDFPageProxy, RenderTask } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import workerSrc from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
-import type { BookRenderer, Position, Relocation, TocEntry } from '../renderer.ts';
+import type { BookRenderer, Relocation, TocEntry } from '../renderer.ts';
 import { entryStartingAt } from '../toc.ts';
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
@@ -70,12 +70,8 @@ class PdfRenderer implements BookRenderer {
     if (this.doc) await this.show(this.pageAt(fraction, this.doc.numPages));
   }
 
-  positionAt(fraction: number): Position {
-    if (!this.doc) return {};
-    const total = this.doc.numPages;
-    const current = this.pageAt(fraction, total);
-    const tocEntry = entryStartingAt(this.toc, current);
-    return { page: { current, total }, ...(tocEntry ? { tocEntry } : {}) };
+  tocEntryAt(fraction: number): TocEntry | undefined {
+    return this.doc && entryStartingAt(this.toc, this.pageAt(fraction, this.doc.numPages));
   }
 
   async next(): Promise<void> {

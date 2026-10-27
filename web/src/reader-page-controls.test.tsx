@@ -34,11 +34,11 @@ test('the bar is a slider showing how far through the book, and it follows page 
 
 test('in a paged book the bar counts pages', async () => {
   const { app, bar } = await openReader('/books/1/read/PDF');
-  await expect.element(bar).toHaveAttribute('aria-valuetext', 'Page 1 of 3');
+  await expect.element(bar).toHaveAttribute('aria-valuetext', 'page 1 of 3');
 
   await userEvent.click(app.screen.getByRole('button', { name: 'Next' }));
 
-  await expect.element(bar).toHaveAttribute('aria-valuetext', 'Page 2 of 3');
+  await expect.element(bar).toHaveAttribute('aria-valuetext', 'page 2 of 3');
   await expect.element(bar).toHaveValue('2');
 });
 
@@ -69,6 +69,18 @@ test('dragging previews the chapter it would land in, and jumps only on release'
   await expect.element(app.screen.getByText('75%', { exact: true })).toBeVisible();
 });
 
+test('dragging away and back to where it started leaves the bar following page turns', async () => {
+  const { app, bar } = await openReader('/books/1/read/EPUB');
+
+  drag(bar, 75);
+  await expect.element(app.screen.getByText('Chapter two · 75%')).toBeVisible();
+  drag(bar, 0);
+  await userEvent.click(app.screen.getByRole('button', { name: 'Next' }));
+
+  await expect.element(bar).toHaveAttribute('aria-valuetext', '25%');
+  await expect.element(app.screen.getByText('25%', { exact: true })).toBeVisible();
+});
+
 test('dragging in a paged book previews the page number', async () => {
   const { app, bar } = await openReader('/books/1/read/PDF');
 
@@ -85,7 +97,7 @@ test('clicking the bar jumps there, and the jump is saved like a page turn', asy
   await userEvent.click(bar, { position: { x: width - 2, y: height / 2 } });
 
   await expect.element(app.screen.getByText('Page three')).toBeVisible();
-  await expect.element(bar).toHaveAttribute('aria-valuetext', 'Page 3 of 3');
+  await expect.element(bar).toHaveAttribute('aria-valuetext', 'page 3 of 3');
   expect(fake.latest.calls).toContainEqual({ op: 'goToFraction', fraction: 1 });
 
   const reloaded = await app.reload();
@@ -97,12 +109,12 @@ test('arrow keys step the focused bar without also turning the page', async () =
   const { fake, app, bar } = await openReader('/books/1/read/PDF');
 
   await userEvent.click(app.screen.getByRole('button', { name: 'Next' }));
-  await expect.element(bar).toHaveAttribute('aria-valuetext', 'Page 2 of 3');
+  await expect.element(bar).toHaveAttribute('aria-valuetext', 'page 2 of 3');
   (bar.element() as HTMLInputElement).focus();
   await userEvent.keyboard('{ArrowLeft}');
 
   await expect.element(app.screen.getByText('Page one')).toBeVisible();
-  await expect.element(bar).toHaveAttribute('aria-valuetext', 'Page 1 of 3');
+  await expect.element(bar).toHaveAttribute('aria-valuetext', 'page 1 of 3');
   expect(fake.latest.calls.filter(({ op }) => op === 'previous')).toEqual([]);
 
   await userEvent.keyboard('{ArrowRight}');

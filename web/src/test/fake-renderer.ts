@@ -1,4 +1,4 @@
-import type { BookRenderer, Position, ReaderStyles, Relocation, Renderers, TocEntry } from '../reader/renderer.ts';
+import type { BookRenderer, ReaderStyles, Relocation, Renderers, TocEntry } from '../reader/renderer.ts';
 import { entryStartingAt } from '../reader/toc.ts';
 
 export type RendererCall =
@@ -59,13 +59,8 @@ export class FakeRenderer implements BookRenderer {
     this.show(this.indexAt(fraction));
   }
 
-  positionAt(fraction: number): Position {
-    const index = this.indexAt(fraction);
-    const tocEntry = entryStartingAt(this.toc, index + 1);
-    return {
-      ...(this.reportsPages ? { page: { current: index + 1, total: this.lines.length } } : {}),
-      ...(tocEntry ? { tocEntry } : {}),
-    };
+  tocEntryAt(fraction: number): TocEntry | undefined {
+    return entryStartingAt(this.toc, this.indexAt(fraction) + 1);
   }
 
   async next(): Promise<void> {

@@ -140,7 +140,7 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
         transforms?.addEventListener('data', transformResource);
         created.renderer.setAttribute('flow', 'paginated');
         toc = (created.book.toc ?? []).map((item) => toTocEntry(item, tocEntries));
-        tocSections = await sectionsOf(created, toc);
+        tocSections = await tocSectionsOf(created, toc);
         if (destroyed.signal.aborted) return;
         const resumed =
           location !== undefined &&
@@ -169,10 +169,8 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
     async goToFraction(fraction) {
       await navigate(`Could not go to ${Math.round(fraction * 100)}%`, () => view?.goToFraction(fraction));
     },
-    positionAt(fraction) {
-      if (!view) return {};
-      const tocEntry = entryForSection(tocSections, sectionAt(view.getSectionFractions(), fraction));
-      return tocEntry ? { tocEntry } : {};
+    tocEntryAt(fraction) {
+      return view && entryForSection(tocSections, sectionAt(view.getSectionFractions(), fraction));
     },
     async next() {
       await navigate('Could not turn to the next page', () => view?.next());
@@ -227,12 +225,12 @@ async function isResolvable(view: FoliateView, location: string): Promise<boolea
   return !!target && target.index >= 0 && target.index < view.book.sections.length;
 }
 
-async function sectionsOf(view: FoliateView, toc: TocEntry[]): Promise<TocSection[]> {
+async function tocSectionsOf(view: FoliateView, toc: TocEntry[]): Promise<TocSection[]> {
   const sections = await Promise.all(
     toc.map(async (entry) => {
       const index = (await view.resolveNavigation(entry.location))?.index;
       const own = index === undefined ? [] : [{ entry, index }];
-      return [...own, ...(await sectionsOf(view, entry.children ?? []))];
+      return [...own, ...(await tocSectionsOf(view, entry.children ?? []))];
     }),
   );
   return sections.flat();
@@ -247,15 +245,10 @@ function sectionAt(starts: number[], fraction: number): number {
   return section;
 }
 
-// A chapter that begins inside the section is the one shown on arrival; otherwise the latest one
-// before it is still running.
 function entryForSection(sections: TocSection[], section: number): TocEntry | undefined {
-  let found: TocSection | undefined;
-  for (const candidate of sections) {
-    if (candidate.index > section) continue;
-    if (!found || candidate.index > found.index || (candidate.index === found.index && candidate.index < section)) found = candidate;
-  }
-  return found?.entry;
+  const startsHere = sections.find((candidate) => candidate.index === section);
+  if (startsHere) return startsHere.entry;
+  return sections.findLast((candidate) => candidate.index < section)?.entry;
 }
 
 function toTocEntry(item: TocItem, entries: WeakMap<TocItem, TocEntry>): TocEntry {
