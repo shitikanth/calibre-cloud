@@ -51,7 +51,7 @@ export function ProgressBar({ label, loaded, total, className }: ProgressBarProp
 export function TopProgressBar({ label, loaded, total, className }: ProgressBarProps) {
   const percent = percentOf({ loaded, total });
   return (
-    <div {...progressAria(label, percent)} className={`fixed inset-x-0 top-0 z-30 h-[3px] overflow-hidden ${className}`}>
+    <div {...progressAria(label, percent)} className={`fixed inset-x-0 top-0 z-30 h-0.5 overflow-hidden ${className}`}>
       <Fill percent={percent} />
     </div>
   );
