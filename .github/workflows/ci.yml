@@ -29,7 +29,22 @@ jobs:
       - run: pnpm --filter @calibre-cloud/web exec playwright install --with-deps --only-shell chromium
       - run: pnpm lint
       - run: pnpm typecheck
-      - run: pnpm test
+      - run: pnpm test:coverage
+      - name: Write coverage to the job summary
+        run: |
+          {
+            echo '### Coverage'
+            echo
+            echo '| Run | Statements | Branches | Functions | Lines |'
+            echo '|---|---|---|---|---|'
+            for run in web deploy-cloudflare; do
+              jq -r --arg run "$run" '.total | "| \($run) | \(.statements.pct)% | \(.branches.pct)% | \(.functions.pct)% | \(.lines.pct)% |"' "coverage/$run/coverage-summary.json"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: coverage/
       - run: pnpm build
       - name: Smoke-check the built app under wrangler dev
         run: pnpm --filter @calibre-cloud/deploy-cloudflare run smoke:local

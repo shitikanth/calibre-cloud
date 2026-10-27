@@ -30,7 +30,7 @@ const pdfjs = {
 };
 
 export default defineConfig([
-  globalIgnores(['**/dist/', '**/.wrangler/', '**/.vitest/']),
+  globalIgnores(['**/dist/', '**/.wrangler/', '**/.vitest/', '**/coverage/']),
   js.configs.recommended,
   tseslint.configs.recommended,
   {

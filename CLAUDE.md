@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 pnpm workspace: `web/` (the SPA) and `deploy/cloudflare/` (the Worker config and deploy scripts).
 
-- `pnpm lint`, `pnpm typecheck`, `pnpm test`: what CI runs. Tests use Vitest; `web/` runs in browser mode (Playwright Chromium).
+- `pnpm lint`, `pnpm typecheck`, `pnpm test`: the local checks. Tests use Vitest; `web/` runs in browser mode (Playwright Chromium). CI runs `pnpm test:coverage` in place of `pnpm test`.
 - `pnpm build`: builds the SPA into `deploy/cloudflare/dist`.
 - `pnpm --filter @calibre-cloud/deploy-cloudflare run smoke:local`: smoke-checks the build, CSP included, under `wrangler dev`.
 
