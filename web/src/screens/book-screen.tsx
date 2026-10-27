@@ -3,11 +3,17 @@ import type { BookDetail } from '../library/protocol.ts';
 import { useLibrarySession } from '../library/session.tsx';
 import { useBook } from '../library/use-book.ts';
 import { BookDetails } from './book-details.tsx';
+import { LibraryNotices } from './library-notices.tsx';
 import { LoadingLibrary } from './library-screen.tsx';
 import { StorageErrorScreen } from './storage-error-screen.tsx';
 
 export function BookScreen({ bookId }: { bookId: string }) {
-  return <OpenBook bookId={bookId}>{(book) => <BookDetails book={book} />}</OpenBook>;
+  return <OpenBook bookId={bookId}>{(book) => (
+        <>
+          <LibraryNotices />
+          <BookDetails book={book} />
+        </>
+      )}</OpenBook>;
 }
 
 type OpenBookProps = {
