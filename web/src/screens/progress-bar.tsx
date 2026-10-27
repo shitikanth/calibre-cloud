@@ -7,10 +7,11 @@ function percentOf({ loaded, total }: Progress): number | undefined {
   return total > 0 ? Math.min(100, Math.floor((loaded / total) * 100)) : undefined;
 }
 
-export function describeProgress(progress: Progress): string {
+export function describeProgress(progress: Progress, { withTotal }: { withTotal: boolean }): string {
   const percent = percentOf(progress);
-  if (percent !== undefined) return `${formatSize(progress.loaded)} of ${formatSize(progress.total)} · ${percent}%`;
-  return progress.loaded > 0 ? `${formatSize(progress.loaded)} downloaded` : '';
+  if (percent === undefined) return progress.loaded > 0 ? `${formatSize(progress.loaded)} downloaded` : '';
+  const sizes = withTotal ? `${formatSize(progress.loaded)} of ${formatSize(progress.total)}` : formatSize(progress.loaded);
+  return `${sizes} · ${percent}%`;
 }
 
 function Fill({ percent }: { percent: number | undefined }) {
@@ -19,7 +20,7 @@ function Fill({ percent }: { percent: number | undefined }) {
   }
   return (
     <span
-      className="absolute inset-y-0 left-0 rounded-full bg-current transition-[width] duration-200 ease-out"
+      className="absolute inset-y-0 left-0 rounded-r-full bg-current transition-[width] duration-200 ease-out"
       style={{ width: `${percent}%` }}
     />
   );
@@ -47,11 +48,11 @@ export function ProgressBar({ label, loaded, total, className }: ProgressBarProp
   );
 }
 
-export function TopProgressBar({ label, loaded, total, className }: ProgressBarProps) {
+export function HeaderProgressBar({ label, loaded, total, className }: ProgressBarProps) {
   const percent = percentOf({ loaded, total });
   return (
-    <span {...progressAria(label, percent)} className={`fixed inset-x-0 top-0 z-30 h-[3px] overflow-hidden ${className}`}>
+    <div {...progressAria(label, percent)} className={`relative h-[3px] overflow-hidden ${className}`}>
       <Fill percent={percent} />
-    </span>
+    </div>
   );
 }

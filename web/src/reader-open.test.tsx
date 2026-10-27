@@ -57,7 +57,7 @@ test('the book file downloads with progress, and Cancel goes back to the book pa
   await held.started;
   await expect.element(app.screen.getByRole('progressbar', { name: 'Downloading EPUB · 56 B' })).toBeVisible();
   await expect.element(app.screen.getByText('Downloading EPUB · 56 B', { exact: true })).toBeVisible();
-  await expect.element(app.screen.getByText(/ of .* · 50%$/)).toBeVisible();
+  await expect.element(app.screen.getByText('28 B · 50%', { exact: true })).toBeVisible();
   await expect.element(app.screen.getByRole('heading', { level: 1, name: 'Jane Eyre' })).toBeVisible();
 
   await userEvent.click(app.screen.getByRole('button', { name: 'Cancel' }));
