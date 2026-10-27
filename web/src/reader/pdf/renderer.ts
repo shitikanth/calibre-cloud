@@ -1,7 +1,7 @@
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 import type { PDFDocumentLoadingTask, PDFDocumentProxy, PDFPageProxy, RenderTask } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import workerSrc from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
-import type { BookRenderer, Relocation, TocEntry } from '../renderer.ts';
+import type { BookRenderer, Position, Relocation, TocEntry } from '../renderer.ts';
 import { entryStartingAt } from '../toc.ts';
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
@@ -66,6 +66,18 @@ class PdfRenderer implements BookRenderer {
     if (this.isPage(page)) await this.show(page);
   }
 
+  async goToFraction(fraction: number): Promise<void> {
+    if (this.doc) await this.show(this.pageAt(fraction, this.doc.numPages));
+  }
+
+  positionAt(fraction: number): Position {
+    if (!this.doc) return {};
+    const total = this.doc.numPages;
+    const current = this.pageAt(fraction, total);
+    const tocEntry = entryStartingAt(this.toc, current);
+    return { page: { current, total }, ...(tocEntry ? { tocEntry } : {}) };
+  }
+
   async next(): Promise<void> {
     if (this.doc && this.currentPage < this.doc.numPages) await this.show(this.currentPage + 1);
   }
@@ -97,6 +109,10 @@ class PdfRenderer implements BookRenderer {
 
   private isPage(page: number): boolean {
     return Number.isInteger(page) && page >= 1 && page <= (this.doc?.numPages ?? 0);
+  }
+
+  private pageAt(fraction: number, total: number): number {
+    return Math.min(Math.max(Math.round(fraction * (total - 1)) + 1, 1), total);
   }
 
   private resolve(location: string | undefined): number {

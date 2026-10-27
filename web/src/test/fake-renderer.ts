@@ -1,8 +1,9 @@
-import type { BookRenderer, ReaderStyles, Relocation, Renderers, TocEntry } from '../reader/renderer.ts';
+import type { BookRenderer, Position, ReaderStyles, Relocation, Renderers, TocEntry } from '../reader/renderer.ts';
 import { entryStartingAt } from '../reader/toc.ts';
 
 export type RendererCall =
   | { op: 'goTo'; location: string }
+  | { op: 'goToFraction'; fraction: number }
   | { op: 'next' }
   | { op: 'previous' }
   | { op: 'setStyles'; styles: ReaderStyles }
@@ -53,6 +54,20 @@ export class FakeRenderer implements BookRenderer {
     this.show(this.resolve(location));
   }
 
+  async goToFraction(fraction: number): Promise<void> {
+    this.calls.push({ op: 'goToFraction', fraction });
+    this.show(this.indexAt(fraction));
+  }
+
+  positionAt(fraction: number): Position {
+    const index = this.indexAt(fraction);
+    const tocEntry = entryStartingAt(this.toc, index + 1);
+    return {
+      ...(this.reportsPages ? { page: { current: index + 1, total: this.lines.length } } : {}),
+      ...(tocEntry ? { tocEntry } : {}),
+    };
+  }
+
   async next(): Promise<void> {
     this.calls.push({ op: 'next' });
     this.show(Math.min(this.index + 1, this.lines.length - 1));
@@ -85,6 +100,10 @@ export class FakeRenderer implements BookRenderer {
 
   emitRenderError(error: Error): void {
     for (const listener of this.errorListeners) listener(error);
+  }
+
+  private indexAt(fraction: number): number {
+    return Math.min(Math.max(Math.round(fraction * (this.lines.length - 1)), 0), this.lines.length - 1);
   }
 
   private resolve(location: string | undefined): number {

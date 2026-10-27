@@ -77,6 +77,20 @@ test('the outline becomes the TOC with page numbers as locations, and an entry n
   expect(relocations.at(-1)?.tocEntry).toBe(renderer.toc[1]);
 });
 
+test('goToFraction turns to the nearest page, and positionAt names that page without turning', async () => {
+  const { renderer, relocations } = await openFixture();
+
+  expect(renderer.positionAt(0.7)).toEqual({ page: { current: 2, total: 2 }, tocEntry: { label: 'Page two', location: '2' } });
+  expect(renderer.positionAt(0.3)).toEqual({ page: { current: 1, total: 2 }, tocEntry: { label: 'Page one', location: '1' } });
+  expect(relocations).toHaveLength(1);
+
+  await renderer.goToFraction(0.7);
+  expect(relocations.at(-1)?.page).toEqual({ current: 2, total: 2 });
+
+  await renderer.goToFraction(0);
+  expect(relocations.at(-1)?.page).toEqual({ current: 1, total: 2 });
+});
+
 test('next and previous turn one page at a time and stop at the ends', async () => {
   const { renderer, relocations } = await openFixture();
 
