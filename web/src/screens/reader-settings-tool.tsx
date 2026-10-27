@@ -6,7 +6,7 @@ const themeLabels: Record<ReaderTheme, string> = { light: 'Light', sepia: 'Sepia
 const zoomStep = 1.25;
 const zoomRange = { min: 0.25, max: 4 };
 const stepButtonClass =
-  'rounded border border-(--reader-line) px-3 py-1 text-sm hover:bg-(--reader-hover) disabled:opacity-50 disabled:hover:bg-transparent';
+  'min-h-11 min-w-11 rounded border border-(--reader-line) px-3 py-1 text-sm hover:bg-(--reader-hover) disabled:opacity-50 disabled:hover:bg-transparent';
 
 export type SettingsToolProps = {
   renderer: BookRenderer;
@@ -80,14 +80,18 @@ function Stepper({ label, value, decrease, increase }: { label: string; value: s
     <div className="flex items-center justify-between gap-2">
       <span>{label}</span>
       <span className="flex items-center gap-2">
-        <button type="button" className={stepButtonClass} disabled={decrease.disabled} onClick={decrease.act}>
-          {decrease.label}
-        </button>
+        <StepButton step={decrease} glyph="−" />
         <span className="w-12 text-center tabular-nums">{value}</span>
-        <button type="button" className={stepButtonClass} disabled={increase.disabled} onClick={increase.act}>
-          {increase.label}
-        </button>
+        <StepButton step={increase} glyph="+" />
       </span>
     </div>
+  );
+}
+
+function StepButton({ step, glyph }: { step: Step; glyph: string }) {
+  return (
+    <button type="button" aria-label={step.label} className={stepButtonClass} disabled={step.disabled} onClick={step.act}>
+      {glyph}
+    </button>
   );
 }
