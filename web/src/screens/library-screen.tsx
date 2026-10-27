@@ -5,7 +5,7 @@ import { BookGrid } from './book-grid.tsx';
 import { ContinueReading } from './continue-reading.tsx';
 import { LibraryNotices } from './library-notices.tsx';
 import { LoadMore } from './load-more.tsx';
-import { ProgressBar } from './progress-bar.tsx';
+import { describeProgress, TopProgressBar } from './progress-bar.tsx';
 import { StorageErrorScreen } from './storage-error-screen.tsx';
 
 export function LibraryScreen() {
@@ -39,15 +39,13 @@ export function LibraryScreen() {
 }
 
 export function LoadingLibrary({ progress }: { progress: LoadProgress | undefined }) {
+  const loaded = progress?.loaded ?? 0;
+  const total = progress?.total ?? 0;
   return (
     <section>
+      <TopProgressBar label="Downloading library" loaded={loaded} total={total} className="text-neutral-900" />
       <h1 className="text-xl font-semibold">Loading your library…</h1>
-      <ProgressBar
-        label="Downloading library"
-        loaded={progress?.loaded ?? 0}
-        total={progress?.total ?? 0}
-        className="mt-4 w-full"
-      />
+      <p className="mt-1 min-h-5 text-sm text-neutral-600 tabular-nums">{describeProgress({ loaded, total })}</p>
     </section>
   );
 }

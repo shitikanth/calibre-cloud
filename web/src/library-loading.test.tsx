@@ -15,8 +15,8 @@ test('the first download of the library shows its progress', async () => {
   const app = await renderApp({ storage, connected: true });
 
   await download.started;
-  await expect.element(app.screen.getByRole('progressbar', { name: 'Downloading library' })).toBeVisible();
-  await expect.element(app.screen.getByText('50%')).toBeVisible();
+  await expect.element(app.screen.getByRole('progressbar', { name: 'Downloading library' })).toHaveAttribute('aria-valuenow', '50');
+  await expect.element(app.screen.getByText(/ of .* · 50%$/)).toBeVisible();
 
   download.release();
   await expect.element(app.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();

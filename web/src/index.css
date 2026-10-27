@@ -1,5 +1,18 @@
 @import 'tailwindcss';
 
+@theme {
+  --animate-progress-slide: progress-slide 1.4s ease-in-out infinite;
+
+  @keyframes progress-slide {
+    from {
+      left: -30%;
+    }
+    to {
+      left: 100%;
+    }
+  }
+}
+
 @layer components {
   .description > * + * {
     @apply mt-3;
