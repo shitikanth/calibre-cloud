@@ -40,3 +40,11 @@ export async function checkAssets(origin: string, assets: string[]): Promise<str
   }
   return problems;
 }
+
+export async function checkSpaFallback(origin: string, missingPath = '/smoke/missing-file.js'): Promise<string[]> {
+  const response = await fetch(new URL(missingPath, origin));
+  await response.body?.cancel();
+  const type = (response.headers.get('content-type') ?? '(none)').split(';')[0]!.trim().toLowerCase();
+  if (response.status === 200 && type === 'text/html') return [];
+  return [`${missingPath} (fetch): HTTP ${response.status} ${type}, expected the app with 200 text/html`];
+}

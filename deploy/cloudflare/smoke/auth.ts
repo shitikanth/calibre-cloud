@@ -1,4 +1,4 @@
-const google = 'https://accounts.google.com';
+const googleOrigin = 'https://accounts.google.com';
 
 async function checkStart(origin: string): Promise<string[]> {
   const route = 'GET /api/auth/google/start';
@@ -11,7 +11,7 @@ async function checkStart(origin: string): Promise<string[]> {
   }
   const problems: string[] = [];
   const target = new URL(location);
-  if (target.origin !== google) problems.push(`${route}: redirects to ${target.origin}, expected ${google}`);
+  if (target.origin !== googleOrigin) problems.push(`${route}: redirects to ${target.origin}, expected ${googleOrigin}`);
   const callback = `${origin}/api/auth/google/callback`;
   const redirectUri = target.searchParams.get('redirect_uri');
   if (redirectUri !== callback) problems.push(`${route}: redirect_uri is ${redirectUri}, expected ${callback}`);

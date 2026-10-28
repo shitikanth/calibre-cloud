@@ -10,6 +10,8 @@ const stateCookie = 'signin_state';
 const signInCookie = 'signin';
 const authPath = '/api/auth';
 const maxCookieAge = 400 * 24 * 60 * 60;
+const stateCookieOptions = { path: authPath, httpOnly: true, secure: true, sameSite: 'Lax' } as const;
+const signInCookieOptions = { path: authPath, httpOnly: true, secure: true, sameSite: 'Strict' } as const;
 
 interface SignInState {
   state: string;
@@ -35,25 +37,28 @@ function requestOrigin(c: Context): string {
   return new URL(c.req.url).origin;
 }
 
-interface Settings {
+function googleCallbackUri(origin: string): string {
+  return `${origin}${authPath}/google/callback`;
+}
+
+interface ReadyConfig {
   readonly google: GoogleClient;
   readonly key: CryptoKey;
 }
 
-type AuthContext = Context<{ Variables: Settings }>;
+type AuthContext = Context<{ Variables: ReadyConfig }>;
 
-async function settingsFrom(config: Config): Promise<Settings | { readonly missing: string[] }> {
+async function ready(config: Config): Promise<ReadyConfig | { readonly missing: string[] }> {
+  const { googleClientId: clientId, googleClientSecret: clientSecret } = config;
   const key = config.cookieKey ? await importCookieKey(config.cookieKey) : undefined;
-  const missing = [
-    ...(config.googleClientId ? [] : ['googleClientId']),
-    ...(config.googleClientSecret ? [] : ['googleClientSecret']),
-    ...(key ? [] : ['cookieKey']),
-  ];
-  if (!config.googleClientId || !config.googleClientSecret || !key) return { missing };
+  if (!clientId || !clientSecret || !key) {
+    const present = { googleClientId: clientId, googleClientSecret: clientSecret, cookieKey: key };
+    return { missing: Object.entries(present).flatMap(([name, value]) => (value ? [] : [name])) };
+  }
   return {
     google: {
-      clientId: config.googleClientId,
-      clientSecret: config.googleClientSecret,
+      clientId,
+      clientSecret,
       fetch: config.fetch ?? ((input, init) => fetch(input, init)),
     },
     key,
@@ -61,13 +66,7 @@ async function settingsFrom(config: Config): Promise<Settings | { readonly missi
 }
 
 async function keepSignIn(c: AuthContext, signIn: SignIn) {
-  setCookie(c, signInCookie, await seal(c.var.key, signInCookie, signIn), {
-    maxAge: maxCookieAge,
-    path: authPath,
-    httpOnly: true,
-    secure: true,
-    sameSite: 'Strict',
-  });
+  setCookie(c, signInCookie, await seal(c.var.key, signInCookie, signIn), { ...signInCookieOptions, maxAge: maxCookieAge });
 }
 
 async function savedSignIn(c: AuthContext): Promise<SignIn | undefined> {
@@ -78,34 +77,29 @@ async function savedSignIn(c: AuthContext): Promise<SignIn | undefined> {
 }
 
 function app(config: Config) {
-  return new Hono<{ Variables: Settings }>()
-    .use('/api/auth/*', async (c, next) => {
+  return new Hono<{ Variables: ReadyConfig }>()
+    .use(`${authPath}/*`, async (c, next) => {
       c.header('cache-control', 'no-store');
       if (c.req.method === 'POST' && c.req.header('origin') !== requestOrigin(c)) return c.json({ error: 'forbidden' }, 403);
-      const settings = await settingsFrom(config);
-      if ('missing' in settings) return c.json({ error: 'not-configured', missing: settings.missing }, 500);
-      c.set('google', settings.google);
-      c.set('key', settings.key);
+      const prepared = await ready(config);
+      if ('missing' in prepared) return c.json({ error: 'not-configured', missing: prepared.missing }, 500);
+      c.set('google', prepared.google);
+      c.set('key', prepared.key);
       await next();
     })
-    .get('/api/auth/google/start', async (c) => {
+    .get(`${authPath}/google/start`, async (c) => {
       const origin = requestOrigin(c);
       const returnTo = sameOriginPath(origin, c.req.query('return'));
       if (returnTo === undefined) return c.json({ error: 'bad-return' }, 400);
       const state = toBase64Url(crypto.getRandomValues(new Uint8Array(32)));
-      setCookie(c, stateCookie, await seal(c.var.key, stateCookie, { state, returnTo } satisfies SignInState), {
-        maxAge: 600,
-        path: authPath,
-        httpOnly: true,
-        secure: true,
-        sameSite: 'Lax',
-      });
-      return c.redirect(googleAuthorizationUrl(c.var.google.clientId, `${origin}/api/auth/google/callback`, state), 302);
+      const sealed = await seal(c.var.key, stateCookie, { state, returnTo } satisfies SignInState);
+      setCookie(c, stateCookie, sealed, { ...stateCookieOptions, maxAge: 600 });
+      return c.redirect(googleAuthorizationUrl(c.var.google.clientId, googleCallbackUri(origin), state), 302);
     })
-    .get('/api/auth/google/callback', async (c) => {
+    .get(`${authPath}/google/callback`, async (c) => {
       const origin = requestOrigin(c);
       const sealedState = getCookie(c, stateCookie);
-      deleteCookie(c, stateCookie, { path: authPath, httpOnly: true, secure: true, sameSite: 'Lax' });
+      deleteCookie(c, stateCookie, stateCookieOptions);
       const saved = sealedState === undefined ? undefined : await unseal(c.var.key, stateCookie, sealedState);
       const returnTo = (isSignInState(saved) && sameOriginPath(origin, saved.returnTo)) || '/';
       const fail = (reason: 'denied' | 'failed') => c.redirect(`${origin}${returnTo}#signin-error=${reason}`, 302);
@@ -114,12 +108,12 @@ function app(config: Config) {
       if (error !== undefined) return fail(error === 'access_denied' ? 'denied' : 'failed');
       const code = c.req.query('code');
       if (code === undefined) return fail('failed');
-      const refreshToken = await exchangeCode(c.var.google, code, `${origin}/api/auth/google/callback`);
+      const refreshToken = await exchangeCode(c.var.google, code, googleCallbackUri(origin));
       if (refreshToken === undefined) return fail('failed');
       await keepSignIn(c, { provider: 'google', refreshToken });
       return c.redirect(`${origin}${returnTo}`, 302);
     })
-    .post('/api/auth/refresh', async (c) => {
+    .post(`${authPath}/refresh`, async (c) => {
       const signIn = await savedSignIn(c);
       if (signIn === undefined) return c.json({ error: 'reconnect' }, 401);
       const result = await refreshAccessToken(c.var.google, signIn.refreshToken);
@@ -128,10 +122,10 @@ function app(config: Config) {
       await keepSignIn(c, signIn);
       return c.json({ accessToken: result.accessToken, expiresAt: Date.now() + result.expiresInSeconds * 1000 });
     })
-    .post('/api/auth/signout', async (c) => {
+    .post(`${authPath}/signout`, async (c) => {
       const signIn = await savedSignIn(c);
       if (signIn !== undefined) await revoke(c.var.google, signIn.refreshToken);
-      deleteCookie(c, signInCookie, { path: authPath, httpOnly: true, secure: true, sameSite: 'Strict' });
+      deleteCookie(c, signInCookie, signInCookieOptions);
       return c.body(null, 204);
     });
 }

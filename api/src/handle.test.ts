@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
+import { toBase64Url } from './base64url.ts';
 import { handle, type Config } from './index.ts';
 
 const origin = 'https://app.example';
@@ -396,7 +397,7 @@ describe('missing configuration', () => {
   });
 
   test('accepts a cookie key written in base64url', async () => {
-    const cookieKey = btoa(String.fromCharCode(...new Uint8Array(32).fill(251))).replace(/\+/g, '-').replace(/\//g, '_');
+    const cookieKey = toBase64Url(new Uint8Array(32).fill(251));
 
     const response = await handle(new Request(`${origin}/api/auth/google/start`), { ...config, cookieKey });
 
