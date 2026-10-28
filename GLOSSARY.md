@@ -33,7 +33,7 @@ The app's read-only access to one library in one storage provider. Ending it is 
 _Avoid_: session, account, login
 
 **Sign-in**:
-The user's read-only grant to the app for their account at a storage provider that needs one, such as Google Drive. It comes before picking a library root, and it lasts across switching to another library in the same account.
+The user's read-only grant to the app for their account at a storage provider that needs one, such as Google Drive. It comes before picking a library root.
 _Avoid_: login, session, authorization, account
 
 **Connect link**:
