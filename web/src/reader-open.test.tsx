@@ -70,6 +70,31 @@ test('the book file downloads with progress, and Cancel goes back to the book pa
   expect(app.screen.getByRole('alert').query()).toBeNull();
 });
 
+test('the reader shows only its header while the version check runs, then the progress bar once the download starts', async () => {
+  const storage = await janeEyreLibrary();
+  const stat = storage.holdNextStat(epubPath);
+  const read = storage.holdNextRead(epubPath);
+  const app = await renderApp({ storage, connected: true, path: '/books/1/read/EPUB', renderers: fakeRenderers(['EPUB']).renderers });
+
+  await stat.started;
+  await expect.element(app.screen.getByRole('heading', { level: 1, name: 'Jane Eyre' })).toBeVisible();
+  await expect.element(app.screen.getByRole('link', { name: 'Back to book' })).toBeVisible();
+  expect(app.screen.getByRole('progressbar').query()).toBeNull();
+  expect(app.screen.getByText('Downloading EPUB · 56 B', { exact: true }).query()).toBeNull();
+  expect(app.screen.getByRole('button', { name: 'Cancel' }).query()).toBeNull();
+
+  stat.release();
+  await read.started;
+  await expect.element(app.screen.getByRole('progressbar', { name: 'Downloading EPUB · 56 B' })).toBeVisible();
+  await expect.element(app.screen.getByText('Downloading EPUB · 56 B', { exact: true })).toBeVisible();
+
+  await userEvent.click(app.screen.getByRole('button', { name: 'Cancel' }));
+
+  await expect.element(app.screen.getByRole('button', { name: 'Download EPUB' })).toBeVisible();
+  expect(app.url).toBe('/books/1');
+  read.release();
+});
+
 test('a format of unknown size downloads under its name alone', async () => {
   const storage = new FakeStorage(await buildCalibreLibrary([{ title: 'Jane Eyre', authors: ['Charlotte Brontë'], formats: { PDF: '' } }]));
   const held = storage.holdNextRead('Charlotte Bronte/Jane Eyre (1)/Jane Eyre - Charlotte Bronte.pdf');

@@ -60,7 +60,8 @@ function Reader({ book, format }: { book: BookDetail; format: BookFormat }) {
       </ReaderShell>
     );
   }
-  if (state.status !== 'done') {
+  if (state.status === 'idle' || state.status === 'checking') return <ReaderShell book={book} theme={settings.theme} />;
+  if (state.status === 'fetching') {
     const cancel = () => {
       file.cancel();
       void navigate({ to: '/books/$bookId', params: { bookId: String(book.id) } });
@@ -72,8 +73,8 @@ function Reader({ book, format }: { book: BookDetail; format: BookFormat }) {
           <p className="text-sm text-(--reader-muted)">{label}</p>
           <ProgressBar
             label={label}
-            loaded={state.status === 'fetching' ? state.loaded : 0}
-            total={state.status === 'fetching' ? state.total : 0}
+            loaded={state.loaded}
+            total={state.total}
             className="w-full"
           />
           <button type="button" className="min-h-11 rounded border border-(--reader-line) px-3 py-1 text-sm" onClick={cancel}>
@@ -94,7 +95,7 @@ function Reader({ book, format }: { book: BookDetail; format: BookFormat }) {
   );
 }
 
-function ReaderShell({ book, theme, children }: { book: BookDetail; theme: ReaderTheme; children: ReactNode }) {
+function ReaderShell({ book, theme, children }: { book: BookDetail; theme: ReaderTheme; children?: ReactNode }) {
   return (
     <div className="reader flex h-dvh flex-col" data-theme={theme}>
       <header className="flex items-center gap-2 border-b border-(--reader-line) px-2 py-1">
