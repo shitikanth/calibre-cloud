@@ -5,7 +5,7 @@ import { megaProvider } from './mega/provider.ts';
 import type { Connection, LinkProvider, ParsedConnectInput, StorageProvider } from './provider.ts';
 import type { LibraryFinder, SignInProvider } from './sign-in.ts';
 
-export const providers: readonly StorageProvider[] = [megaProvider, googleProvider];
+export const providers: readonly StorageProvider[] = [googleProvider, megaProvider];
 
 export type ResolvedConnectInput = { provider: LinkProvider; parsed: ParsedConnectInput };
 

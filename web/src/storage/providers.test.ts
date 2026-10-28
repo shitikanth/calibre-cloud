@@ -16,8 +16,8 @@ function setup() {
   return { auth, storage, drive, registry };
 }
 
-test('the app offers MEGA and Google Drive', () => {
-  expect(providers.map(({ id }) => id)).toEqual(['mega', 'google']);
+test('the app offers Google Drive and MEGA', () => {
+  expect(providers.map(({ id }) => id)).toEqual(['google', 'mega']);
 });
 
 test('lists every provider in the order given, whatever its kind', () => {
