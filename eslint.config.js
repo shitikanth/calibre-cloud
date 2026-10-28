@@ -64,6 +64,18 @@ export default defineConfig([
     rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, foliate, pdfjs] }] },
   },
   {
+    ignores: ['web/src/storage/google/**'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'Literal[value=/googleapis\\.com\\/drive/], TemplateElement[value.raw=/googleapis\\.com\\/drive/]',
+          message: 'Only the Google Drive provider (web/src/storage/google/) may call the Drive API.',
+        },
+      ],
+    },
+  },
+  {
     files: ['web/src/reader/foliate/**'],
     rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, megaSdk, megaProvider, googleProvider, pdfjs] }] },
   },
