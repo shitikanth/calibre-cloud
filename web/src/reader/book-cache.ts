@@ -6,6 +6,7 @@ const KEEP = 3;
 
 export type BookFile = { blob: Blob; version: string };
 export type BookFileKey = BookFormatKey & { path: LibraryPath };
+export type OpenOptions = ReadOptions & { onDownload?: () => void };
 
 type Entry = BookFormatKey & { version: string };
 
@@ -97,7 +98,7 @@ async function cachedCopy(cache: Cache, key: BookFormatKey): Promise<BookFile | 
 export async function openBookFile(
   storage: StorageAdapter,
   { bookId, format, path }: BookFileKey,
-  options: ReadOptions,
+  { onDownload, ...options }: OpenOptions,
 ): Promise<BookFile> {
   const cache = await openCache();
   let version: string;
@@ -114,6 +115,7 @@ export async function openBookFile(
     inBackground(() => rememberOpened(cache, entry));
     return { blob: hit, version };
   }
+  onDownload?.();
   const blob = await storage.read(path, options);
   if (cache) inBackground(() => store(cache, entry, blob));
   return { blob, version };

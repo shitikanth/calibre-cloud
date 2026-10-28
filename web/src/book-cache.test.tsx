@@ -58,6 +58,45 @@ test('a book file changed in the library downloads again and the new copy opens'
   expect(bookFileCalls(storage, janeEyreEpubPath)).toEqual(['stat', 'read']);
 });
 
+test('a book opened before reopens with no progress bar while the version check runs', async () => {
+  const storage = await library();
+  const fake = fakeRenderers(['EPUB', 'PDF']);
+  const app = await renderApp({ storage, connected: true, path: '/books/1/read/EPUB', renderers: fake.renderers });
+  await expect.element(app.screen.getByText('# Chapter 1')).toBeVisible();
+  const stat = storage.holdNextStat(janeEyreEpubPath);
+
+  const reloaded = await app.reload();
+
+  await stat.started;
+  await expect.element(reloaded.getByRole('heading', { level: 1, name: 'Jane Eyre' })).toBeVisible();
+  expect(reloaded.getByRole('progressbar').query()).toBeNull();
+  expect(reloaded.getByRole('button', { name: 'Cancel' }).query()).toBeNull();
+  stat.release();
+  await expect.element(reloaded.getByText('# Chapter 1')).toBeVisible();
+});
+
+test('a book file changed in the library shows the progress bar once its new copy starts downloading', async () => {
+  const storage = await library();
+  const fake = fakeRenderers(['EPUB', 'PDF']);
+  const app = await renderApp({ storage, connected: true, path: '/books/1/read/EPUB', renderers: fake.renderers });
+  await expect.element(app.screen.getByText('# Chapter 1')).toBeVisible();
+  storage.put(janeEyreEpubPath, '# Chapter 1, revised\nReader, I married him.', '2');
+  const stat = storage.holdNextStat(janeEyreEpubPath);
+  const read = storage.holdNextRead(janeEyreEpubPath);
+
+  const reloaded = await app.reload();
+
+  await stat.started;
+  await expect.element(reloaded.getByRole('heading', { level: 1, name: 'Jane Eyre' })).toBeVisible();
+  expect(reloaded.getByRole('progressbar').query()).toBeNull();
+  stat.release();
+  await read.started;
+  await expect.element(reloaded.getByRole('progressbar', { name: /^Downloading EPUB/ })).toBeVisible();
+  await expect.element(reloaded.getByRole('button', { name: 'Cancel' })).toBeVisible();
+  read.release();
+  await expect.element(reloaded.getByText('# Chapter 1, revised')).toBeVisible();
+});
+
 const janeEyrePdfPath = 'Charlotte Bronte/Jane Eyre (1)/Jane Eyre - Charlotte Bronte.pdf';
 const wutheringEpubPath = 'Emily Bronte/Wuthering Heights (2)/Wuthering Heights - Emily Bronte.epub';
 const wutheringPdfPath = 'Emily Bronte/Wuthering Heights (2)/Wuthering Heights - Emily Bronte.pdf';
