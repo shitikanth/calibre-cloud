@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="stylesheet" href="/pages.css" />
+    <title>Privacy policy · calibre-cloud</title>
+  </head>
+  <body>
+    <main>
+      <p class="wordmark"><a href="/about">calibre-cloud</a></p>
+      <h1>Privacy policy</h1>
+      <p class="updated">Last updated 28 October 2026</p>
+      <p class="lead">
+        calibre-cloud reads your Calibre library from your own storage and shows it in your browser. Your library and
+        books go straight from your storage to your browser. We never receive them, and we store nothing about you.
+      </p>
+
+      <h2>What the app reads from Google Drive</h2>
+      <p>
+        When you connect Google Drive, you sign in with Google and allow calibre-cloud to see and download your Drive
+        files. The app asks for read-only access and nothing else: not your name, your email address, or your profile.
+        With that access, the app reads:
+      </p>
+      <ul>
+        <li>the names of your folders, so you can pick the one that holds your Calibre library;</li>
+        <li>the names, sizes, and checksums of files in that library, to find them and tell when they change;</li>
+        <li>the contents of the library's <code>metadata.db</code>, its covers, and the book files you open or download.</li>
+      </ul>
+      <p>It never creates, changes, or deletes anything in your Drive.</p>
+
+      <h2>How it's used</h2>
+      <p>
+        Only to show your library in your browser, and to let you read and download your books. We don't use it for
+        advertising, we don't sell it, we don't use it to train AI models, and we don't share it with anyone.
+      </p>
+      <p>
+        calibre-cloud's use and transfer of information received from Google APIs adheres to the
+        <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>,
+        including the Limited Use requirements.
+      </p>
+
+      <h2>Where it goes</h2>
+      <p>
+        Your browser fetches everything above straight from Google. None of it passes through our server: not your book
+        files, not <code>metadata.db</code>, not covers, not the names of your files and folders.
+      </p>
+      <p>Our server takes part in signing in, and nothing else:</p>
+      <ul>
+        <li>
+          When you sign in, Google sends our server a one-time code. The server swaps it with Google for a refresh token,
+          encrypts the token, and saves it in a cookie in your browser. The server keeps no copy. It has no database.
+        </li>
+        <li>
+          When your browser needs to reach Drive, it sends that cookie back. The server decrypts the refresh token, gets a
+          short-lived access token from Google, and hands it to your browser, which keeps it in memory only.
+        </li>
+      </ul>
+
+      <h2>What stays on your device</h2>
+      <p>
+        To open your library quickly, calibre-cloud keeps some things in your browser's storage on this device: which
+        library you connected, a copy of the library's <code>metadata.db</code>, covers, the last three books you opened,
+        your place in each book, and your reader settings. None of it is sent to us.
+      </p>
+
+      <h2>Cookies</h2>
+      <p>
+        calibre-cloud sets cookies only to sign in to Google Drive: one that lasts ten minutes while you sign in, and the
+        encrypted sign-in cookie above. Your browser sends them only to the sign-in part of our server, and page scripts
+        can't read them. There are no analytics, advertising, or tracking cookies, and no analytics of any kind.
+      </p>
+
+      <h2>MEGA</h2>
+      <p>
+        When you connect a MEGA shared folder, its link stays in your browser. Your browser fetches and decrypts the
+        library straight from MEGA. Our server is not involved.
+      </p>
+
+      <h2>Hosting</h2>
+      <p>
+        The app and its sign-in server run on <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare</a>,
+        which handles requests to them as our hosting provider.
+      </p>
+
+      <h2>Removing access and data</h2>
+      <ul>
+        <li>
+          <strong>Disconnect</strong> in the app deletes everything it keeps on this device (reader settings stay),
+          revokes calibre-cloud's access to your Google account, and deletes the sign-in cookie.
+        </li>
+        <li>
+          You can also remove calibre-cloud's access at any time from your
+          <a href="https://myaccount.google.com/connections">Google account</a>.
+        </li>
+        <li>Clearing this site's data in your browser removes everything the app keeps on this device.</li>
+      </ul>
+
+      <h2>Changes</h2>
+      <p>If this policy changes, the new version will be posted on this page with a new date.</p>
+
+      <h2>Contact</h2>
+      <p>
+        Questions or concerns: open an issue at
+        <a href="https://github.com/shitikanth/calibre-cloud/issues">github.com/shitikanth/calibre-cloud</a>.
+      </p>
+    </main>
+    <nav aria-label="calibre-cloud">
+      <a href="/about">About</a>
+      <a href="/">Open the app</a>
+      <a href="/terms">Terms of service</a>
+    </nav>
+  </body>
+</html>
