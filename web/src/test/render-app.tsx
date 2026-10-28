@@ -41,7 +41,7 @@ export async function renderApp({
   if (connected) saveConnection(connected === true ? { provider: 'mega', link: testLink } : connected);
   const opened: Connection[] = [];
   const pageProviders = (): Providers => {
-    const registry = createProviders([...appProviders, ...(signIn ? [signIn] : [])], createAccessTokens({ fetch: auth.fetch }));
+    const registry = createProviders([...appProviders.filter(({ kind }) => kind === 'link'), ...(signIn ? [signIn] : [])], createAccessTokens({ fetch: auth.fetch }));
     return {
       ...registry,
       openStorage(connection) {
