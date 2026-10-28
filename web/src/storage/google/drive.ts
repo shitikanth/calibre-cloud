@@ -1,11 +1,11 @@
-import { Aborted, Network } from '../adapter.ts';
+import { Aborted } from '../adapter.ts';
 import type { AccessTokens } from '../sign-in.ts';
-import { driveFailure } from './errors.ts';
+import { driveFailure, toStorageError } from './errors.ts';
 
-export const folderType = 'application/vnd.google-apps.folder';
 export const sharedWithMe = 'shared-with-me';
 
 const files = 'https://www.googleapis.com/drive/v3/files';
+const folderType = 'application/vnd.google-apps.folder';
 const maxRetries = 2;
 const maxRetryWait = 10;
 
@@ -13,12 +13,21 @@ export type DriveFile = { id: string; name?: string; parents?: string[]; size?: 
 
 type FileList = { nextPageToken?: string; files?: DriveFile[] };
 
-export function quote(value: string): string {
+function quote(value: string): string {
   return `'${value.replace(/[\\']/g, '\\$&')}'`;
 }
 
-export function childrenOf(folder: string): string {
-  return folder === sharedWithMe ? 'sharedWithMe = true' : `${quote(folder)} in parents`;
+export type ItemQuery = { kind: 'folder' | 'file'; in?: string; name?: string };
+
+export function query({ kind, in: folder, name }: ItemQuery): string {
+  return [
+    folder === undefined ? [] : folder === sharedWithMe ? 'sharedWithMe = true' : `${quote(folder)} in parents`,
+    name === undefined ? [] : `name = ${quote(name)}`,
+    `mimeType ${kind === 'folder' ? '=' : '!='} ${quote(folderType)}`,
+    'trashed = false',
+  ]
+    .flat()
+    .join(' and ');
 }
 
 export function createDriveClient(tokens: AccessTokens) {
@@ -26,8 +35,7 @@ export function createDriveClient(tokens: AccessTokens) {
     try {
       return await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal: signal ?? null });
     } catch (error) {
-      if (signal?.aborted) throw new Aborted();
-      throw new Network(error instanceof Error ? error.message : String(error));
+      throw toStorageError(error, signal);
     }
   };
 
@@ -40,6 +48,7 @@ export function createDriveClient(tokens: AccessTokens) {
       if (response.ok) return response;
       if (response.status === 401 && !refreshed) {
         refreshed = true;
+        await response.body?.cancel();
         token = await tokens.get({ refresh: true });
         continue;
       }
@@ -56,8 +65,7 @@ export function createDriveClient(tokens: AccessTokens) {
     try {
       return (await response.json()) as T;
     } catch (error) {
-      if (signal?.aborted) throw new Aborted();
-      throw new Network(error instanceof Error ? error.message : String(error));
+      throw toStorageError(error, signal);
     }
   };
 

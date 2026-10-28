@@ -1,6 +1,6 @@
-import { Network, NotFound, QuotaExceeded, ReconnectRequired, type StorageError } from '../adapter.ts';
+import { Aborted, isStorageError, Network, NotFound, QuotaExceeded, ReconnectRequired, type StorageError } from '../adapter.ts';
 
-export type DriveFailure = { error: StorageError; transient: boolean; retryAfter: number | undefined };
+type DriveFailure = { error: StorageError; transient: boolean; retryAfter: number | undefined };
 
 const rateLimits = new Set(['userRateLimitExceeded', 'rateLimitExceeded']);
 
@@ -34,4 +34,10 @@ function retryAfterOf(response: Response): number | undefined {
   if (Number.isFinite(seconds)) return Math.max(0, seconds);
   const date = Date.parse(header);
   return Number.isNaN(date) ? undefined : Math.max(0, Math.ceil((date - Date.now()) / 1000));
+}
+
+export function toStorageError(thrown: unknown, signal: AbortSignal | undefined): StorageError {
+  if (signal?.aborted) return new Aborted();
+  if (isStorageError(thrown)) return thrown;
+  return new Network(thrown instanceof Error ? thrown.message : String(thrown));
 }

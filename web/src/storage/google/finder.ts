@@ -1,6 +1,6 @@
 import { NotFound } from '../adapter.ts';
 import type { AccessTokens, FolderEntry, LibraryCandidate, LibraryFinder } from '../sign-in.ts';
-import { childrenOf, createDriveClient, folderType, quote, sharedWithMe, type DriveFile } from './drive.ts';
+import { createDriveClient, query, sharedWithMe, type DriveFile } from './drive.ts';
 
 const myDrive = { id: 'root', name: 'My Drive' };
 const sharedWithMeFolder = { id: sharedWithMe, name: 'Shared with me' };
@@ -12,8 +12,10 @@ export function createLibraryFinder(tokens: AccessTokens): LibraryFinder {
 
   return {
     async findLibraries(signal) {
-      const query = `name = 'metadata.db' and mimeType != ${quote(folderType)} and trashed = false`;
-      const [hits, root] = await Promise.all([drive.list(query, 'parents', signal), drive.file('root', 'id', signal)]);
+      const [hits, myDriveRoot] = await Promise.all([
+        drive.list(query({ kind: 'file', name: 'metadata.db' }), 'parents', signal),
+        drive.file('root', 'id', signal),
+      ]);
       const folders = new Map<string, Promise<DriveFile | undefined>>();
       const folder = (id: string) => {
         let found = folders.get(id);
@@ -30,14 +32,14 @@ export function createLibraryFinder(tokens: AccessTokens): LibraryFinder {
       const pathOf = async (id: string) => {
         const names: string[] = [];
         let current: string | undefined = id;
-        while (current !== root.id && names.length < maxDepth) {
+        while (current !== myDriveRoot.id && names.length < maxDepth) {
           const found: DriveFile | undefined = await folder(current);
           if (!found) break;
           names.unshift(found.name ?? '');
           current = found.parents?.[0];
           if (!current) break;
         }
-        return [current === root.id ? myDrive.name : sharedWithMeFolder.name, ...names].join('/');
+        return [current === myDriveRoot.id ? myDrive.name : sharedWithMeFolder.name, ...names].join('/');
       };
 
       const roots = new Set(hits.flatMap(({ parents }) => parents?.slice(0, 1) ?? []));
@@ -47,8 +49,7 @@ export function createLibraryFinder(tokens: AccessTokens): LibraryFinder {
 
     async listFolder(folder, signal) {
       if (folder === undefined) return [myDrive, sharedWithMeFolder];
-      const query = `${childrenOf(folder)} and mimeType = ${quote(folderType)} and trashed = false`;
-      const children = await drive.list(query, 'id,name', signal);
+      const children = await drive.list(query({ kind: 'folder', in: folder }), 'id,name', signal);
       return children.map(({ id, name }): FolderEntry => ({ id, name: name ?? '' })).toSorted((a, b) => byName.compare(a.name, b.name));
     },
   };

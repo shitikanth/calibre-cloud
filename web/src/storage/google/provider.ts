@@ -1,6 +1,6 @@
 import type { Connection } from '../provider.ts';
 import type { SignInProvider } from '../sign-in.ts';
-import { createDriveAdapter } from './adapter.ts';
+import { createGoogleAdapter } from './adapter.ts';
 import { createLibraryFinder } from './finder.ts';
 
 type GoogleConnection = { provider: 'google'; root: string };
@@ -21,9 +21,9 @@ export const googleProvider: SignInProvider = {
     return connection;
   },
   isConnection: (value): value is Connection => isGoogleConnection(value),
-  libraryFinder: (tokens) => createLibraryFinder(tokens),
+  libraryFinder: createLibraryFinder,
   open(connection, tokens) {
     if (!isGoogleConnection(connection)) throw new Error('Not a Google Drive connection');
-    return createDriveAdapter(connection.root, tokens);
+    return createGoogleAdapter(connection.root, tokens);
   },
 };

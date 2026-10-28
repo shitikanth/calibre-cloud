@@ -1,15 +1,14 @@
-import { Aborted, Network, NotFound, type FileStat, type LibraryPath, type ReadOptions, type StorageAdapter } from '../adapter.ts';
+import { Aborted, NotFound, type FileStat, type LibraryPath, type ReadOptions, type StorageAdapter } from '../adapter.ts';
 import type { AccessTokens } from '../sign-in.ts';
-import { childrenOf, createDriveClient, folderType, quote } from './drive.ts';
+import { createDriveClient, query } from './drive.ts';
+import { toStorageError } from './errors.ts';
 
-export function createDriveAdapter(root: string, tokens: AccessTokens): StorageAdapter {
+export function createGoogleAdapter(root: string, tokens: AccessTokens): StorageAdapter {
   const drive = createDriveClient(tokens);
   const folders = new Map<string, string>([['', root]]);
 
-  const child = async (parent: string, name: string, folder: boolean, signal: AbortSignal | undefined) => {
-    const type = `mimeType ${folder ? '=' : '!='} ${quote(folderType)}`;
-    return drive.first(`${childrenOf(parent)} and name = ${quote(name)} and ${type} and trashed = false`, 'id,size,md5Checksum', signal);
-  };
+  const child = (kind: 'folder' | 'file', parent: string, name: string, signal: AbortSignal | undefined) =>
+    drive.first(query({ kind, in: parent, name }), 'id,size,md5Checksum', signal);
 
   const find = async (path: LibraryPath, signal: AbortSignal | undefined) => {
     const segments = path.split('/').filter(Boolean);
@@ -23,12 +22,12 @@ export function createDriveAdapter(root: string, tokens: AccessTokens): StorageA
         folder = known;
         continue;
       }
-      const found = await child(folder, segment, true, signal);
+      const found = await child('folder', folder, segment, signal);
       if (!found) throw new NotFound(path);
       folders.set(key, found.id);
       folder = found.id;
     }
-    const file = await child(folder, name, false, signal);
+    const file = await child('file', folder, name, signal);
     if (!file) throw new NotFound(path);
     return { id: file.id, size: Number(file.size ?? 0), version: file.md5Checksum ?? '' };
   };
@@ -52,8 +51,7 @@ export function createDriveAdapter(root: string, tokens: AccessTokens): StorageA
           onProgress?.(loaded, file.size);
         }
       } catch (error) {
-        if (signal?.aborted || error instanceof Aborted) throw new Aborted();
-        throw new Network(error instanceof Error ? error.message : String(error));
+        throw toStorageError(error, signal);
       }
       return new Blob(chunks);
     },
