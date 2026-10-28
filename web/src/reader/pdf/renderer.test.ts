@@ -137,7 +137,7 @@ test('a swipe turns the page and is reported as a turn, unless it pans a zoomed 
   expect(turns).toBe(2);
 });
 
-test('a swipe while the browser is pinch-zoomed pans the page and is not reported as a turn', async () => {
+test('a swipe while the browser is pinch-zoomed neither turns the page nor is reported as a turn', async () => {
   const { renderer, container, relocations } = await openFixture();
   let turns = 0;
   renderer.onTurn(() => (turns += 1));

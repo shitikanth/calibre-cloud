@@ -337,8 +337,9 @@ test('a swipe inside the section document turns the page and is reported as a tu
   expect(turns).toBe(1);
 });
 
-test('a swipe inside the section document while the browser is pinch-zoomed is not reported as a turn', async () => {
-  const { renderer } = await openFixture();
+test('a swipe inside the section document while the browser is pinch-zoomed neither turns the page nor is reported as a turn', async () => {
+  const { renderer, relocations } = await openFixture();
+  const opening = relocations.at(-1)?.fraction;
   let turns = 0;
   renderer.onTurn(() => (turns += 1));
   vi.spyOn(VisualViewport.prototype, 'scale', 'get').mockReturnValue(2);
@@ -346,6 +347,7 @@ test('a swipe inside the section document while the browser is pinch-zoomed is n
   await swipe(renderer.sectionDocument?.body as Element, 500, 100);
 
   await new Promise((resolve) => setTimeout(resolve, 100));
+  expect(relocations.at(-1)?.fraction).toBe(opening);
   expect(turns).toBe(0);
 });
 
