@@ -29,8 +29,12 @@ A cloud storage service a library can live in: Dropbox, Google Drive, or MEGA.
 _Avoid_: backend, cloud, drive
 
 **Connection**:
-The app's read-only access to one library in one storage provider. Ending it is a disconnect, which also forgets the library on this device.
-_Avoid_: session, account, login, sign-in
+The app's read-only access to one library in one storage provider. Ending it is a disconnect, which also forgets the library on this device and ends any sign-in it uses.
+_Avoid_: session, account, login
+
+**Sign-in**:
+The user's read-only grant to the app for their account at a storage provider that needs one, such as Google Drive. It comes before picking a library root.
+_Avoid_: login, session, authorization, account
 
 **Connect link**:
 A link to the app that carries a storage provider's connect input in its fragment, so opening it connects that library.
