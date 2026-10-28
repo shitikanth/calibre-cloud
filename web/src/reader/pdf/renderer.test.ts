@@ -137,6 +137,19 @@ test('a swipe turns the page and is reported as a turn, unless it pans a zoomed 
   expect(turns).toBe(2);
 });
 
+test('a swipe while the browser is pinch-zoomed neither turns the page nor is reported as a turn', async () => {
+  const { renderer, container, relocations } = await openFixture();
+  let turns = 0;
+  renderer.onTurn(() => (turns += 1));
+  vi.spyOn(VisualViewport.prototype, 'scale', 'get').mockReturnValue(2);
+
+  await swipe(canvasIn(container), 500, 100);
+
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  expect(relocations.at(-1)?.page?.current).toBe(1);
+  expect(turns).toBe(0);
+});
+
 test('setZoom scales the page from fit-width and re-renders it', async () => {
   const { renderer, container, relocations } = await openFixture();
   const canvas = canvasIn(container);

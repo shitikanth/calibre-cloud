@@ -2,12 +2,14 @@ export type SwipeDirection = 'next' | 'previous';
 
 const minDistance = 40;
 
+const pinchZoomed = () => (globalThis.visualViewport?.scale ?? 1) > 1;
+
 export function onSwipe(target: EventTarget, listener: (direction: SwipeDirection) => void): () => void {
   let start: { x: number; y: number } | undefined;
   const begin = (event: Event) => {
     const { touches } = event as TouchEvent;
     const touch = touches[0];
-    start = touches.length === 1 && touch ? { x: touch.clientX, y: touch.clientY } : undefined;
+    start = touches.length === 1 && touch && !pinchZoomed() ? { x: touch.clientX, y: touch.clientY } : undefined;
   };
   const end = (event: Event) => {
     const touch = (event as TouchEvent).changedTouches[0];
