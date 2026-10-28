@@ -79,7 +79,7 @@ A Calibre library can be many GB, but only `metadata.db` is needed to list the w
 
 - **Frontend:** React, Vite, TypeScript, TanStack Router and TanStack Query, Tailwind.
 - **SQLite:** the official `@sqlite.org/sqlite-wasm` build, run in a Web Worker.
-- **Hosting:** a Cloudflare Worker serving static assets, with SPA fallback and a strict CSP set in platform config, not code. The reader renders each foliate-js section or comic page in a same-origin `blob:` frame, which needs `style-src 'self' 'unsafe-inline' blob:`, `frame-src blob:`, and `frame-ancestors 'self'`; `script-src` stays `'self' 'wasm-unsafe-eval'`, so scripts inside a book never run. No serverless functions yet; MEGA needs none.
+- **Hosting:** a Cloudflare Worker serving static assets, with SPA fallback and a strict CSP set in platform config, not code. The reader renders each foliate-js section or comic page in a same-origin `blob:` frame, which needs `style-src 'self' 'unsafe-inline' blob:`, `frame-src blob:`, and `frame-ancestors 'self'`; `script-src` stays `'self' 'wasm-unsafe-eval'`, so scripts inside a book never run. The same Worker runs the serverless auth functions under `/api/*`: a platform-neutral core in `api/` and a Cloudflare entry in `deploy/cloudflare/` that only passes it the Worker's secrets.
 - **Tests:** Vitest in browser mode (Chromium), driving the whole app against an in-memory fake storage adapter.
 
 ## Storage providers

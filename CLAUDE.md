@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-pnpm workspace: `web/` (the SPA) and `deploy/cloudflare/` (the Worker config and deploy scripts).
+pnpm workspace: `web/` (the SPA), `api/` (the platform-neutral API core, `handle(request, config)`), and `deploy/cloudflare/` (the Worker entry, its config, and deploy scripts).
 
 - `pnpm lint`, `pnpm typecheck`, `pnpm test`: the local checks. Tests use Vitest; `web/` runs in browser mode (Playwright Chromium). CI runs `pnpm test:coverage` in place of `pnpm test`.
 - `pnpm build`: builds the SPA into `deploy/cloudflare/dist`.
