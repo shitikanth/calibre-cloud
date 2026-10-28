@@ -3,6 +3,8 @@ import { useEffect } from 'react';
 import { useLibrarySession } from '../library/session.tsx';
 import { useDismissLibraryUpdate } from '../library/use-library-update.ts';
 import { describeError } from './describe-error.ts';
+import { ReconnectLink } from './reconnect-link.tsx';
+import { SignInProblem } from './sign-in-outcome.tsx';
 
 export function LibraryNotices({ showChecking = false }: { showChecking?: boolean }) {
   const { update } = useLibrarySession();
@@ -15,11 +17,17 @@ export function LibraryNotices({ showChecking = false }: { showChecking?: boolea
     );
   }
   if (update.isError) {
-    const { title, detail } = describeError(update.error, 'library');
+    const { title, detail, canReconnect } = describeError(update.error, 'library');
     return (
       <div role="alert" className="mb-4 rounded bg-amber-50 px-3 py-2 text-amber-900">
         <p className="font-medium">{title}</p>
         <p className="text-sm">{detail} Showing the library saved on this device.</p>
+        {canReconnect && (
+          <>
+            <SignInProblem className="text-sm" />
+            <ReconnectLink className="text-sm font-medium underline" />
+          </>
+        )}
       </div>
     );
   }

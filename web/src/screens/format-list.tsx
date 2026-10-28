@@ -5,6 +5,7 @@ import type { BookDetail, BookFormat } from '../library/protocol.ts';
 import { useRenderers } from '../reader/context.tsx';
 import { describeError } from './describe-error.ts';
 import { formatSize } from './format.ts';
+import { ReconnectLink } from './reconnect-link.tsx';
 import { ProgressBar } from './progress-bar.tsx';
 
 export function FormatList({ book }: { book: BookDetail }) {
@@ -82,10 +83,11 @@ function DownloadingFormat({ format, state, cancel }: { format: string; state: D
 }
 
 function DownloadError({ error }: { error: Error }) {
-  const { title, detail } = describeError(error, 'file');
+  const { title, detail, canReconnect } = describeError(error, 'file');
   return (
     <>
-      <span className="font-medium">{title}.</span> {detail}
+      <span className="font-medium">{title}.</span> {detail}{' '}
+      {canReconnect && <ReconnectLink className="font-medium underline" />}
     </>
   );
 }

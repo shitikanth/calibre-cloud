@@ -13,6 +13,8 @@ import { useBookFile } from '../reader/use-book-file.ts';
 import { NotFound, OpenBook } from './book-screen.tsx';
 import { ConnectedShell } from './connected-shell.tsx';
 import { describeError } from './describe-error.ts';
+import { ReconnectLink } from './reconnect-link.tsx';
+import { SignInProblem } from './sign-in-outcome.tsx';
 import { ExternalLinkDialog } from './external-link-dialog.tsx';
 import { formatSize } from './format.ts';
 import { ProgressBar } from './progress-bar.tsx';
@@ -120,12 +122,14 @@ function BackToBook({ book }: { book: BookDetail }) {
 }
 
 function FetchFailed({ book, error, retry }: { book: BookDetail; error: Error; retry: () => void }) {
-  const { title, detail, canRetry } = describeError(error, 'file');
+  const { title, detail, canRetry, canReconnect } = describeError(error, 'file');
   return (
     <section role="alert" className="mx-auto w-full max-w-md px-4 py-12">
       <h2 className="text-xl font-semibold">{title}</h2>
       <p className="mt-2 text-(--reader-muted)">{detail}</p>
+      {canReconnect && <SignInProblem className="mt-2" />}
       <div className="mt-4 flex flex-wrap gap-2">
+        {canReconnect && <ReconnectLink className="rounded bg-(--reader-fg) px-4 py-2 text-(--reader-bg)" />}
         {canRetry && (
           <button type="button" className="rounded bg-(--reader-fg) px-4 py-2 text-(--reader-bg)" onClick={retry}>
             Retry
@@ -155,9 +159,18 @@ function Unopenable({ book, format }: { book: BookDetail; format: BookFormat }) 
         <BackToBook book={book} />
       </div>
       {download.state.status === 'failed' && (
-        <p className="mt-2 text-sm text-red-700">{describeError(download.state.error, 'file').title}.</p>
+        <DownloadFailed error={download.state.error} />
       )}
     </section>
+  );
+}
+
+function DownloadFailed({ error }: { error: Error }) {
+  const { title, canReconnect } = describeError(error, 'file');
+  return (
+    <p className="mt-2 text-sm text-red-700">
+      {title}. {canReconnect && <ReconnectLink className="underline" />}
+    </p>
   );
 }
 

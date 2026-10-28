@@ -40,17 +40,19 @@ export async function renderApp({
 }: RenderAppOptions) {
   if (connected) saveConnection(connected === true ? { provider: 'mega', link: testLink } : connected);
   const opened: Connection[] = [];
-  const registry = createProviders([...appProviders, ...(signIn ? [signIn] : [])], createAccessTokens({ fetch: auth.fetch }));
-  const providers: Providers = {
-    ...registry,
-    openStorage(connection) {
-      opened.push(connection);
-      return signIn?.isConnection(connection) ? registry.openStorage(connection) : storage;
-    },
+  const pageProviders = (): Providers => {
+    const registry = createProviders([...appProviders, ...(signIn ? [signIn] : [])], createAccessTokens({ fetch: auth.fetch }));
+    return {
+      ...registry,
+      openStorage(connection) {
+        opened.push(connection);
+        return signIn?.isConnection(connection) ? registry.openStorage(connection) : storage;
+      },
+    };
   };
   let history = createMemoryHistory({ initialEntries: [path] });
   const mount = async () => {
-    const mountedScreen = await render(<App router={createAppRouter({ history })} providers={providers} renderers={renderers} />);
+    const mountedScreen = await render(<App router={createAppRouter({ history })} providers={pageProviders()} renderers={renderers} />);
     mounted.add(mountedScreen);
     return mountedScreen;
   };
