@@ -37,7 +37,7 @@ jobs:
             echo
             echo '| Run | Statements | Branches | Functions | Lines |'
             echo '|---|---|---|---|---|'
-            for run in web deploy-cloudflare; do
+            for run in web deploy-cloudflare api; do
               jq -r --arg run "$run" '.total | "| \($run) | \(.statements.pct)% | \(.branches.pct)% | \(.functions.pct)% | \(.lines.pct)% |"' "coverage/$run/coverage-summary.json"
             done
           } >> "$GITHUB_STEP_SUMMARY"
