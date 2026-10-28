@@ -5,8 +5,8 @@ import type { BookDetail, BookFormat } from '../library/protocol.ts';
 import { useRenderers } from '../reader/context.tsx';
 import { describeError } from './describe-error.ts';
 import { formatSize } from './format.ts';
-import { ReconnectLink } from './reconnect-link.tsx';
 import { ProgressBar } from './progress-bar.tsx';
+import { ReconnectLink } from './reconnect-link.tsx';
 
 export function FormatList({ book }: { book: BookDetail }) {
   if (book.formats.length === 0) return <p className="text-sm text-neutral-600">No files for this book.</p>;

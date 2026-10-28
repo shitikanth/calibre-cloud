@@ -13,8 +13,6 @@ import { useBookFile } from '../reader/use-book-file.ts';
 import { NotFound, OpenBook } from './book-screen.tsx';
 import { ConnectedShell } from './connected-shell.tsx';
 import { describeError } from './describe-error.ts';
-import { ReconnectLink } from './reconnect-link.tsx';
-import { SignInProblem } from './sign-in-outcome.tsx';
 import { ExternalLinkDialog } from './external-link-dialog.tsx';
 import { formatSize } from './format.ts';
 import { ProgressBar } from './progress-bar.tsx';
@@ -22,6 +20,8 @@ import { BackToBookLink, BottomBar, TapZone, TopBar, zoneAt, type ControlsState 
 import { whereYouAreLabel, positionLabel, SeekBar } from './reader-seek-bar.tsx';
 import { SettingsTool } from './reader-settings-tool.tsx';
 import { TocTool } from './reader-toc.tsx';
+import { ReconnectLink } from './reconnect-link.tsx';
+import { SignInProblem } from './sign-in-outcome.tsx';
 import { useWide } from './use-wide.ts';
 
 export function ReaderScreen({ bookId, format }: { bookId: string; format: string }) {
@@ -127,7 +127,7 @@ function FetchFailed({ book, error, retry }: { book: BookDetail; error: Error; r
     <section role="alert" className="mx-auto w-full max-w-md px-4 py-12">
       <h2 className="text-xl font-semibold">{title}</h2>
       <p className="mt-2 text-(--reader-muted)">{detail}</p>
-      {canReconnect && <SignInProblem className="mt-2" />}
+      {canReconnect && <SignInProblem className="mt-2" announce={false} />}
       <div className="mt-4 flex flex-wrap gap-2">
         {canReconnect && <ReconnectLink className="rounded bg-(--reader-fg) px-4 py-2 text-(--reader-bg)" />}
         {canRetry && (

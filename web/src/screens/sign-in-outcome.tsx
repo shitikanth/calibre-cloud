@@ -17,12 +17,19 @@ function problemFor(error: string | undefined): string | undefined {
 
 export function SignInOutcomeHandler({ children }: { children: ReactNode }) {
   const { hash, pathname, searchStr } = useLocation();
-  const { history } = useRouter();
-  const [problem] = useState(() => problemFor(readSignInError(hash)));
+  const router = useRouter();
+  const [problem, setProblem] = useState(() => problemFor(readSignInError(hash)));
 
   useEffect(() => {
-    if (readSignInError(hash) !== undefined) history.replace(`${pathname}${searchStr}`);
-  }, [hash, pathname, searchStr, history]);
+    if (readSignInError(hash) !== undefined) router.history.replace(`${pathname}${searchStr}`);
+  }, [hash, pathname, searchStr, router]);
+
+  useEffect(() => {
+    if (!problem) return;
+    return router.subscribe('onBeforeNavigate', ({ pathChanged }) => {
+      if (pathChanged) setProblem(undefined);
+    });
+  }, [problem, router]);
 
   return <SignInProblemContext value={problem}>{children}</SignInProblemContext>;
 }
@@ -31,11 +38,11 @@ export function useSignInProblem(): string | undefined {
   return useContext(SignInProblemContext);
 }
 
-export function SignInProblem({ className = '' }: { className?: string }) {
+export function SignInProblem({ className = '', announce = true }: { className?: string; announce?: boolean }) {
   const problem = useSignInProblem();
   if (!problem) return null;
   return (
-    <p role="alert" className={`${className} text-red-700`}>
+    <p role={announce ? 'alert' : undefined} className={`${className} text-red-700`}>
       {problem}
     </p>
   );

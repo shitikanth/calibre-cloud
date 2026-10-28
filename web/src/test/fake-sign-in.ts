@@ -6,8 +6,6 @@ export type FakeFolder = { id: string; name: string; folders?: FakeFolder[] };
 
 export type FakeSignInOptions = {
   storage: StorageAdapter;
-  id?: string;
-  name?: string;
   libraries?: LibraryCandidate[];
   folders?: FakeFolder[];
 };
@@ -20,13 +18,10 @@ export type FakeSignInProvider = SignInProvider & {
   holdNextSearch(): { readonly started: Promise<void>; release(): void };
 };
 
-export function fakeSignInProvider({
-  storage,
-  id = 'fake',
-  name = 'Fake Drive',
-  libraries = [],
-  folders = [],
-}: FakeSignInOptions): FakeSignInProvider {
+const id = 'fake';
+const name = 'Fake Drive';
+
+export function fakeSignInProvider({ storage, libraries = [], folders = [] }: FakeSignInOptions): FakeSignInProvider {
   let failure: StorageError | undefined;
   let hold: { started: () => void; released: Promise<void> } | undefined;
   const finderCalls: string[] = [];

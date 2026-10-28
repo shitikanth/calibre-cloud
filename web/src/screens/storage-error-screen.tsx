@@ -9,7 +9,7 @@ export function StorageErrorScreen({ error, retry }: { error: Error; retry: () =
     <section role="alert">
       <h1 className="text-xl font-semibold">{title}</h1>
       <p className="mt-2 text-neutral-700">{detail}</p>
-      {canReconnect && <SignInProblem className="mt-2" />}
+      {canReconnect && <SignInProblem className="mt-2" announce={false} />}
       <div className="mt-4 flex flex-wrap gap-2">
         {canReconnect && <ReconnectLink className="rounded bg-neutral-900 px-4 py-2 text-white" />}
         {canRetry && (

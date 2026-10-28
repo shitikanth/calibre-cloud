@@ -10,6 +10,7 @@ export type AccessTokenClientOptions = { fetch?: typeof fetch; now?: () => numbe
 type Token = { accessToken: string; expiresAt: number };
 
 const renewBefore = 2 * 60 * 1000;
+const signOutTimeout = 10 * 1000;
 
 export function createAccessTokens({
   fetch: send = (input, init) => fetch(input, init),
@@ -17,10 +18,10 @@ export function createAccessTokens({
 }: AccessTokenClientOptions = {}): AccessTokenClient {
   let current: Token | undefined;
   let refreshing: Promise<string> | undefined;
-  let signIn = 0;
+  let generation = 0;
 
   async function refresh(): Promise<string> {
-    const started = signIn;
+    const started = generation;
     let response: Response;
     try {
       response = await send('/api/auth/refresh', { method: 'POST' });
@@ -31,7 +32,7 @@ export function createAccessTokens({
     if (!response.ok) throw new Network(`Token refresh failed with ${response.status}`);
     const token = parseToken(await response.json().catch(() => undefined));
     if (!token) throw new Network('Token refresh returned no token');
-    if (started === signIn) current = token;
+    if (started === generation) current = token;
     return token.accessToken;
   }
 
@@ -48,8 +49,8 @@ export function createAccessTokens({
     async signOut() {
       current = undefined;
       refreshing = undefined;
-      signIn += 1;
-      await send('/api/auth/signout', { method: 'POST' }).catch(() => undefined);
+      generation += 1;
+      await send('/api/auth/signout', { method: 'POST', signal: AbortSignal.timeout(signOutTimeout) }).catch(() => undefined);
     },
   };
 }

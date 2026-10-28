@@ -20,14 +20,14 @@ type Pick = ReturnType<typeof usePick>;
 function usePick(provider: SignInProvider) {
   const { connect } = useConnection();
   const { openStorage } = useProviders();
-  return useMutation({
+  const mutation = useMutation({
     mutationFn: async (root: string) => {
       const connection = provider.connectionFor(root);
       await openStorage(connection).stat('metadata.db');
       return connection;
     },
-    onSuccess: connect,
   });
+  return { ...mutation, choose: (root: string) => mutation.mutate(root, { onSuccess: connect }) };
 }
 
 export function LibraryPicker({ provider }: { provider: SignInProvider }) {
@@ -50,7 +50,15 @@ export function LibraryPicker({ provider }: { provider: SignInProvider }) {
           {browsing ? (
             <FolderBrowser provider={provider} finder={finder} pick={pick} />
           ) : (
-            <SearchResults provider={provider} finder={finder} pick={pick} browse={() => setBrowsing(true)} />
+            <SearchResults
+              provider={provider}
+              finder={finder}
+              pick={pick}
+              browse={() => {
+                pick.reset();
+                setBrowsing(true);
+              }}
+            />
           )}
           <PickOutcome provider={provider} pick={pick} />
         </div>
@@ -96,7 +104,7 @@ function SearchResults({ provider, finder, pick, browse }: ViewProps & { browse:
         <ul aria-label="Libraries found" className="flex flex-col gap-2">
           {search.data.map(({ root, path }) => (
             <li key={root}>
-              <button type="button" className={rowClass} disabled={pick.isPending} onClick={() => pick.mutate(root)}>
+              <button type="button" className={rowClass} disabled={pick.isPending} onClick={() => pick.choose(root)}>
                 {path}
               </button>
             </li>
@@ -111,6 +119,10 @@ function SearchResults({ provider, finder, pick, browse }: ViewProps & { browse:
 function FolderBrowser({ provider, finder, pick }: ViewProps) {
   const [trail, setTrail] = useState<FolderEntry[]>([]);
   const current = trail.at(-1);
+  const goTo = (next: FolderEntry[]) => {
+    pick.reset();
+    setTrail(next);
+  };
   const folders = useQuery({
     queryKey: ['library-folders', provider.id, current?.id ?? null],
     networkMode: 'always',
@@ -127,7 +139,7 @@ function FolderBrowser({ provider, finder, pick }: ViewProps) {
             type="button"
             className={secondaryClass}
             disabled={pick.isPending}
-            onClick={() => setTrail(trail.slice(0, -1))}
+            onClick={() => goTo(trail.slice(0, -1))}
           >
             Up
           </button>
@@ -148,7 +160,7 @@ function FolderBrowser({ provider, finder, pick }: ViewProps) {
                 type="button"
                 className={rowClass}
                 disabled={pick.isPending}
-                onClick={() => setTrail([...trail, folder])}
+                onClick={() => goTo([...trail, folder])}
               >
                 {folder.name}
               </button>
@@ -161,7 +173,7 @@ function FolderBrowser({ provider, finder, pick }: ViewProps) {
           type="button"
           className="inline-flex min-h-11 items-center self-start rounded bg-neutral-900 px-4 py-2 text-white disabled:opacity-60"
           disabled={pick.isPending}
-          onClick={() => pick.mutate(current.id)}
+          onClick={() => pick.choose(current.id)}
         >
           Use this folder
         </button>

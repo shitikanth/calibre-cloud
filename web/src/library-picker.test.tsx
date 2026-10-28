@@ -107,6 +107,8 @@ test('picking a folder with no Calibre library says so and stays in the picker',
   await expect.element(picker(app).getByRole('alert')).toMatchTextContent(/This folder has no Calibre library/);
   await expect.element(picker(app).getByRole('button', { name: 'My Drive/Photos' })).toBeEnabled();
   expect(app.url).toBe('/connect/fake');
+  await userEvent.click(picker(app).getByRole('button', { name: 'Browse folders' }));
+  expect(picker(app).getByRole('alert').query()).toBeNull();
   const reloaded = await app.reload();
   await expect.element(reloaded.getByRole('region', { name: 'Choose your library' })).toBeVisible();
 });
@@ -143,4 +145,35 @@ test('Cancel goes back to the connect screen', async () => {
   await expect.element(app.screen.getByRole('form', { name: 'Connect MEGA' })).toBeVisible();
   expect(app.url).toBe('/');
   expect(app.opened).toEqual([]);
+});
+
+test('Cancel while a library is opening does not connect it', async () => {
+  const storage = await library();
+  const held = storage.holdNextStat('metadata.db');
+  const { app } = await openPicker({ storage, libraries: [{ root: 'root-1', path: 'Calibre Library' }] });
+
+  await userEvent.click(picker(app).getByRole('button', { name: 'Calibre Library' }));
+  await held.started;
+  await userEvent.click(picker(app).getByRole('link', { name: 'Cancel' }));
+  held.release();
+
+  await expect.element(app.screen.getByRole('form', { name: 'Connect MEGA' })).toBeVisible();
+  const reloaded = await app.reload();
+  await expect.element(reloaded.getByRole('form', { name: 'Connect MEGA' })).toBeVisible();
+});
+
+test('a sign-in problem is not shown again after moving to another page', async () => {
+  const storage = await library();
+  const app = await renderApp({
+    storage,
+    signIn: fakeSignInProvider({ storage, libraries: [{ root: 'root-1', path: 'Calibre Library' }] }),
+    path: '/connect/fake#signin-error=denied',
+  });
+  await expect.element(app.screen.getByText('Sign-in was cancelled.')).toBeVisible();
+
+  app.navigate('/');
+  await expect.element(app.screen.getByRole('form', { name: 'Connect MEGA' })).toBeVisible();
+  expect(app.screen.getByText('Sign-in was cancelled.').query()).toBeNull();
+  app.navigate('/connect/fake');
+  await expect.element(picker(app).getByRole('button', { name: 'Calibre Library' })).toBeVisible();
 });

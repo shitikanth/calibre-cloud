@@ -24,7 +24,7 @@ export function LibraryNotices({ showChecking = false }: { showChecking?: boolea
         <p className="text-sm">{detail} Showing the library saved on this device.</p>
         {canReconnect && (
           <>
-            <SignInProblem className="text-sm" />
+            <SignInProblem className="text-sm" announce={false} />
             <ReconnectLink className="text-sm font-medium underline" />
           </>
         )}
