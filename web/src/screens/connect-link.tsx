@@ -2,18 +2,18 @@ import { useLocation, useRouter } from '@tanstack/react-router';
 import { createContext, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { readConnectLink } from '../connection/connect-link.ts';
 import { sameConnection, type Connection } from '../connection/connection.ts';
-import { useConnection } from '../connection/context.tsx';
+import { useConnection, useProviders } from '../connection/context.tsx';
 import { useDisconnect } from '../library/use-disconnect.ts';
-import { resolveConnectInput } from '../storage/providers.ts';
+import type { Providers } from '../storage/providers.ts';
 import { DisconnectFailure } from './disconnect-button.tsx';
 
 type Pending = { kind: 'fill'; input: string } | { kind: 'connect' | 'switch'; connection: Connection };
 
 const ConnectLinkInput = createContext<string | undefined>(undefined);
 
-function pendingFor(input: string | undefined, current: Connection | undefined): Pending | undefined {
+function pendingFor(providers: Providers, input: string | undefined, current: Connection | undefined): Pending | undefined {
   if (input === undefined) return undefined;
-  const { parsed } = resolveConnectInput(input);
+  const { parsed } = providers.resolveConnectInput(input);
   if (!current) return parsed.ok ? { kind: 'connect', connection: parsed.connection } : { kind: 'fill', input };
   if (!parsed.ok || sameConnection(parsed.connection, current)) return undefined;
   return { kind: 'switch', connection: parsed.connection };
@@ -21,9 +21,10 @@ function pendingFor(input: string | undefined, current: Connection | undefined):
 
 export function ConnectLinkHandler({ children }: { children: ReactNode }) {
   const { connection, connect } = useConnection();
+  const providers = useProviders();
   const { hash, pathname, searchStr } = useLocation();
   const { history } = useRouter();
-  const [pending, setPending] = useState(() => pendingFor(readConnectLink(hash), connection));
+  const [pending, setPending] = useState(() => pendingFor(providers, readConnectLink(hash), connection));
 
   useEffect(() => {
     if (readConnectLink(hash) !== undefined) history.replace(`${pathname}${searchStr}`);
