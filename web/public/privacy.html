@@ -24,8 +24,12 @@
         With that access, the app reads:
       </p>
       <ul>
-        <li>the names of your folders, so you can pick the one that holds your Calibre library;</li>
-        <li>the names, sizes, and checksums of files in that library, to find them and tell when they change;</li>
+        <li>
+          the files named <code>metadata.db</code> anywhere in your Drive, including Shared with me, and the names of the
+          folders above them, so it can suggest where your Calibre library is;
+        </li>
+        <li>the names of the folders you open in its folder browser, so you can pick your library yourself;</li>
+        <li>the sizes and checksums of files in the library you pick, to tell when they change;</li>
         <li>the contents of the library's <code>metadata.db</code>, its covers, and the book files you open or download.</li>
       </ul>
       <p>It never creates, changes, or deletes anything in your Drive.</p>
@@ -46,7 +50,7 @@
         Your browser fetches everything above straight from Google. None of it passes through our server: not your book
         files, not <code>metadata.db</code>, not covers, not the names of your files and folders.
       </p>
-      <p>Our server takes part in signing in, and nothing else:</p>
+      <p>Besides serving the app itself, our server only helps you sign in:</p>
       <ul>
         <li>
           When you sign in, Google sends our server a one-time code. The server swaps it with Google for a refresh token,
@@ -88,7 +92,7 @@
       <ul>
         <li>
           <strong>Disconnect</strong> in the app deletes everything it keeps on this device (reader settings stay),
-          revokes calibre-cloud's access to your Google account, and deletes the sign-in cookie.
+          asks Google to revoke calibre-cloud's access to your Google account, and deletes the sign-in cookie.
         </li>
         <li>
           You can also remove calibre-cloud's access at any time from your

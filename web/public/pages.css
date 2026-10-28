@@ -39,6 +39,7 @@ h2 {
 
 h1 {
   margin: 1.5rem 0 0.75rem;
+  line-height: 1.12;
   font-size: 2.125rem;
   letter-spacing: -0.01em;
 }

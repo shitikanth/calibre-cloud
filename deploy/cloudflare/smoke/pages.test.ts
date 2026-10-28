@@ -17,7 +17,7 @@ const healthy: Record<string, string> = {
   '/terms': '<h1>Terms of service</h1>',
 };
 
-type Served = string | number;
+type Served = string | { status: number };
 
 let pages: Record<string, Served>;
 let headers: Record<string, string>;
@@ -33,7 +33,7 @@ beforeAll(async () => {
       return;
     }
     const page = pages[req.url ?? ''] ?? app;
-    if (typeof page === 'number') res.writeHead(page).end();
+    if (typeof page === 'object') res.writeHead(page.status).end();
     else res.writeHead(200, { 'content-type': 'text/html', ...headers }).end(page);
   });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -65,7 +65,7 @@ test('reports a page the SPA fallback answers with the app', async () => {
 });
 
 test('reports a page that does not load', async () => {
-  serve({ '/privacy': 404 });
+  serve({ '/privacy': { status: 404 } });
   expect(await checkPublicPages(origin)).toContain('/privacy: HTTP 404');
 });
 
