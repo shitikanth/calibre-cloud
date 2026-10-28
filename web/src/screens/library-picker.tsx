@@ -4,11 +4,8 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { useConnection, useProviders } from '../connection/context.tsx';
 import { NotFound } from '../storage/adapter.ts';
 import type { FolderEntry, LibraryFinder, SignInProvider } from '../storage/sign-in.ts';
+import { connectPath } from './connect-path.ts';
 import { describeError } from './describe-error.ts';
-
-export function pickerPath(providerId: string): string {
-  return `/connect/${encodeURIComponent(providerId)}`;
-}
 
 const rowClass =
   'flex min-h-11 w-full items-center rounded border border-neutral-300 px-3 py-2 text-left hover:bg-neutral-100 disabled:opacity-60';
@@ -203,7 +200,7 @@ function PickerError({ provider, error, retry }: { provider: SignInProvider; err
       <p className="font-medium text-red-700">{title}</p>
       <p className="text-neutral-700">{detail}</p>
       {canReconnect ? (
-        <a href={signInHref(provider, pickerPath(provider.id))} className={`${secondaryClass} self-start`}>
+        <a href={signInHref(provider, connectPath(provider.id))} className={`${secondaryClass} self-start`}>
           Sign in again
         </a>
       ) : (

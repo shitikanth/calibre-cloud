@@ -2,6 +2,7 @@ import { userEvent } from 'vitest/browser';
 import { expect, test } from 'vitest';
 import { chooseFromMenu } from './test/app-bar.ts';
 import { buildCalibreLibrary } from './test/calibre-library.ts';
+import { chooseScreen, connectMega } from './test/connect.ts';
 import { fakeRenderers, type FakeRenderer } from './test/fake-renderer.ts';
 import { FakeStorage } from './test/fake-storage.ts';
 import { renderApp, testLink } from './test/render-app.tsx';
@@ -131,9 +132,10 @@ test('Disconnect keeps the reader settings', async () => {
   await expect.element(app.screen.getByRole('button', { name: 'Download EPUB' })).toBeVisible();
 
   await chooseFromMenu(app.screen, 'Disconnect');
-  await expect.element(app.screen.getByRole('textbox', { name: 'MEGA folder link' })).toBeVisible();
-  await userEvent.fill(app.screen.getByRole('textbox', { name: 'MEGA folder link' }), testLink);
-  await userEvent.click(app.screen.getByRole('button', { name: 'Connect' }));
+  await expect.element(chooseScreen(app.screen)).toBeVisible();
+  await connectMega(app.screen, testLink);
+  await expect.element(app.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
+  app.navigate('/books/1');
   await userEvent.click(app.screen.getByRole('link', { name: 'Read EPUB' }));
 
   await expect.element(app.screen.getByRole('button', { name: 'Settings' })).toBeVisible();

@@ -1,5 +1,5 @@
 import type { StorageAdapter } from './adapter.ts';
-import type { Connection } from './provider.ts';
+import type { Connection, ProviderIdentity } from './provider.ts';
 
 export type AccessTokens = { get(options?: { refresh?: boolean }): Promise<string> };
 
@@ -12,10 +12,8 @@ export interface LibraryFinder {
   listFolder(folder: string | undefined, signal?: AbortSignal): Promise<FolderEntry[]>;
 }
 
-export interface SignInProvider {
+export interface SignInProvider extends ProviderIdentity {
   readonly kind: 'sign-in';
-  readonly id: string;
-  readonly name: string;
   readonly startPath: string;
   connectionFor(root: string): Connection;
   isConnection(value: unknown): value is Connection;

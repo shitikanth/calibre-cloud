@@ -10,6 +10,7 @@ export const providers: readonly StorageProvider[] = [megaProvider, googleProvid
 export type ResolvedConnectInput = { provider: LinkProvider; parsed: ParsedConnectInput };
 
 export type Providers = {
+  readonly all: readonly StorageProvider[];
   readonly linkProviders: readonly LinkProvider[];
   readonly signInProviders: readonly SignInProvider[];
   resolveConnectInput(input: string): ResolvedConnectInput;
@@ -32,6 +33,7 @@ export function createProviders(list: readonly StorageProvider[], tokens: Access
     `${provider.startPath}?${new URLSearchParams({ return: returnTo })}`;
 
   return {
+    all: list,
     linkProviders,
     signInProviders,
     resolveConnectInput(input) {

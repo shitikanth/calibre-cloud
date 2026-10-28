@@ -2,6 +2,7 @@ import type { Connection } from '../provider.ts';
 import type { SignInProvider } from '../sign-in.ts';
 import { createGoogleAdapter } from './adapter.ts';
 import { createLibraryFinder } from './finder.ts';
+import icon from './icon.svg';
 
 type GoogleConnection = { provider: 'google'; root: string };
 
@@ -15,6 +16,7 @@ export const googleProvider: SignInProvider = {
   kind: 'sign-in',
   id: 'google',
   name: 'Google Drive',
+  icon,
   startPath: '/api/auth/google/start',
   connectionFor(root) {
     const connection: GoogleConnection = { provider: 'google', root };

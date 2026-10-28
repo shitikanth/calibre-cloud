@@ -2,6 +2,7 @@ import { expect, test } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { Network } from './storage/adapter.ts';
 import { buildCalibreLibrary } from './test/calibre-library.ts';
+import { chooseScreen } from './test/connect.ts';
 import { FakeAuthServer } from './test/fake-auth.ts';
 import { fakeSignInProvider, type FakeSignInOptions } from './test/fake-sign-in.ts';
 import { FakeStorage } from './test/fake-storage.ts';
@@ -142,7 +143,7 @@ test('Cancel goes back to the connect screen', async () => {
 
   await userEvent.click(picker(app).getByRole('link', { name: 'Cancel' }));
 
-  await expect.element(app.screen.getByRole('form', { name: 'Connect MEGA' })).toBeVisible();
+  await expect.element(chooseScreen(app.screen)).toBeVisible();
   expect(app.url).toBe('/');
   expect(app.opened).toEqual([]);
 });
@@ -157,9 +158,9 @@ test('Cancel while a library is opening does not connect it', async () => {
   await userEvent.click(picker(app).getByRole('link', { name: 'Cancel' }));
   held.release();
 
-  await expect.element(app.screen.getByRole('form', { name: 'Connect MEGA' })).toBeVisible();
+  await expect.element(chooseScreen(app.screen)).toBeVisible();
   const reloaded = await app.reload();
-  await expect.element(reloaded.getByRole('form', { name: 'Connect MEGA' })).toBeVisible();
+  await expect.element(chooseScreen(reloaded)).toBeVisible();
 });
 
 test('a sign-in problem is not shown again after moving to another page', async () => {
@@ -172,7 +173,7 @@ test('a sign-in problem is not shown again after moving to another page', async 
   await expect.element(app.screen.getByText('Sign-in was cancelled.')).toBeVisible();
 
   app.navigate('/');
-  await expect.element(app.screen.getByRole('form', { name: 'Connect MEGA' })).toBeVisible();
+  await expect.element(chooseScreen(app.screen)).toBeVisible();
   expect(app.screen.getByText('Sign-in was cancelled.').query()).toBeNull();
   app.navigate('/connect/fake');
   await expect.element(picker(app).getByRole('button', { name: 'Calibre Library' })).toBeVisible();

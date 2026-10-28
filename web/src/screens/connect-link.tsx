@@ -5,16 +5,19 @@ import { sameConnection, type Connection } from '../connection/connection.ts';
 import { useConnection, useProviders } from '../connection/context.tsx';
 import { useDisconnect } from '../library/use-disconnect.ts';
 import type { Providers } from '../storage/providers.ts';
+import { connectPath } from './connect-path.ts';
 import { DisconnectFailure } from './disconnect-button.tsx';
 
-type Pending = { kind: 'fill'; input: string } | { kind: 'connect' | 'switch'; connection: Connection };
+type Pending = { kind: 'fill'; input: string; provider: string } | { kind: 'connect' | 'switch'; connection: Connection };
 
 const ConnectLinkInput = createContext<string | undefined>(undefined);
 
 function pendingFor(providers: Providers, input: string | undefined, current: Connection | undefined): Pending | undefined {
   if (input === undefined) return undefined;
-  const { parsed } = providers.resolveConnectInput(input);
-  if (!current) return parsed.ok ? { kind: 'connect', connection: parsed.connection } : { kind: 'fill', input };
+  const { provider, parsed } = providers.resolveConnectInput(input);
+  if (!current) {
+    return parsed.ok ? { kind: 'connect', connection: parsed.connection } : { kind: 'fill', input, provider: provider.id };
+  }
   if (!parsed.ok || sameConnection(parsed.connection, current)) return undefined;
   return { kind: 'switch', connection: parsed.connection };
 }
@@ -27,8 +30,9 @@ export function ConnectLinkHandler({ children }: { children: ReactNode }) {
   const [pending, setPending] = useState(() => pendingFor(providers, readConnectLink(hash), connection));
 
   useEffect(() => {
-    if (readConnectLink(hash) !== undefined) history.replace(`${pathname}${searchStr}`);
-  }, [hash, pathname, searchStr, history]);
+    if (readConnectLink(hash) === undefined) return;
+    history.replace(pending?.kind === 'fill' ? connectPath(pending.provider) : `${pathname}${searchStr}`);
+  }, [hash, pathname, searchStr, history, pending]);
 
   useLayoutEffect(() => {
     if (pending?.kind === 'connect') connect(pending.connection);

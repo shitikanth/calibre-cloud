@@ -1,6 +1,7 @@
 import { afterEach, expect, test } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { buildCalibreLibrary } from './test/calibre-library.ts';
+import { chooseScreen } from './test/connect.ts';
 import { FakeStorage } from './test/fake-storage.ts';
 import { renderApp } from './test/render-app.tsx';
 import { expectBooks, type Screen } from './test/screen.ts';
@@ -44,7 +45,7 @@ test('the library and detail pages show the same app bar', async () => {
 test('the connect screen has no app bar', async () => {
   const app = await renderApp({ storage: await bronteLibrary() });
 
-  await expect.element(app.screen.getByRole('textbox', { name: 'MEGA folder link' })).toBeVisible();
+  await expect.element(chooseScreen(app.screen)).toBeVisible();
   expect(app.screen.getByRole('banner').query()).toBeNull();
 });
 

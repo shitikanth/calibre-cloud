@@ -1,7 +1,7 @@
 import { expect, onTestFinished, test, vi } from 'vitest';
-import { userEvent } from 'vitest/browser';
 import { chooseFromMenu } from './test/app-bar.ts';
 import { buildCalibreLibrary } from './test/calibre-library.ts';
+import { chooseScreen, connectMega } from './test/connect.ts';
 import { FakeStorage } from './test/fake-storage.ts';
 import { renderApp, testLink } from './test/render-app.tsx';
 
@@ -9,11 +9,6 @@ type Screen = Awaited<ReturnType<typeof renderApp>>['screen'];
 
 async function libraryWithCover() {
   return new FakeStorage(await buildCalibreLibrary([{ title: 'Jane Eyre', authors: ['Charlotte Brontë'], hasCover: true }]));
-}
-
-async function connect(screen: Screen) {
-  await userEvent.fill(screen.getByRole('textbox', { name: 'MEGA folder link' }), testLink);
-  await userEvent.click(screen.getByRole('button', { name: 'Connect' }));
 }
 
 async function expectLibraryShown(screen: Screen) {
@@ -28,7 +23,7 @@ test('connecting asks the browser to keep the cached library', async () => {
   onTestFinished(() => persist.mockRestore());
   const app = await renderApp({ storage: await libraryWithCover() });
 
-  await connect(app.screen);
+  await connectMega(app.screen, testLink);
 
   await expectLibraryShown(app.screen);
   expect(persist).toHaveBeenCalledOnce();
@@ -41,12 +36,12 @@ test('Disconnect forgets the link, the library and the covers on this device', a
 
   await chooseFromMenu(app.screen, 'Disconnect');
 
-  await expect.element(app.screen.getByRole('textbox', { name: 'MEGA folder link' })).toBeVisible();
+  await expect.element(chooseScreen(app.screen)).toBeVisible();
   const reloaded = await app.reload();
-  await expect.element(reloaded.getByRole('textbox', { name: 'MEGA folder link' })).toBeVisible();
+  await expect.element(chooseScreen(reloaded)).toBeVisible();
 
   storage.calls.length = 0;
-  await connect(reloaded);
+  await connectMega(reloaded, testLink);
   await expectLibraryShown(reloaded);
   expect(storage.calls.filter(({ op }) => op === 'read').map(({ path }) => path)).toEqual([
     'metadata.db',
@@ -66,5 +61,5 @@ test('a Disconnect that cannot forget the library says so and stays connected', 
   await expect.element(app.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
   forget.mockRestore();
   await chooseFromMenu(app.screen, 'Disconnect');
-  await expect.element(app.screen.getByRole('textbox', { name: 'MEGA folder link' })).toBeVisible();
+  await expect.element(chooseScreen(app.screen)).toBeVisible();
 });
