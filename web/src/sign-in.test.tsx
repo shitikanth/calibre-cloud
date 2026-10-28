@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { ReconnectRequired } from './storage/adapter.ts';
+import { chooseFromMenu } from './test/app-bar.ts';
 import { buildCalibreLibrary } from './test/calibre-library.ts';
 import { FakeAuthServer } from './test/fake-auth.ts';
 import { fakeRenderers } from './test/fake-renderer.ts';
@@ -139,4 +140,44 @@ test('a MEGA library that needs reconnecting still offers only a different libra
   await expect.element(app.screen.getByRole('heading', { name: 'Reconnect your library' })).toBeVisible();
   await expect.element(app.screen.getByRole('button', { name: 'Connect a different library' })).toBeVisible();
   expect(app.screen.getByRole('link', { name: 'Reconnect' }).query()).toBeNull();
+});
+
+test('Disconnect ends the sign-in and forgets the library on this device', async () => {
+  const storage = await library();
+  const app = await renderApp({ storage, signIn: fakeSignInProvider({ storage }), connected: signedIn });
+  await expect.element(app.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
+
+  await chooseFromMenu(app.screen, 'Disconnect');
+
+  await expect.element(app.screen.getByRole('link', { name: 'Sign in with Fake Drive' })).toBeVisible();
+  expect(app.auth.requests).toEqual(['POST /api/auth/refresh', 'POST /api/auth/signout']);
+  app.navigate('/connect/fake');
+  await expect.element(app.screen.getByText('No Calibre library found. Browse your folders instead.')).toBeVisible();
+  expect(app.auth.requests.at(-1)).toBe('POST /api/auth/refresh');
+  const reloaded = await app.reload({ whileClosed: async () => app.navigate('/') });
+  await expect.element(reloaded.getByRole('link', { name: 'Sign in with Fake Drive' })).toBeVisible();
+});
+
+test('a sign-out that fails still forgets the library on this device', async () => {
+  const storage = await library();
+  const app = await renderApp({ storage, signIn: fakeSignInProvider({ storage }), connected: signedIn });
+  await expect.element(app.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
+  app.auth.signOutFails = true;
+
+  await chooseFromMenu(app.screen, 'Disconnect');
+
+  await expect.element(app.screen.getByRole('link', { name: 'Sign in with Fake Drive' })).toBeVisible();
+  const reloaded = await app.reload();
+  await expect.element(reloaded.getByRole('link', { name: 'Sign in with Fake Drive' })).toBeVisible();
+});
+
+test('a MEGA Disconnect does not touch the sign-in', async () => {
+  const storage = await library();
+  const app = await renderApp({ storage, signIn: fakeSignInProvider({ storage }), connected: true });
+  await expect.element(app.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
+
+  await chooseFromMenu(app.screen, 'Disconnect');
+
+  await expect.element(app.screen.getByRole('textbox', { name: 'MEGA folder link' })).toBeVisible();
+  expect(app.auth.requests).toEqual([]);
 });
