@@ -70,6 +70,9 @@ export async function renderApp({
     back() {
       history.back();
     },
+    forward() {
+      history.forward();
+    },
     navigate(to: string) {
       history.push(to);
     },

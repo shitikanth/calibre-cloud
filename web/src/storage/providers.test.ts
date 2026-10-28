@@ -20,6 +20,13 @@ test('the app offers MEGA and Google Drive', () => {
   expect(providers.map(({ id }) => id)).toEqual(['mega', 'google']);
 });
 
+test('lists every provider in the order given, whatever its kind', () => {
+  const drive = fakeSignInProvider({ storage: new FakeStorage() });
+  const registry = createProviders([drive, ...providers.filter(({ kind }) => kind === 'link')], createAccessTokens());
+
+  expect(registry.allProviders.map(({ id }) => id)).toEqual(['fake', 'mega']);
+});
+
 describe('readConnection', () => {
   test('accepts a stored MEGA connection', () => {
     const { registry } = setup();

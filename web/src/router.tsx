@@ -92,22 +92,24 @@ function ReaderRouteScreen() {
   return connection ? <ReaderScreen bookId={bookId} format={format} /> : <ConnectScreen />;
 }
 
-const pickerRoute = createRoute({
+const connectRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/connect/$provider',
-  component: PickerRouteScreen,
+  component: ConnectRouteScreen,
 });
 
-function PickerRouteScreen() {
+function ConnectRouteScreen() {
   const { connection } = useConnection();
-  const { signInProvider } = useProviders();
+  const { signInProvider, linkProvider } = useProviders();
   const problem = useSignInProblem();
-  const provider = signInProvider(pickerRoute.useParams().provider);
+  const id = connectRoute.useParams().provider;
   if (connection) return <Navigate to="/" replace />;
-  return provider && !problem ? <LibraryPicker provider={provider} /> : <ConnectScreen />;
+  const signIn = signInProvider(id);
+  if (signIn && !problem) return <LibraryPicker provider={signIn} />;
+  return <ConnectScreen provider={linkProvider(id)} />;
 }
 
-const routeTree = rootRoute.addChildren([homeRoute, bookRoute, readerRoute, pickerRoute]);
+const routeTree = rootRoute.addChildren([homeRoute, bookRoute, readerRoute, connectRoute]);
 
 export function createAppRouter(options: { history?: RouterHistory } = {}) {
   return createRouter({ routeTree, ...options });

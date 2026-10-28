@@ -1,5 +1,6 @@
 import type { Connection, LinkProvider } from '../provider.ts';
 import { createMegaAdapter } from './adapter.ts';
+import icon from './icon.svg';
 import { parseMegaFolderLink, type MegaLinkProblem } from './link.ts';
 
 type MegaConnection = { provider: 'mega'; link: string };
@@ -18,7 +19,13 @@ function isMegaConnection(value: unknown): value is MegaConnection {
 export const megaProvider: LinkProvider = {
   kind: 'link',
   id: 'mega',
-  connectForm: { name: 'MEGA', label: 'MEGA folder link', placeholder: 'https://mega.nz/folder/…#…' },
+  name: 'MEGA',
+  icon,
+  connectForm: {
+    hint: 'Paste the shared link to your Calibre library folder.',
+    label: 'MEGA folder link',
+    placeholder: 'https://mega.nz/folder/…#…',
+  },
   parseConnectInput(input) {
     const parsed = parseMegaFolderLink(input);
     if (!parsed.ok) return { ok: false, problem: problemMessages[parsed.problem] };

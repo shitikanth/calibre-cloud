@@ -20,6 +20,8 @@ export type FakeSignInProvider = SignInProvider & {
 
 const id = 'fake';
 const name = 'Fake Drive';
+const icon =
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="48" height="48"%3E%3Crect width="48" height="48" rx="8" fill="%23737373"/%3E%3C/svg%3E';
 
 export function fakeSignInProvider({ storage, libraries = [], folders = [] }: FakeSignInOptions): FakeSignInProvider {
   let failure: StorageError | undefined;
@@ -46,6 +48,7 @@ export function fakeSignInProvider({ storage, libraries = [], folders = [] }: Fa
     kind: 'sign-in',
     id,
     name,
+    icon,
     startPath: `/api/auth/${id}/start`,
     libraries,
     folders,
