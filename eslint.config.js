@@ -19,6 +19,11 @@ const megaProvider = {
   message: 'Only web/src/storage/ may import the MEGA provider. Everything above the storage boundary uses storage/providers.ts.',
 };
 
+const googleProvider = {
+  group: ['**/storage/google', '**/storage/google/*'],
+  message: 'Only web/src/storage/ may import the Google Drive provider. Everything above the storage boundary uses storage/providers.ts.',
+};
+
 const foliate = {
   group: ['foliate-js', 'foliate-js/*'],
   message: 'Only the foliate renderer (web/src/reader/foliate/) may use foliate-js.',
@@ -44,11 +49,11 @@ export default defineConfig([
   },
   {
     ignores: ['deploy/**'],
-    rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, megaSdk, megaProvider, foliate, pdfjs] }] },
+    rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, megaSdk, megaProvider, googleProvider, foliate, pdfjs] }] },
   },
   {
     files: ['web/vite.config.ts'],
-    rules: { 'no-restricted-imports': ['error', { patterns: [megaSdk, megaProvider, foliate, pdfjs] }] },
+    rules: { 'no-restricted-imports': ['error', { patterns: [megaSdk, megaProvider, googleProvider, foliate, pdfjs] }] },
   },
   {
     files: ['web/src/storage/**'],
@@ -59,11 +64,23 @@ export default defineConfig([
     rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, foliate, pdfjs] }] },
   },
   {
+    ignores: ['web/src/storage/google/**'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'Literal[value=/googleapis\\.com\\/drive/], TemplateElement[value.raw=/googleapis\\.com\\/drive/]',
+          message: 'Only the Google Drive provider (web/src/storage/google/) may call the Drive API.',
+        },
+      ],
+    },
+  },
+  {
     files: ['web/src/reader/foliate/**'],
-    rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, megaSdk, megaProvider, pdfjs] }] },
+    rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, megaSdk, megaProvider, googleProvider, pdfjs] }] },
   },
   {
     files: ['web/src/reader/pdf/**'],
-    rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, megaSdk, megaProvider, foliate] }] },
+    rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, megaSdk, megaProvider, googleProvider, foliate] }] },
   },
 ]);

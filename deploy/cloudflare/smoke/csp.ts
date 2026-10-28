@@ -6,7 +6,7 @@ export const expectedCsp: Record<string, string[]> = {
   'font-src': ["'self'", 'blob:', 'data:'],
   'media-src': ["'self'", 'blob:'],
   'frame-src': ['blob:'],
-  'connect-src': ["'self'", 'https://g.api.mega.co.nz', 'https://*.userstorage.mega.co.nz'],
+  'connect-src': ["'self'", 'https://g.api.mega.co.nz', 'https://*.userstorage.mega.co.nz', 'https://www.googleapis.com'],
   'worker-src': ["'self'"],
   'object-src': ["'none'"],
   'base-uri': ["'none'"],
