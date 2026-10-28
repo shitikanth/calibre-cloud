@@ -8,7 +8,7 @@ import type { Providers } from '../storage/providers.ts';
 import { connectPath } from './connect-path.ts';
 import { DisconnectFailure } from './disconnect-button.tsx';
 
-type Pending = { kind: 'fill'; input: string; provider: string } | { kind: 'connect' | 'switch'; connection: Connection };
+type Pending = { kind: 'fill'; input: string; providerId: string } | { kind: 'connect' | 'switch'; connection: Connection };
 
 const ConnectLinkInput = createContext<string | undefined>(undefined);
 
@@ -16,7 +16,7 @@ function pendingFor(providers: Providers, input: string | undefined, current: Co
   if (input === undefined) return undefined;
   const { provider, parsed } = providers.resolveConnectInput(input);
   if (!current) {
-    return parsed.ok ? { kind: 'connect', connection: parsed.connection } : { kind: 'fill', input, provider: provider.id };
+    return parsed.ok ? { kind: 'connect', connection: parsed.connection } : { kind: 'fill', input, providerId: provider.id };
   }
   if (!parsed.ok || sameConnection(parsed.connection, current)) return undefined;
   return { kind: 'switch', connection: parsed.connection };
@@ -31,7 +31,7 @@ export function ConnectLinkHandler({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (readConnectLink(hash) === undefined) return;
-    history.replace(pending?.kind === 'fill' ? connectPath(pending.provider) : `${pathname}${searchStr}`);
+    history.replace(pending?.kind === 'fill' ? connectPath(pending.providerId) : `${pathname}${searchStr}`);
   }, [hash, pathname, searchStr, history, pending]);
 
   useLayoutEffect(() => {

@@ -100,13 +100,13 @@ const connectRoute = createRoute({
 
 function ConnectRouteScreen() {
   const { connection } = useConnection();
-  const { signInProvider, linkProviders } = useProviders();
+  const { signInProvider, linkProvider } = useProviders();
   const problem = useSignInProblem();
   const id = connectRoute.useParams().provider;
   if (connection) return <Navigate to="/" replace />;
   const signIn = signInProvider(id);
   if (signIn && !problem) return <LibraryPicker provider={signIn} />;
-  return <ConnectScreen provider={linkProviders.find((provider) => provider.id === id)} />;
+  return <ConnectScreen provider={linkProvider(id)} />;
 }
 
 const routeTree = rootRoute.addChildren([homeRoute, bookRoute, readerRoute, connectRoute]);
