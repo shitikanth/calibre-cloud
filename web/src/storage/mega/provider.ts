@@ -1,4 +1,4 @@
-import type { Connection, StorageProvider } from '../provider.ts';
+import type { Connection, LinkProvider } from '../provider.ts';
 import { createMegaAdapter } from './adapter.ts';
 import { parseMegaFolderLink, type MegaLinkProblem } from './link.ts';
 
@@ -15,7 +15,8 @@ function isMegaConnection(value: unknown): value is MegaConnection {
   return provider === 'mega' && typeof link === 'string';
 }
 
-export const megaProvider: StorageProvider = {
+export const megaProvider: LinkProvider = {
+  kind: 'link',
   id: 'mega',
   connectForm: { name: 'MEGA', label: 'MEGA folder link', placeholder: 'https://mega.nz/folder/…#…' },
   parseConnectInput(input) {

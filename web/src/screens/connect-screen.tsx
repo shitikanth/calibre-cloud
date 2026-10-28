@@ -1,10 +1,10 @@
 import { useState, type FormEvent } from 'react';
-import { useConnection } from '../connection/context.tsx';
-import type { StorageProvider } from '../storage/provider.ts';
-import { providers, resolveConnectInput } from '../storage/providers.ts';
+import { useConnection, useProviders } from '../connection/context.tsx';
+import type { LinkProvider } from '../storage/provider.ts';
 import { useConnectLinkInput } from './connect-link.tsx';
 
 export function ConnectScreen() {
+  const { linkProviders } = useProviders();
   const linked = useLinkedInput();
   return (
     <div className="flex justify-center sm:py-12">
@@ -16,7 +16,7 @@ export function ConnectScreen() {
           calibre-cloud
         </h1>
         <p className="mt-2 text-neutral-600">Browse your Calibre library straight from the cloud storage it lives in.</p>
-        {providers.map((provider) => (
+        {linkProviders.map((provider) => (
           <ConnectForm key={provider.id} provider={provider} initial={linked?.provider === provider ? linked : undefined} />
         ))}
       </section>
@@ -26,14 +26,15 @@ export function ConnectScreen() {
 
 type InitialInput = { input: string; problem: string | undefined };
 
-function useLinkedInput(): (InitialInput & { provider: StorageProvider }) | undefined {
+function useLinkedInput(): (InitialInput & { provider: LinkProvider }) | undefined {
+  const { resolveConnectInput } = useProviders();
   const input = useConnectLinkInput();
   if (input === undefined) return undefined;
   const { provider, parsed } = resolveConnectInput(input);
   return { provider, input, problem: parsed.ok ? undefined : parsed.problem };
 }
 
-function ConnectForm({ provider, initial }: { provider: StorageProvider; initial: InitialInput | undefined }) {
+function ConnectForm({ provider, initial }: { provider: LinkProvider; initial: InitialInput | undefined }) {
   const { connect } = useConnection();
   const [problem, setProblem] = useState(initial?.problem);
   const { name, label, placeholder } = provider.connectForm;
