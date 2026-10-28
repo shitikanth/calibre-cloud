@@ -46,7 +46,8 @@ test('without sign-in providers the connect screen offers only MEGA', async () =
   const app = await renderApp({ storage: await library() });
 
   await expect.element(chooseScreen(app.screen).getByRole('link', { name: 'MEGA' })).toBeVisible();
-  expect(chooseScreen(app.screen).getByRole('link').elements().map((tile) => tile.textContent)).toEqual(['MEGA']);
+  const tiles = chooseScreen(app.screen).getByRole('listitem').getByRole('link');
+  expect(tiles.elements().map((tile) => tile.textContent)).toEqual(['MEGA']);
 });
 
 test.each([
