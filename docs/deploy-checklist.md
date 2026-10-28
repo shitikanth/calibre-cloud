@@ -60,11 +60,19 @@ Until all three are set, "Sign in" comes straight back to the app with "Couldn�
 
 For `wrangler dev`, put the same three values in `deploy/cloudflare/.dev.vars` (gitignored), one `NAME=value` per line, and open the app at `http://localhost:8787`, not `127.0.0.1`: the callback URI is built from the address in the browser.
 
+### Publish the Google app
+
+Until it is published, the app stays in *Testing*: only listed test users can sign in, and sign-ins end after 7 days.
+
+- [ ] Google Search Console: verify `<account-subdomain>.workers.dev` (for this account, `golu3990.workers.dev`) with the HTML file method. The verification file goes in `web/public/` in a small PR.
+- [ ] Google Auth Platform → Branding: home page `https://calibre-cloud.golu3990.workers.dev/about`, privacy policy `…/privacy`, terms of service `…/terms`, and authorized domain `golu3990.workers.dev`.
+- [ ] Audience → Publish app.
+
 ## Local commands
 
 - `pnpm lint`, `pnpm typecheck`, `pnpm test`: what CI runs.
 - `pnpm build`: builds the SPA into `deploy/cloudflare/dist` with `_headers`.
-- `pnpm --filter @calibre-cloud/deploy-cloudflare run smoke:local`: serves `dist` with `wrangler dev` and runs the smoke check against it: the CSP directive by directive, the pdf.js worker and wasm files, the smoked routes including the reader's not-connected state, and the auth routes (start redirects to Google; refresh without a sign-in asks to reconnect). It passes dummy values for the three Worker variables, so it needs no `.dev.vars`.
+- `pnpm --filter @calibre-cloud/deploy-cloudflare run smoke:local`: serves `dist` with `wrangler dev` and runs the smoke check against it: the CSP directive by directive, the pdf.js worker and wasm files, the smoked routes including the reader's not-connected state, the auth routes (start redirects to Google; refresh without a sign-in asks to reconnect), and the public pages `/about`, `/privacy`, and `/terms` (served as pages, not the app, with their content shown with JavaScript off). It passes dummy values for the three Worker variables, so it needs no `.dev.vars`.
 - MEGA adapter smoke test: put `MEGA_SMOKE_LINK="<shared folder link to a test library>"` in `.env.local` at the repo root (gitignored). Keep the quotes: unquoted, everything from `#` on is read as a comment and the key is lost. `pnpm test` then also runs `web/src/storage/mega/adapter.smoke.test.ts` against real MEGA. It's skipped when the variable is missing and always skipped when `CI` is set. Never commit or paste the link anywhere else.
 - `pnpm --filter @calibre-cloud/deploy-cloudflare run smoke:deployed <origin>`: runs the smoke check by hand against a deployed preview or production URL. Its auth checks fail until that deployment has the section 4 values. Run `pnpm build` first on the commit that is deployed there: the check reads the names of the pdf.js worker and wasm files from `dist`, and a build of another commit can name the worker differently.
 - `wrangler login` is needed only to deploy from a laptop with `pnpm --filter @calibre-cloud/deploy-cloudflare run release`. Workers Builds doesn't need it.
