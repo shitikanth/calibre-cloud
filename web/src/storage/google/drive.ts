@@ -21,8 +21,6 @@ export function childrenOf(folder: string): string {
   return folder === sharedWithMe ? 'sharedWithMe = true' : `${quote(folder)} in parents`;
 }
 
-export type DriveClient = ReturnType<typeof createDriveClient>;
-
 export function createDriveClient(tokens: AccessTokens) {
   const send = async (url: string, token: string, signal: AbortSignal | undefined): Promise<Response> => {
     try {
@@ -34,16 +32,17 @@ export function createDriveClient(tokens: AccessTokens) {
   };
 
   const request = async (url: string, signal: AbortSignal | undefined): Promise<Response> => {
-    let refresh = false;
+    if (signal?.aborted) throw new Aborted();
+    let token = await tokens.get();
+    let refreshed = false;
     for (let tries = 0; ; ) {
-      if (signal?.aborted) throw new Aborted();
-      const response = await send(url, await (refresh ? tokens.get({ refresh: true }) : tokens.get()), signal);
+      const response = await send(url, token, signal);
       if (response.ok) return response;
-      if (response.status === 401 && !refresh) {
-        refresh = true;
+      if (response.status === 401 && !refreshed) {
+        refreshed = true;
+        token = await tokens.get({ refresh: true });
         continue;
       }
-      refresh = false;
       const { error, transient, retryAfter } = await driveFailure(response);
       const wait = retryAfter ?? 2 ** tries;
       if (!transient || tries >= maxRetries || wait > maxRetryWait) throw error;
@@ -66,7 +65,6 @@ export function createDriveClient(tokens: AccessTokens) {
     json<FileList>(`${files}?${new URLSearchParams(params)}`, signal);
 
   return {
-    request,
     media: (id: string, signal: AbortSignal | undefined) => request(`${files}/${encodeURIComponent(id)}?alt=media`, signal),
     file: (id: string, fields: string, signal: AbortSignal | undefined) =>
       json<DriveFile>(`${files}/${encodeURIComponent(id)}?${new URLSearchParams({ fields })}`, signal),

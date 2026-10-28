@@ -143,6 +143,16 @@ describe('Google Drive adapter errors', () => {
     expect(drive.requests.map(({ token }) => token)).toEqual(['stale', 'fresh']);
   });
 
+  test('still retries a rate limit twice after refreshing the token', async () => {
+    drive.validTokens.clear();
+    drive.validTokens.add('fresh');
+    const accessTokens = tokens(({ refresh } = {}) => Promise.resolve(refresh ? 'fresh' : 'stale'));
+    for (let i = 0; i < 2; i++) drive.failNext({ status: 429, reason: 'rateLimitExceeded', headers: { 'Retry-After': '0' } });
+
+    await expect(open(accessTokens).stat('metadata.db')).resolves.toMatchObject({ size: 15 });
+    expect(drive.requests.map(({ token }) => token)).toEqual(['stale', 'fresh', 'fresh', 'fresh']);
+  });
+
   test('asks to reconnect when Drive still refuses the refreshed token', async () => {
     drive.validTokens.clear();
     const accessTokens = tokens();
