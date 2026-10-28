@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { connectLinkHref } from '../connection/connect-link.ts';
-import { useConnection } from '../connection/context.tsx';
-import { connectInputFor } from '../storage/providers.ts';
+import { useConnection, useProviders } from '../connection/context.tsx';
 
 const copiedMessageMs = 3000;
 
@@ -9,6 +8,7 @@ type Outcome = { copied: true } | { copied: false; href: string };
 
 export function useCopyConnectLink() {
   const { connection } = useConnection();
+  const { connectInputFor } = useProviders();
   const input = connection && connectInputFor(connection);
   const [outcome, setOutcome] = useState<Outcome | undefined>();
 

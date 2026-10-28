@@ -1,5 +1,6 @@
 packages:
   - web
+  - api
   - deploy/cloudflare
 
 onlyBuiltDependencies:

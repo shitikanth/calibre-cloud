@@ -20,6 +20,8 @@ import { BackToBookLink, BottomBar, TapZone, TopBar, zoneAt, type ControlsState 
 import { whereYouAreLabel, positionLabel, SeekBar } from './reader-seek-bar.tsx';
 import { SettingsTool } from './reader-settings-tool.tsx';
 import { TocTool } from './reader-toc.tsx';
+import { ReconnectLink } from './reconnect-link.tsx';
+import { SignInProblem } from './sign-in-outcome.tsx';
 import { useWide } from './use-wide.ts';
 
 export function ReaderScreen({ bookId, format }: { bookId: string; format: string }) {
@@ -120,12 +122,14 @@ function BackToBook({ book }: { book: BookDetail }) {
 }
 
 function FetchFailed({ book, error, retry }: { book: BookDetail; error: Error; retry: () => void }) {
-  const { title, detail, canRetry } = describeError(error, 'file');
+  const { title, detail, canRetry, canReconnect } = describeError(error, 'file');
   return (
     <section role="alert" className="mx-auto w-full max-w-md px-4 py-12">
       <h2 className="text-xl font-semibold">{title}</h2>
       <p className="mt-2 text-(--reader-muted)">{detail}</p>
+      {canReconnect && <SignInProblem className="mt-2" announce={false} />}
       <div className="mt-4 flex flex-wrap gap-2">
+        {canReconnect && <ReconnectLink className="rounded bg-(--reader-fg) px-4 py-2 text-(--reader-bg)" />}
         {canRetry && (
           <button type="button" className="rounded bg-(--reader-fg) px-4 py-2 text-(--reader-bg)" onClick={retry}>
             Retry
@@ -155,9 +159,18 @@ function Unopenable({ book, format }: { book: BookDetail; format: BookFormat }) 
         <BackToBook book={book} />
       </div>
       {download.state.status === 'failed' && (
-        <p className="mt-2 text-sm text-red-700">{describeError(download.state.error, 'file').title}.</p>
+        <DownloadFailed error={download.state.error} />
       )}
     </section>
+  );
+}
+
+function DownloadFailed({ error }: { error: Error }) {
+  const { title, canReconnect } = describeError(error, 'file');
+  return (
+    <p className="mt-2 text-sm text-red-700">
+      {title}. {canReconnect && <ReconnectLink className="underline" />}
+    </p>
   );
 }
 

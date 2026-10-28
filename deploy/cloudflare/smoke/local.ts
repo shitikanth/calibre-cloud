@@ -4,7 +4,14 @@ import { smokeAndReport } from './report.ts';
 const port = process.env.SMOKE_PORT ?? '8799';
 const origin = `http://127.0.0.1:${port}`;
 
-const wrangler = spawn('wrangler', ['dev', '--ip', '127.0.0.1', '--port', port], {
+const dummySecrets = {
+  GOOGLE_CLIENT_ID: 'smoke-client-id',
+  GOOGLE_CLIENT_SECRET: 'smoke-client-secret',
+  AUTH_COOKIE_KEY: btoa(String.fromCharCode(...new Uint8Array(32))),
+};
+const vars = Object.entries(dummySecrets).flatMap(([name, value]) => ['--var', `${name}:${value}`]);
+
+const wrangler = spawn('wrangler', ['dev', '--ip', '127.0.0.1', '--port', port, ...vars], {
   stdio: ['ignore', 'inherit', 'inherit'],
   detached: true,
 });

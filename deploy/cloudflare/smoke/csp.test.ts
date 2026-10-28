@@ -3,7 +3,7 @@ import { expect, test } from 'vitest';
 import { cspProblems } from './csp.ts';
 
 const specHeader =
-  "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' blob:; img-src 'self' blob: data:; font-src 'self' blob: data:; media-src 'self' blob:; frame-src blob:; connect-src 'self' https://g.api.mega.co.nz https://*.userstorage.mega.co.nz; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'";
+  "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' blob:; img-src 'self' blob: data:; font-src 'self' blob: data:; media-src 'self' blob:; frame-src blob:; connect-src 'self' https://g.api.mega.co.nz https://*.userstorage.mega.co.nz https://www.googleapis.com; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'";
 
 test('accepts the policy from the spec', () => {
   expect(cspProblems(specHeader)).toEqual([]);

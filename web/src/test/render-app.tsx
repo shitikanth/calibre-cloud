@@ -5,7 +5,11 @@ import { saveConnection, type Connection } from '../connection/connection.ts';
 import { renderers as productionRenderers } from '../reader/renderers.ts';
 import type { Renderers } from '../reader/renderer.ts';
 import { createAppRouter } from '../router.tsx';
+import { createAccessTokens } from '../storage/access-tokens.ts';
 import type { StorageAdapter } from '../storage/adapter.ts';
+import { createProviders, providers as appProviders, type Providers } from '../storage/providers.ts';
+import { FakeAuthServer } from './fake-auth.ts';
+import type { FakeSignInProvider } from './fake-sign-in.ts';
 import '../index.css';
 
 export const testLink = 'https://mega.nz/folder/TestHandle#TestKey_123';
@@ -17,18 +21,38 @@ export async function unmountApps() {
   mounted.clear();
 }
 
-export type RenderAppOptions = { storage: StorageAdapter; path?: string; connected?: boolean; renderers?: Renderers };
+export type RenderAppOptions = {
+  storage: StorageAdapter;
+  path?: string;
+  connected?: boolean | Connection;
+  renderers?: Renderers;
+  signIn?: FakeSignInProvider;
+  auth?: FakeAuthServer;
+};
 
-export async function renderApp({ storage, path = '/', connected = false, renderers = productionRenderers }: RenderAppOptions) {
-  if (connected) saveConnection({ provider: 'mega', link: testLink });
+export async function renderApp({
+  storage,
+  path = '/',
+  connected = false,
+  renderers = productionRenderers,
+  signIn,
+  auth = new FakeAuthServer(),
+}: RenderAppOptions) {
+  if (connected) saveConnection(connected === true ? { provider: 'mega', link: testLink } : connected);
   const opened: Connection[] = [];
-  const openStorage = (connection: Connection) => {
-    opened.push(connection);
-    return storage;
+  const pageProviders = (): Providers => {
+    const registry = createProviders([...appProviders.filter(({ kind }) => kind === 'link'), ...(signIn ? [signIn] : [])], createAccessTokens({ fetch: auth.fetch }));
+    return {
+      ...registry,
+      openStorage(connection) {
+        opened.push(connection);
+        return signIn?.isConnection(connection) ? registry.openStorage(connection) : storage;
+      },
+    };
   };
   let history = createMemoryHistory({ initialEntries: [path] });
   const mount = async () => {
-    const mountedScreen = await render(<App router={createAppRouter({ history })} openStorage={openStorage} renderers={renderers} />);
+    const mountedScreen = await render(<App router={createAppRouter({ history })} providers={pageProviders()} renderers={renderers} />);
     mounted.add(mountedScreen);
     return mountedScreen;
   };
@@ -39,11 +63,15 @@ export async function renderApp({ storage, path = '/', connected = false, render
       return screen;
     },
     opened,
+    auth,
     get url() {
       return history.location.href;
     },
     back() {
       history.back();
+    },
+    forward() {
+      history.forward();
     },
     navigate(to: string) {
       history.push(to);

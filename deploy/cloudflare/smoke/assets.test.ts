@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, expect, test } from 'vitest';
-import { checkAssets, emittedAssets } from './assets.ts';
+import { checkAssets, checkSpaFallback, emittedAssets } from './assets.ts';
 
 const immutable = 'public, max-age=31536000, immutable';
 
@@ -16,6 +16,7 @@ const files: Record<string, { type: string; cacheControl?: string }> = {
   '/pdfjs/wasm/quickjs-eval.js': { type: 'Application/JavaScript; charset=utf-8' },
   '/pdfjs/wasm/mislabelled.wasm': { type: 'application/octet-stream' },
   '/pdfjs/wasm/html.js': { type: 'text/html' },
+  '/served-as-the-app.js': { type: 'text/html; charset=utf-8' },
 };
 
 let server: Server;
@@ -55,6 +56,16 @@ test('reports an asset served with the wrong content type', async () => {
   expect(await checkAssets(origin, ['/pdfjs/wasm/mislabelled.wasm', '/pdfjs/wasm/html.js'])).toEqual([
     '/pdfjs/wasm/mislabelled.wasm: content-type application/octet-stream, expected application/wasm',
     '/pdfjs/wasm/html.js: content-type text/html, expected text/javascript or application/javascript',
+  ]);
+});
+
+test('passes a missing file that a fetch, not a navigation, gets the app for', async () => {
+  expect(await checkSpaFallback(origin, '/served-as-the-app.js')).toEqual([]);
+});
+
+test('reports a missing file that a fetch gets an error for instead of the app', async () => {
+  expect(await checkSpaFallback(origin, '/smoke/missing-file.js')).toEqual([
+    '/smoke/missing-file.js (fetch): HTTP 404 text/html, expected the app with 200 text/html',
   ]);
 });
 

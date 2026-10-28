@@ -3,6 +3,7 @@ import { userEvent } from 'vitest/browser';
 import { Network } from './storage/adapter.ts';
 import { chooseFromMenu } from './test/app-bar.ts';
 import { buildCalibreLibrary } from './test/calibre-library.ts';
+import { chooseScreen, connectMega } from './test/connect.ts';
 import { fakeRenderers } from './test/fake-renderer.ts';
 import { FakeStorage } from './test/fake-storage.ts';
 import { renderApp, testLink, unmountApps } from './test/render-app.tsx';
@@ -309,10 +310,11 @@ test('Disconnect forgets the book files on this device', async () => {
   await userEvent.click(app.screen.getByRole('link', { name: 'Back to book' }));
 
   await chooseFromMenu(app.screen, 'Disconnect');
-  await expect.element(app.screen.getByRole('textbox', { name: 'MEGA folder link' })).toBeVisible();
+  await expect.element(chooseScreen(app.screen)).toBeVisible();
   storage.calls.length = 0;
-  await userEvent.fill(app.screen.getByRole('textbox', { name: 'MEGA folder link' }), testLink);
-  await userEvent.click(app.screen.getByRole('button', { name: 'Connect' }));
+  await connectMega(app.screen, testLink);
+  await expect.element(app.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
+  app.navigate('/books/1');
   await userEvent.click(app.screen.getByRole('link', { name: 'Read EPUB' }));
 
   await expect.element(app.screen.getByText('# Chapter 1')).toBeVisible();

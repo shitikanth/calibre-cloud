@@ -38,11 +38,41 @@ GitHub → Settings → Branches (or Rules → Rulesets) → `main`.
 - [ ] Open `https://calibre-cloud.<your-subdomain>.workers.dev/` and a deep link such as `/smoke/deep-link`. Both should load the app.
 - [ ] Open a test PR and check that Workers Builds comments with a preview URL.
 
+## 4. Google sign-in
+
+The Worker runs the auth routes under `/api/auth/` (the only paths that reach it before the static assets; see `run_worker_first` in `wrangler.jsonc`). It reads three values, none of them committed:
+
+| Worker variable | Value |
+|---|---|
+| `GOOGLE_CLIENT_ID` | The OAuth client's ID. |
+| `GOOGLE_CLIENT_SECRET` | The OAuth client's secret. |
+| `AUTH_COOKIE_KEY` | 32 random bytes in base64, from `openssl rand -base64 32`. It encrypts the sign-in cookie, so changing it signs everyone out. |
+
+Until all three are set, "Sign in" comes straight back to the app with "Couldn’t sign in", the Worker log names the missing values, and `POST /api/auth/refresh` and `/signout` answer `500 {"error":"not-configured","missing":[...]}`. The rest of the app is unaffected.
+
+- [ ] In Google Cloud → APIs & Services → Credentials, make the OAuth client a *Web application* with exactly these authorized redirect URIs:
+  - `https://calibre-cloud.golu3990.workers.dev/api/auth/google/callback`
+  - `https://slice-google-drive-calibre-cloud.golu3990.workers.dev/api/auth/google/callback`
+  - `http://localhost:8787/api/auth/google/callback`
+- [ ] Set the three values on production, from `deploy/cloudflare/`: `wrangler secret put GOOGLE_CLIENT_ID`, then the same for `GOOGLE_CLIENT_SECRET` and `AUTH_COOKIE_KEY`. Set the client ID as a secret too, not a plain variable: `wrangler deploy` replaces plain variables set in the dashboard with the ones in `wrangler.jsonc`, which has none.
+- [ ] Set them for Previews: `wrangler preview base-config secret put GOOGLE_CLIENT_ID`, and the same for the other two. Previews deployed afterwards get them, so push to the slice branch to redeploy its preview.
+- [ ] Check: `pnpm --filter @calibre-cloud/deploy-cloudflare run smoke:deployed <origin>` now passes its auth checks (`/api/auth/google/start` redirects to Google).
+
+For `wrangler dev`, put the same three values in `deploy/cloudflare/.dev.vars` (gitignored), one `NAME=value` per line, and open the app at `http://localhost:8787`, not `127.0.0.1`: the callback URI is built from the address in the browser.
+
+### Publish the Google app
+
+Until it is published, the app stays in *Testing*: only listed test users can sign in, and sign-ins end after 7 days.
+
+- [ ] Google Search Console: verify `<account-subdomain>.workers.dev` (for this account, `golu3990.workers.dev`) with the HTML file method. The verification file goes in `web/public/` in a small PR.
+- [ ] Google Auth Platform → Branding: home page `https://calibre-cloud.golu3990.workers.dev/about`, privacy policy `…/privacy`, terms of service `…/terms`, and authorized domain `golu3990.workers.dev`.
+- [ ] Audience → Publish app.
+
 ## Local commands
 
 - `pnpm lint`, `pnpm typecheck`, `pnpm test`: what CI runs.
 - `pnpm build`: builds the SPA into `deploy/cloudflare/dist` with `_headers`.
-- `pnpm --filter @calibre-cloud/deploy-cloudflare run smoke:local`: serves `dist` with `wrangler dev` and runs the smoke check against it: the CSP directive by directive, the pdf.js worker and wasm files, and the smoked routes including the reader's not-connected state.
+- `pnpm --filter @calibre-cloud/deploy-cloudflare run smoke:local`: serves `dist` with `wrangler dev` and runs the smoke check against it: the CSP directive by directive, the pdf.js worker and wasm files, the smoked routes including the reader's not-connected state, the auth routes (start redirects to Google; refresh without a sign-in asks to reconnect), and the public pages `/about`, `/privacy`, and `/terms` (served as pages, not the app, with their content shown with JavaScript off). It passes dummy values for the three Worker variables, so it needs no `.dev.vars`.
 - MEGA adapter smoke test: put `MEGA_SMOKE_LINK="<shared folder link to a test library>"` in `.env.local` at the repo root (gitignored). Keep the quotes: unquoted, everything from `#` on is read as a comment and the key is lost. `pnpm test` then also runs `web/src/storage/mega/adapter.smoke.test.ts` against real MEGA. It's skipped when the variable is missing and always skipped when `CI` is set. Never commit or paste the link anywhere else.
-- `pnpm --filter @calibre-cloud/deploy-cloudflare run smoke:deployed <origin>`: runs the smoke check by hand against a deployed preview or production URL. Run `pnpm build` first on the commit that is deployed there: the check reads the names of the pdf.js worker and wasm files from `dist`, and a build of another commit can name the worker differently.
+- `pnpm --filter @calibre-cloud/deploy-cloudflare run smoke:deployed <origin>`: runs the smoke check by hand against a deployed preview or production URL. Its auth checks fail until that deployment has the section 4 values. Run `pnpm build` first on the commit that is deployed there: the check reads the names of the pdf.js worker and wasm files from `dist`, and a build of another commit can name the worker differently.
 - `wrangler login` is needed only to deploy from a laptop with `pnpm --filter @calibre-cloud/deploy-cloudflare run release`. Workers Builds doesn't need it.

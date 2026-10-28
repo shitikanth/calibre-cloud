@@ -1,6 +1,6 @@
 # calibre-cloud: High-Level Design
 
-Status: the first slice is built: browse, search, book detail, and download from a MEGA shared folder. The reader is built for EPUB, KEPUB, PDF, MOBI, PRC, AZW, AZW3, KF8, FB2, FBZ, and CBZ. Google Drive and Dropbox are not built yet.
+Status: the first slice is built: browse, search, book detail, and download from a MEGA shared folder. The reader is built for EPUB, KEPUB, PDF, MOBI, PRC, AZW, AZW3, KF8, FB2, FBZ, and CBZ. Google Drive is built: sign-in through the serverless auth functions, then a library-root picker. Dropbox is not built yet.
 
 ## Goal
 
@@ -46,7 +46,7 @@ flowchart LR
   - `read`: the whole file as a Blob, with progress and cancellation.
 
   Every failure is one of five provider-neutral errors: `NotFound`, `ReconnectRequired`, `QuotaExceeded`, `Network`, `Aborted`. The UI explains errors in these terms only.
-- **Storage provider:** each provider also owns its connect input (for MEGA, a folder link and its validation) and the shape of its saved connection. Only the storage layer knows the providers; everything above it sees a connection and an adapter. ESLint enforces this boundary and keeps each provider's SDK inside its adapter.
+- **Storage provider:** each provider also owns the name and icon the connect screen shows for it, its connect input (for MEGA, a folder link and its validation), and the shape of its saved connection. Only the storage layer knows the providers; everything above it sees a connection and an adapter. ESLint enforces this boundary and keeps each provider's SDK inside its adapter.
 - **Library index:** the official SQLite WASM build in a Web Worker opens `metadata.db` (the SQLite file Calibre keeps at the library root) read-only and answers browse and search queries over a small typed message API. Queries use Calibre's base tables, not its views or SQL functions.
 - **Library UI:** browse and search by author, series, tag, and other metadata, showing covers.
 - **Reader:** renders a book file in the browser, with one renderer per supported format: foliate-js for EPUB, KEPUB, MOBI, PRC, AZW, AZW3, KF8, FB2, FBZ, and CBZ, and pdf.js for PDF. foliate-js picks CBZ, FB2, and FBZ by file name, so the renderer names the file with the format's extension. Every other format is download-only. A link out of a book never opens by itself: the reader shows its URL and asks first, and opens only `http:`, `https:`, and `mailto:` links, in a new tab with no opener or referrer.
@@ -79,7 +79,8 @@ A Calibre library can be many GB, but only `metadata.db` is needed to list the w
 
 - **Frontend:** React, Vite, TypeScript, TanStack Router and TanStack Query, Tailwind.
 - **SQLite:** the official `@sqlite.org/sqlite-wasm` build, run in a Web Worker.
-- **Hosting:** a Cloudflare Worker serving static assets, with SPA fallback and a strict CSP set in platform config, not code. The reader renders each foliate-js section or comic page in a same-origin `blob:` frame, which needs `style-src 'self' 'unsafe-inline' blob:`, `frame-src blob:`, and `frame-ancestors 'self'`; `script-src` stays `'self' 'wasm-unsafe-eval'`, so scripts inside a book never run. No serverless functions yet; MEGA needs none.
+- **Hosting:** a Cloudflare Worker serving static assets, with SPA fallback and a strict CSP set in platform config, not code. The reader renders each foliate-js section or comic page in a same-origin `blob:` frame, which needs `style-src 'self' 'unsafe-inline' blob:`, `frame-src blob:`, and `frame-ancestors 'self'`; `script-src` stays `'self' 'wasm-unsafe-eval'`, so scripts inside a book never run. The same Worker runs the serverless auth functions under `/api/*`: a platform-neutral core in `api/` and a Cloudflare entry in `deploy/cloudflare/` that only passes it the Worker's secrets.
+- **Public pages:** a home page, privacy policy, and terms of service at `/about`, `/privacy`, and `/terms`: static HTML beside the app, readable without JavaScript, because Google requires them and fetches them directly. The privacy policy describes the sign-in flow and the device cache above, so it changes with them.
 - **Tests:** Vitest in browser mode (Chromium), driving the whole app against an in-memory fake storage adapter.
 
 ## Storage providers
@@ -87,7 +88,7 @@ A Calibre library can be many GB, but only `metadata.db` is needed to list the w
 | Provider | Auth | Addressing | Notes |
 |---|---|---|---|
 | Dropbox | OAuth with PKCE, works from the browser alone | Path-based | Simplest fit. |
-| Google Drive | OAuth. Long sessions need a serverless refresh function | ID-based, so paths are resolved folder by folder | Scope choice is the main risk (below). |
+| Google Drive | OAuth redirect flow through the serverless auth functions; `drive.readonly` | ID-based, so paths are resolved folder by folder and cached per session | Library root found by search or our folder browser, in My Drive and Shared with me. |
 | MEGA | No OAuth | Encrypted nodes, decrypted in the browser | Use a shared folder link instead of the user's password. |
 
 ## Cost model
@@ -98,6 +99,6 @@ A Calibre library can be many GB, but only `metadata.db` is needed to list the w
 
 ## Risks and open questions
 
-1. **Google Drive scope:** `drive.readonly` is a restricted scope. Unverified apps are capped at 100 users, and verification can require a paid annual security assessment, which would break "costs scale to zero". `drive.file` with the Google Picker avoids this, but it's unconfirmed whether picking a folder grants access to the files inside it. Prototype this before building the Drive adapter.
+1. **Google Drive scope:** settled for now (#4, #12). The app uses `drive.readonly` and is never submitted for verification, so it stays capped at 100 users and needs no paid security assessment. In *Testing*, only listed test users can sign in and refresh tokens expire after 7 days. Publishing it needs, on Google's Branding page, links to the three public pages, their domain listed as an authorized domain, and that domain verified in Search Console (#147). The domain is the account's `<account-subdomain>.workers.dev`, since `workers.dev` is on the Public Suffix List; a custom domain only if Google refuses it. `drive.file` with the Google Picker would lift the cap, but whether picking a folder covers its descendants is unconfirmed; it only matters for a public launch.
 2. **MEGA transfer quota:** free accounts have a bandwidth limit, so large books may fail to download. A download that hits the quota fails at once with `QuotaExceeded` rather than retrying.
 3. **Formats:** settled. Every format foliate-js or pdf.js reads is read in the browser; every other format is download-only.

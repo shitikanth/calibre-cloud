@@ -2,6 +2,7 @@ import { userEvent } from 'vitest/browser';
 import { afterEach, expect, test, vi } from 'vitest';
 import { NotFound, QuotaExceeded } from './storage/adapter.ts';
 import { buildCalibreLibrary } from './test/calibre-library.ts';
+import { chooseScreen } from './test/connect.ts';
 import { fakeRenderers } from './test/fake-renderer.ts';
 import { FakeStorage } from './test/fake-storage.ts';
 import { renderApp } from './test/render-app.tsx';
@@ -189,7 +190,7 @@ test.each(['/books/1/read/DJVU', '/books/1/read/TXT'])('%s says the format was n
 test('the reader route asks to connect first when there is no connection', async () => {
   const app = await renderApp({ storage: await janeEyreLibrary(), path: '/books/1/read/EPUB' });
 
-  await expect.element(app.screen.getByRole('textbox', { name: 'MEGA folder link' })).toBeVisible();
+  await expect.element(chooseScreen(app.screen)).toBeVisible();
   expect(app.url).toBe('/books/1/read/EPUB');
 });
 

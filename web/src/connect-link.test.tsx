@@ -2,6 +2,7 @@ import { userEvent } from 'vitest/browser';
 import { expect, onTestFinished, test, vi } from 'vitest';
 import { chooseFromMenu } from './test/app-bar.ts';
 import { buildCalibreLibrary } from './test/calibre-library.ts';
+import { openMegaStep } from './test/connect.ts';
 import { FakeStorage } from './test/fake-storage.ts';
 import { renderApp, testLink, unmountApps } from './test/render-app.tsx';
 import type { Screen } from './test/screen.ts';
@@ -40,10 +41,12 @@ test('a connect link works unencoded, the MEGA key’s own # included', async ()
   expect(app.url).toBe('/books/1');
 });
 
-test('a connect link no provider accepts shows the MEGA problem message', async () => {
+test('a connect link no provider accepts opens MEGA’s step, filled in, with its problem message', async () => {
   const app = await renderApp({ storage: await oneBookLibrary(), path: '/#connect=https://mega.nz/folder/TestHandle%' });
 
+  await expect.element(app.screen.getByRole('heading', { level: 1, name: 'MEGA' })).toBeVisible();
   await expect.element(linkInput(app.screen)).toHaveValue('https://mega.nz/folder/TestHandle%');
+  expect(app.url).toBe('/connect/mega');
   await expect.element(linkInput(app.screen)).toHaveAttribute('aria-invalid', 'true');
   await expect.element(app.screen.getByRole('alert')).toMatchTextContent(/isn’t a MEGA folder link/);
   expect(app.opened).toEqual([]);
@@ -101,7 +104,7 @@ test('after a connect link connects, disconnecting shows an empty connect screen
 
   await userEvent.click(app.screen.getByRole('button', { name: 'Connect a different library' }));
 
-  await expect.element(linkInput(app.screen)).toHaveValue('');
+  await expect.element(await openMegaStep(app.screen)).toHaveValue('');
 });
 
 test('once connected by hand, a link no provider accepts no longer fills the connect screen', async () => {
@@ -111,7 +114,7 @@ test('once connected by hand, a link no provider accepts no longer fills the con
 
   await userEvent.click(app.screen.getByRole('button', { name: 'Connect a different library' }));
 
-  await expect.element(linkInput(app.screen)).toHaveValue('');
+  await expect.element(await openMegaStep(app.screen)).toHaveValue('');
 });
 
 test('Escape cannot cancel a switch that has already started', async () => {

@@ -17,6 +17,13 @@ describe('platform import ban', () => {
     expect(await platformImportErrors('web/src/example.ts', source)).toHaveLength(1);
   });
 
+  test.each([
+    ['node:crypto', "import { randomBytes } from 'node:crypto';\nrandomBytes(1);\n"],
+    ['cloudflare:workers', "import { env } from 'cloudflare:workers';\nconsole.log(env);\n"],
+  ])('rejects %s in the API core', async (_name, source) => {
+    expect(await platformImportErrors('api/src/example.ts', source)).toHaveLength(1);
+  });
+
   test('allows node:* and cloudflare:* in the deploy package', async () => {
     const source =
       "import { readFileSync } from 'node:fs';\nimport { env } from 'cloudflare:workers';\nconsole.log(readFileSync, env);\n";
