@@ -1,10 +1,13 @@
 import { useState, type FormEvent } from 'react';
 import { useConnection, useProviders } from '../connection/context.tsx';
 import type { LinkProvider } from '../storage/provider.ts';
+import type { SignInProvider } from '../storage/sign-in.ts';
 import { useConnectLinkInput } from './connect-link.tsx';
+import { pickerPath } from './library-picker.tsx';
+import { SignInProblem } from './sign-in-outcome.tsx';
 
 export function ConnectScreen() {
-  const { linkProviders } = useProviders();
+  const { linkProviders, signInProviders } = useProviders();
   const linked = useLinkedInput();
   return (
     <div className="flex justify-center sm:py-12">
@@ -19,6 +22,14 @@ export function ConnectScreen() {
         {linkProviders.map((provider) => (
           <ConnectForm key={provider.id} provider={provider} initial={linked?.provider === provider ? linked : undefined} />
         ))}
+        {signInProviders.length > 0 && (
+          <div className="mt-6 flex flex-col gap-2">
+            <SignInProblem />
+            {signInProviders.map((provider) => (
+              <SignInButton key={provider.id} provider={provider} />
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
@@ -74,5 +85,17 @@ function ConnectForm({ provider, initial }: { provider: LinkProvider; initial: I
         Connect
       </button>
     </form>
+  );
+}
+
+function SignInButton({ provider }: { provider: SignInProvider }) {
+  const { signInHref } = useProviders();
+  return (
+    <a
+      href={signInHref(provider, pickerPath(provider.id))}
+      className="inline-flex min-h-11 items-center justify-center rounded border border-neutral-400 px-4 py-2 hover:bg-neutral-100"
+    >
+      Sign in with {provider.name}
+    </a>
   );
 }

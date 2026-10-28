@@ -3,16 +3,19 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  Navigate,
   useMatch,
   type RouterHistory,
 } from '@tanstack/react-router';
-import { useConnection } from './connection/context.tsx';
+import { useConnection, useProviders } from './connection/context.tsx';
 import { BookScreen } from './screens/book-screen.tsx';
 import { ConnectLinkHandler } from './screens/connect-link.tsx';
 import { ConnectScreen } from './screens/connect-screen.tsx';
 import { ConnectedShell } from './screens/connected-shell.tsx';
+import { LibraryPicker } from './screens/library-picker.tsx';
 import { LibraryScreen } from './screens/library-screen.tsx';
 import { ReaderScreen } from './screens/reader-screen.tsx';
+import { SignInOutcomeHandler, useSignInProblem } from './screens/sign-in-outcome.tsx';
 
 const rootRoute = createRootRoute({
   component: RootLayout,
@@ -21,9 +24,11 @@ const rootRoute = createRootRoute({
 
 function RootLayout() {
   return (
-    <ConnectLinkHandler>
-      <Layout />
-    </ConnectLinkHandler>
+    <SignInOutcomeHandler>
+      <ConnectLinkHandler>
+        <Layout />
+      </ConnectLinkHandler>
+    </SignInOutcomeHandler>
   );
 }
 
@@ -87,7 +92,22 @@ function ReaderRouteScreen() {
   return connection ? <ReaderScreen bookId={bookId} format={format} /> : <ConnectScreen />;
 }
 
-const routeTree = rootRoute.addChildren([homeRoute, bookRoute, readerRoute]);
+const pickerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/connect/$provider',
+  component: PickerRouteScreen,
+});
+
+function PickerRouteScreen() {
+  const { connection } = useConnection();
+  const { signInProvider } = useProviders();
+  const problem = useSignInProblem();
+  const provider = signInProvider(pickerRoute.useParams().provider);
+  if (connection) return <Navigate to="/" replace />;
+  return provider && !problem ? <LibraryPicker provider={provider} /> : <ConnectScreen />;
+}
+
+const routeTree = rootRoute.addChildren([homeRoute, bookRoute, readerRoute, pickerRoute]);
 
 export function createAppRouter(options: { history?: RouterHistory } = {}) {
   return createRouter({ routeTree, ...options });

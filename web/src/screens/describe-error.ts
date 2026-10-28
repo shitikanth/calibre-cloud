@@ -1,7 +1,13 @@
 import { LibraryInUse } from '../library/errors.ts';
 import { Aborted, Network, NotFound, QuotaExceeded, ReconnectRequired } from '../storage/adapter.ts';
 
-export type ErrorCopy = { title: string; detail: string; canRetry: boolean; canSwitchLibrary: boolean };
+export type ErrorCopy = {
+  title: string;
+  detail: string;
+  canRetry: boolean;
+  canSwitchLibrary: boolean;
+  canReconnect: boolean;
+};
 
 export type ErrorSubject = 'library' | 'file';
 
@@ -13,6 +19,7 @@ export function describeError(error: Error, subject: ErrorSubject): ErrorCopy {
       detail: 'This browser can show the library in one tab at a time. Close the other tab, then try again.',
       canRetry: true,
       canSwitchLibrary: false,
+      canReconnect: false,
     };
   if (error instanceof NotFound)
     return library
@@ -22,14 +29,22 @@ export function describeError(error: Error, subject: ErrorSubject): ErrorCopy {
             'This folder has no metadata.db at its root, or it can no longer be opened. Connect the folder Calibre uses as its library.',
           canRetry: false,
           canSwitchLibrary: true,
+          canReconnect: false,
         }
-      : { title: 'File missing', detail: 'This file is missing from your library.', canRetry: false, canSwitchLibrary: true };
+      : {
+          title: 'File missing',
+          detail: 'This file is missing from your library.',
+          canRetry: false,
+          canSwitchLibrary: true,
+          canReconnect: false,
+        };
   if (error instanceof QuotaExceeded)
     return {
       title: 'Download quota exceeded',
       detail: 'Your storage provider has paused downloads for now. Try later.',
       canRetry: true,
       canSwitchLibrary: true,
+      canReconnect: false,
     };
   if (error instanceof Network)
     return {
@@ -37,6 +52,7 @@ export function describeError(error: Error, subject: ErrorSubject): ErrorCopy {
       detail: 'Check your internet connection and try again.',
       canRetry: true,
       canSwitchLibrary: true,
+      canReconnect: false,
     };
   if (error instanceof ReconnectRequired)
     return {
@@ -44,6 +60,7 @@ export function describeError(error: Error, subject: ErrorSubject): ErrorCopy {
       detail: 'Your access has expired. Connect again.',
       canRetry: false,
       canSwitchLibrary: true,
+      canReconnect: true,
     };
   if (error instanceof Aborted)
     return {
@@ -51,11 +68,13 @@ export function describeError(error: Error, subject: ErrorSubject): ErrorCopy {
       detail: 'It was cancelled.',
       canRetry: true,
       canSwitchLibrary: true,
+      canReconnect: false,
     };
   return {
     title: library ? 'Couldn’t open this library' : 'The download failed',
     detail: error.message,
     canRetry: true,
     canSwitchLibrary: true,
+    canReconnect: false,
   };
 }
