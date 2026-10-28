@@ -53,7 +53,10 @@ test('a new visitor chooses from every storage provider, in the registry’s ord
   await expect.element(screen.getByRole('heading', { level: 1, name: 'Connect your Calibre library' })).toBeVisible();
   await expect.element(screen.getByText(/^Read-only\. calibre-cloud never changes your library/)).toBeVisible();
   const tiles = screen.getByRole('listitem').getByRole('link');
-  expect(tiles.elements().map((tile) => tile.textContent)).toEqual(['MEGA', 'Fake Drive']);
+  expect(tiles.elements()).toEqual([
+    screen.getByRole('link', { name: 'MEGA' }).element(),
+    screen.getByRole('link', { name: 'Fake Drive' }).element(),
+  ]);
   for (const tile of tiles.elements()) {
     const icon = tile.querySelector('img')!;
     await expect.poll(() => icon.complete && icon.naturalWidth > 0).toBe(true);

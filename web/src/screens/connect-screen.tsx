@@ -23,7 +23,7 @@ export function ConnectScreen({ provider }: { provider?: LinkProvider | undefine
 }
 
 function ChooseProvider() {
-  const { all } = useProviders();
+  const { allProviders } = useProviders();
   return (
     <>
       <p className="text-sm/[1.5] font-semibold text-neutral-600">calibre-cloud</p>
@@ -32,7 +32,7 @@ function ChooseProvider() {
       </h1>
       <SignInProblem className="mt-4" />
       <ul className="mt-7 grid grid-cols-[repeat(auto-fill,minmax(112px,1fr))] gap-3">
-        {all.map((provider) => (
+        {allProviders.map((provider) => (
           <li key={provider.id}>
             <ProviderTile provider={provider} />
           </li>

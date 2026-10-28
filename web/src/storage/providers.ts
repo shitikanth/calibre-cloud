@@ -10,13 +10,14 @@ export const providers: readonly StorageProvider[] = [megaProvider, googleProvid
 export type ResolvedConnectInput = { provider: LinkProvider; parsed: ParsedConnectInput };
 
 export type Providers = {
-  readonly all: readonly StorageProvider[];
+  readonly allProviders: readonly StorageProvider[];
   readonly linkProviders: readonly LinkProvider[];
   readonly signInProviders: readonly SignInProvider[];
   resolveConnectInput(input: string): ResolvedConnectInput;
   readConnection(value: unknown): Connection | undefined;
   connectInputFor(connection: Connection): string | undefined;
   openStorage(connection: Connection): StorageAdapter;
+  linkProvider(id: string): LinkProvider | undefined;
   signInProvider(id: string): SignInProvider | undefined;
   libraryFinder(provider: SignInProvider): LibraryFinder;
   signInHref(provider: SignInProvider, returnTo: string): string;
@@ -33,7 +34,7 @@ export function createProviders(list: readonly StorageProvider[], tokens: Access
     `${provider.startPath}?${new URLSearchParams({ return: returnTo })}`;
 
   return {
-    all: list,
+    allProviders: list,
     linkProviders,
     signInProviders,
     resolveConnectInput(input) {
@@ -51,6 +52,7 @@ export function createProviders(list: readonly StorageProvider[], tokens: Access
       if (!provider) throw new Error(`No storage provider called ${connection.provider}`);
       return provider.kind === 'link' ? provider.open(connection) : provider.open(connection, tokens);
     },
+    linkProvider: (id) => linkProviders.find((provider) => provider.id === id),
     signInProvider: (id) => signInProviders.find((provider) => provider.id === id),
     libraryFinder: (provider) => provider.libraryFinder(tokens),
     signInHref,
