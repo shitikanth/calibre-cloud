@@ -1,6 +1,6 @@
 # calibre-cloud: High-Level Design
 
-Status: the first slice is built: browse, search, book detail, and download from a MEGA shared folder. The reader is built for EPUB, KEPUB, PDF, MOBI, PRC, AZW, AZW3, KF8, FB2, FBZ, and CBZ. Google Drive and Dropbox are not built yet.
+Status: the first slice is built: browse, search, book detail, and download from a MEGA shared folder. The reader is built for EPUB, KEPUB, PDF, MOBI, PRC, AZW, AZW3, KF8, FB2, FBZ, and CBZ. Google Drive is built: sign-in through the serverless auth functions, then a library-root picker. Dropbox is not built yet.
 
 ## Goal
 
@@ -87,7 +87,7 @@ A Calibre library can be many GB, but only `metadata.db` is needed to list the w
 | Provider | Auth | Addressing | Notes |
 |---|---|---|---|
 | Dropbox | OAuth with PKCE, works from the browser alone | Path-based | Simplest fit. |
-| Google Drive | OAuth. Long sessions need a serverless refresh function | ID-based, so paths are resolved folder by folder | Scope choice is the main risk (below). |
+| Google Drive | OAuth redirect flow through the serverless auth functions; `drive.readonly` | ID-based, so paths are resolved folder by folder and cached per session | Library root found by search or our folder browser, in My Drive and Shared with me. |
 | MEGA | No OAuth | Encrypted nodes, decrypted in the browser | Use a shared folder link instead of the user's password. |
 
 ## Cost model
@@ -98,6 +98,6 @@ A Calibre library can be many GB, but only `metadata.db` is needed to list the w
 
 ## Risks and open questions
 
-1. **Google Drive scope:** `drive.readonly` is a restricted scope. Unverified apps are capped at 100 users, and verification can require a paid annual security assessment, which would break "costs scale to zero". `drive.file` with the Google Picker avoids this, but it's unconfirmed whether picking a folder grants access to the files inside it. Prototype this before building the Drive adapter.
+1. **Google Drive scope:** settled for now (#4, #12). The app uses `drive.readonly` and is never submitted for verification, so it stays capped at 100 users and needs no paid security assessment. Publishing it out of *Testing* still needs a home page, privacy policy and terms (#147). `drive.file` with the Google Picker would lift the cap, but whether picking a folder covers its descendants is unconfirmed; it only matters for a public launch.
 2. **MEGA transfer quota:** free accounts have a bandwidth limit, so large books may fail to download. A download that hits the quota fails at once with `QuotaExceeded` rather than retrying.
 3. **Formats:** settled. Every format foliate-js or pdf.js reads is read in the browser; every other format is download-only.
