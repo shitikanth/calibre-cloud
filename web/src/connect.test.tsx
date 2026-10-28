@@ -65,6 +65,15 @@ test('a new visitor chooses from every storage provider, in the registry’s ord
   expect(app.opened).toEqual([]);
 });
 
+test('a new visitor can open the home page that describes calibre-cloud', async () => {
+  const app = await renderApp({ storage: await threeBookLibrary() });
+
+  const about = chooseScreen(app.screen).getByRole('link', { name: 'About calibre-cloud' });
+
+  await expect.element(about).toHaveAttribute('href', '/about');
+  expect(about.element().getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+});
+
 test('a tile shows a focus ring when reached by keyboard', async () => {
   const app = await renderApp({ storage: await threeBookLibrary() });
   const tile = chooseScreen(app.screen).getByRole('link', { name: 'MEGA' });

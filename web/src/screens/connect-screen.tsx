@@ -42,6 +42,12 @@ function ChooseProvider() {
         Read-only. calibre-cloud never changes your library, and your books go straight from your storage to this
         browser.
       </p>
+      <a
+        href="/about"
+        className="mt-2 -ml-1 inline-flex min-h-11 items-center px-1 text-sm text-neutral-600 underline hover:text-neutral-900"
+      >
+        About calibre-cloud
+      </a>
     </>
   );
 }

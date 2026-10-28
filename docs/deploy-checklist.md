@@ -60,6 +60,14 @@ Until all three are set, "Sign in" comes straight back to the app with "Couldn�
 
 For `wrangler dev`, put the same three values in `deploy/cloudflare/.dev.vars` (gitignored), one `NAME=value` per line, and open the app at `http://localhost:8787`, not `127.0.0.1`: the callback URI is built from the address in the browser.
 
+### Publish the Google app
+
+Until it is published, the app stays in *Testing*: only listed test users can sign in, and sign-ins end after 7 days.
+
+- [ ] Google Search Console: verify `<account-subdomain>.workers.dev` (for this account, `golu3990.workers.dev`) with the HTML file method. The verification file goes in `web/public/` in a small PR.
+- [ ] Google Auth Platform → Branding: home page `https://calibre-cloud.golu3990.workers.dev/about`, privacy policy `…/privacy`, terms of service `…/terms`, and authorized domain `golu3990.workers.dev`.
+- [ ] Audience → Publish app.
+
 ## Local commands
 
 - `pnpm lint`, `pnpm typecheck`, `pnpm test`: what CI runs.
