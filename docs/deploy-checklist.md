@@ -48,7 +48,7 @@ The Worker runs the auth routes under `/api/auth/` (the only paths that reach it
 | `GOOGLE_CLIENT_SECRET` | The OAuth client's secret. |
 | `AUTH_COOKIE_KEY` | 32 random bytes in base64, from `openssl rand -base64 32`. It encrypts the sign-in cookie, so changing it signs everyone out. |
 
-Until all three are set, the auth routes answer `500 {"error":"not-configured","missing":[...]}`, and the rest of the app is unaffected.
+Until all three are set, "Sign in" comes straight back to the app with "Couldn’t sign in", the Worker log names the missing values, and `POST /api/auth/refresh` and `/signout` answer `500 {"error":"not-configured","missing":[...]}`. The rest of the app is unaffected.
 
 - [ ] In Google Cloud → APIs & Services → Credentials, make the OAuth client a *Web application* with exactly these authorized redirect URIs:
   - `https://calibre-cloud.golu3990.workers.dev/api/auth/google/callback`

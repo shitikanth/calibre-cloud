@@ -76,13 +76,21 @@ async function savedSignIn(c: AuthContext): Promise<SignIn | undefined> {
   return isSignIn(signIn) ? signIn : undefined;
 }
 
+function signInError(c: Context, returnTo: string, reason: 'denied' | 'failed' = 'failed') {
+  return c.redirect(`${requestOrigin(c)}${returnTo}#signin-error=${reason}`, 302);
+}
+
 function app(config: Config) {
   return new Hono<{ Variables: ReadyConfig }>()
     .use(`${authPath}/*`, async (c, next) => {
       c.header('cache-control', 'no-store');
       if (c.req.method === 'POST' && c.req.header('origin') !== requestOrigin(c)) return c.json({ error: 'forbidden' }, 403);
       const prepared = await ready(config);
-      if ('missing' in prepared) return c.json({ error: 'not-configured', missing: prepared.missing }, 500);
+      if ('missing' in prepared) {
+        console.error('Sign-in is not configured; missing', prepared.missing);
+        if (c.req.method === 'GET') return signInError(c, sameOriginPath(requestOrigin(c), c.req.query('return')) ?? '/');
+        return c.json({ error: 'not-configured', missing: prepared.missing }, 500);
+      }
       c.set('google', prepared.google);
       c.set('key', prepared.key);
       await next();
@@ -90,7 +98,7 @@ function app(config: Config) {
     .get(`${authPath}/google/start`, async (c) => {
       const origin = requestOrigin(c);
       const returnTo = sameOriginPath(origin, c.req.query('return'));
-      if (returnTo === undefined) return c.json({ error: 'bad-return' }, 400);
+      if (returnTo === undefined) return signInError(c, '/');
       const state = toBase64Url(crypto.getRandomValues(new Uint8Array(32)));
       const sealed = await seal(c.var.key, stateCookie, { state, returnTo } satisfies SignInState);
       setCookie(c, stateCookie, sealed, { ...stateCookieOptions, maxAge: 600 });
@@ -102,7 +110,7 @@ function app(config: Config) {
       deleteCookie(c, stateCookie, stateCookieOptions);
       const saved = sealedState === undefined ? undefined : await unseal(c.var.key, stateCookie, sealedState);
       const returnTo = (isSignInState(saved) && sameOriginPath(origin, saved.returnTo)) || '/';
-      const fail = (reason: 'denied' | 'failed') => c.redirect(`${origin}${returnTo}#signin-error=${reason}`, 302);
+      const fail = (reason: 'denied' | 'failed') => signInError(c, returnTo, reason);
       if (!isSignInState(saved) || saved.state !== c.req.query('state')) return fail('failed');
       const error = c.req.query('error');
       if (error !== undefined) return fail(error === 'access_denied' ? 'denied' : 'failed');

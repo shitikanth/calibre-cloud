@@ -119,8 +119,8 @@ describe('GET /api/auth/google/start', () => {
       config,
     );
 
-    expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: 'bad-return' });
+    expect(response.status).toBe(302);
+    expect(response.headers.get('location')).toBe(`${origin}/#signin-error=failed`);
     expect(setCookies(response)).toEqual([]);
   });
 });
@@ -369,15 +369,25 @@ describe('cross-site POSTs', () => {
 });
 
 describe('missing configuration', () => {
+  const notConfigured = { googleClientId: undefined, googleClientSecret: '', cookieKey: undefined };
+
+  test.each([
+    ['GET /api/auth/google/start', () => new Request(`${origin}/api/auth/google/start?return=%2Fconnect%2Fgoogle`), '/connect/google'],
+    ['GET /api/auth/google/callback', () => callbackRequest('state=s&code=c', ''), '/'],
+  ] as const)('%s sends the browser back to the app with a sign-in error', async (_route, request, returnTo) => {
+    const response = await handle(request(), notConfigured);
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get('location')).toBe(`${origin}${returnTo}#signin-error=failed`);
+  });
+
   const routes = [
-    ['GET /api/auth/google/start', () => new Request(`${origin}/api/auth/google/start`)],
-    ['GET /api/auth/google/callback', () => callbackRequest('state=s&code=c', '')],
     ['POST /api/auth/refresh', () => post('/api/auth/refresh')],
     ['POST /api/auth/signout', () => post('/api/auth/signout')],
   ] as const;
 
   test.each(routes)('%s fails with a clear 500 naming what is missing', async (_route, request) => {
-    const response = await handle(request(), { googleClientId: undefined, googleClientSecret: '', cookieKey: undefined });
+    const response = await handle(request(), notConfigured);
 
     expect(response.status).toBe(500);
     expect(await response.json()).toEqual({
@@ -390,7 +400,7 @@ describe('missing configuration', () => {
     ['too short', btoa('short key')],
     ['not base64', 'not base64!'],
   ])('treats a cookie key that is %s as missing', async (_case, cookieKey) => {
-    const response = await handle(new Request(`${origin}/api/auth/google/start`), { ...config, cookieKey });
+    const response = await handle(post('/api/auth/refresh'), { ...config, cookieKey });
 
     expect(response.status).toBe(500);
     expect(await response.json()).toEqual({ error: 'not-configured', missing: ['cookieKey'] });
