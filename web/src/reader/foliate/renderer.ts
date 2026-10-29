@@ -165,7 +165,7 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
       const starts = current.getSectionFractions();
       for (const [index, section] of current.book.sections.entries()) {
         if (!section.createDocument) continue;
-        const doc = await section.createDocument();
+        const [doc] = await Promise.all([section.createDocument(), new Promise((resolve) => setTimeout(resolve))]);
         if (signal.aborted || destroyed.signal.aborted) return;
         const start = starts[index] ?? 0;
         const span = (starts[index + 1] ?? start) - start;
@@ -182,7 +182,6 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
           };
           yield result;
         }
-        await new Promise((resolve) => setTimeout(resolve));
       }
     },
     highlight(result, matches) {

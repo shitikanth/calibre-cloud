@@ -20,7 +20,7 @@ type OwnedState = SearchState & { owner: BookSearch | undefined };
 export type BookSearchControl = { state: SearchState; change: (query: string) => void; pick: (result: SearchResult) => void };
 
 export function useBookSearch(search: BookSearch | undefined): BookSearchControl {
-  const [owned, setState] = useState<OwnedState>({ ...blank, owner: undefined });
+  const [owned, setOwned] = useState<OwnedState>({ ...blank, owner: undefined });
   const running = useRef<AbortController | undefined>(undefined);
   const state = owned.owner === search ? owned : blank;
 
@@ -38,7 +38,7 @@ export function useBookSearch(search: BookSearch | undefined): BookSearchControl
       running.current = controller;
       const { signal } = controller;
       const wanted = search && query.trim() !== '';
-      setState({ query, results: [], searching: !!wanted, picked: undefined, owner: search });
+      setOwned({ query, results: [], searching: !!wanted, picked: undefined, owner: search });
       if (!wanted) return;
       void (async () => {
         await new Promise((resolve) => setTimeout(resolve, SETTLE_MS));
@@ -47,7 +47,7 @@ export function useBookSearch(search: BookSearch | undefined): BookSearchControl
         let frame: number | undefined;
         const flush = () => {
           frame = undefined;
-          if (!signal.aborted) setState((current) => ({ ...current, results: found.slice() }));
+          if (!signal.aborted) setOwned((current) => ({ ...current, results: found.slice() }));
         };
         try {
           for await (const result of search.find(query, signal)) {
@@ -59,13 +59,13 @@ export function useBookSearch(search: BookSearch | undefined): BookSearchControl
           // A search that fails part-way keeps what it found.
         }
         if (frame !== undefined) cancelAnimationFrame(frame);
-        if (!signal.aborted) setState((current) => ({ ...current, results: found, searching: false }));
+        if (!signal.aborted) setOwned((current) => ({ ...current, results: found, searching: false }));
       })();
     },
     [search],
   );
 
-  const pick = useCallback((picked: SearchResult) => setState((current) => ({ ...current, picked })), []);
+  const pick = useCallback((picked: SearchResult) => setOwned((current) => ({ ...current, picked })), []);
 
   return { state, change, pick };
 }
@@ -103,7 +103,7 @@ export function useHighlights(): Highlights {
   return highlights;
 }
 
-type SearchToolProps = { control: BookSearchControl; placement: PopoverPlacement; onPick: (result: SearchResult) => void };
+type SearchToolProps = Readonly<{ control: BookSearchControl; placement: PopoverPlacement; onPick: (result: SearchResult) => void }>;
 
 export function SearchTool({ control, placement, onPick }: SearchToolProps) {
   return (
@@ -122,7 +122,19 @@ export function SearchTool({ control, placement, onPick }: SearchToolProps) {
   );
 }
 
-type Group = { entry: TocEntry | undefined; results: SearchResult[] };
+type Group = { entry: TocEntry | undefined; results: [SearchResult, ...SearchResult[]] };
+
+const resultKeys = new WeakMap<SearchResult, number>();
+let lastKey = 0;
+
+function keyOf(result: SearchResult): number {
+  let key = resultKeys.get(result);
+  if (key === undefined) {
+    key = ++lastKey;
+    resultKeys.set(result, key);
+  }
+  return key;
+}
 
 function grouped(results: SearchResult[]): Group[] {
   const groups: Group[] = [];
@@ -145,7 +157,9 @@ function countLabel({ query, results, searching }: SearchState): string {
   return searching ? `${count}…` : count;
 }
 
-function SearchPanel({ control, pick }: { control: BookSearchControl; pick: (result: SearchResult) => void }) {
+type SearchPanelProps = Readonly<{ control: BookSearchControl; pick: (result: SearchResult) => void }>;
+
+function SearchPanel({ control, pick }: SearchPanelProps) {
   const { state, change } = control;
   const list = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
@@ -187,19 +201,17 @@ function SearchPanel({ control, pick }: { control: BookSearchControl; pick: (res
           </button>
         )}
       </div>
-      <p role="status" className={`px-4 text-xs text-(--reader-muted) ${count ? 'pb-1.5' : ''}`}>
-        {count}
-      </p>
+      <output className={`block px-4 text-xs text-(--reader-muted) ${count ? 'pb-1.5' : ''}`}>{count}</output>
       {state.results.length > 0 && (
         <div ref={list} className="min-h-0 overflow-y-auto border-t border-(--reader-line) pb-1">
-          {grouped(state.results).map((group, index) => (
-            <section key={index}>
+          {grouped(state.results).map((group) => (
+            <section key={keyOf(group.results[0])}>
               {group.entry && (
                 <h3 className="px-4 pt-2.5 pb-1 text-xs font-semibold tracking-wide text-(--reader-muted) uppercase">{group.entry.label}</h3>
               )}
               <ul>
-                {group.results.map((result, item) => (
-                  <li key={item}>
+                {group.results.map((result) => (
+                  <li key={keyOf(result)}>
                     <button
                       type="button"
                       aria-current={result === state.picked ? 'true' : undefined}

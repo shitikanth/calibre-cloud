@@ -6,15 +6,18 @@ const CONTEXT = 30;
 
 type Folded = { text: string; origins: number[] };
 
+function foldChar(char: string, foldedSoFar: string): string {
+  if (!/\s/.test(char)) return char.normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase();
+  return foldedSoFar.endsWith(' ') ? '' : ' ';
+}
+
 function fold(text: string): Folded {
   let folded = '';
   const origins: number[] = [];
   let index = 0;
   for (const char of text) {
-    const pieces = /\s/.test(char)
-      ? folded.endsWith(' ') ? '' : ' '
-      : char.normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase();
-    for (let piece = 0; piece < pieces.length; piece++) origins.push(index);
+    const pieces = foldChar(char, folded);
+    origins.push(...Array.from(pieces, () => index));
     folded += pieces;
     index += char.length;
   }
