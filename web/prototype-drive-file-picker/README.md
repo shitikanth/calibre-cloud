@@ -9,11 +9,15 @@ additions. Every CSP violation on the page is listed live, and the server logs `
 
 ## One-time setup (owner)
 
-1. Create a **new** Google Cloud project, so no `drive.readonly` grant from the real app's project
-   is involved. Its **project number** is `PICKER_APP_ID`.
-2. Enable **Google Drive API** and **Google Picker API**.
-3. Google Auth Platform: audience External, status Testing, test user `golu3990@gmail.com`.
-   Data access: add `.../auth/drive.file` and nothing else.
+1. Pick a Google Cloud project. Its **project number** is `PICKER_APP_ID`. The page asks for a
+   `drive.file`-only token and flags any other granted scope, so the live app's `drive.readonly`
+   grant can't leak in either way.
+   - **New project** (preferred): folders picked here stay granted to a throwaway project, so a
+     later re-test in the live project starts clean.
+   - **Live app's project**: less setup; its sign-in URL still requests only `drive.readonly`.
+2. Enable **Google Picker API** (and **Google Drive API** in a new project).
+3. Google Auth Platform, Data access: add `.../auth/drive.file`. In a new project also set audience
+   External, status Testing, test user `golu3990@gmail.com`.
 4. Clients → Web application. JavaScript origin `http://localhost:8156`, redirect URI
    `http://localhost:8156/`. The client ID is `PICKER_CLIENT_ID`.
 5. Credentials → API key, restricted to the Google Picker API and Google Drive API, website
