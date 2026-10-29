@@ -1,11 +1,14 @@
-import type { ExternalLink, FoliateView, Location, ResourceData, ResourceLoad, TocItem } from 'foliate-js/view.js';
-import type { BookRenderer, ReaderStyles, ReaderTheme, Relocation, Tap, TocEntry } from '../renderer.ts';
+import type { ExternalLink, FoliateView, Location, Overlayer, ResourceData, ResourceLoad, TocItem } from 'foliate-js/view.js';
+import type { BookRenderer, BookSearch, ReaderStyles, ReaderTheme, Relocation, SearchResult, Tap, TocEntry } from '../renderer.ts';
 import { onSwipe } from '../swipe.ts';
 
 export type FoliateRenderer = BookRenderer & {
   readonly sectionDocument: Document | undefined;
   readonly refusedResources: readonly string[];
+  readonly overlay: SVGSVGElement | undefined;
 };
+
+type HighlightKind = 'picked' | 'other';
 
 type SectionLoad = { doc: Document; index: number };
 
@@ -16,6 +19,10 @@ const themes: Record<ReaderTheme, { background: string; text: string; link: stri
   sepia: { background: '#f4ecd8', text: '#5b4636', link: '#8a4b08' },
   dark: { background: '#121212', text: '#e0e0e0', link: '#8ab4f8' },
 };
+
+const highlightColor = '#facc15';
+
+const highlightOpacity: Record<HighlightKind, string> = { picked: '0.45', other: '0.2' };
 
 const documentTypes = new Set(['application/xhtml+xml', 'text/html', 'image/svg+xml']);
 
@@ -54,6 +61,8 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
   let tocSections: TocSection[] = [];
   let sectionDocument: Document | undefined;
   const refusedResources: string[] = [];
+  let highlighted: { overlayer: Overlayer; keys: string[] } | undefined;
+  let highlightGeneration = 0;
 
   const renderError = (error: Error) => {
     for (const listener of errorListeners) listener(error);
@@ -140,6 +149,72 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
       });
   };
 
+  const overlayer = () => view?.renderer?.getContents?.().find((contents) => contents.overlayer);
+
+  const search: BookSearch = {
+    async *find(query, signal) {
+      const current = view;
+      if (!current) return;
+      const [{ searchMatcher }, { textWalker }] = await Promise.all([import('foliate-js/search.js'), import('foliate-js/text-walker.js')]);
+      const matcher = searchMatcher(textWalker, {
+        defaultLocale: current.language?.canonical,
+        matchCase: false,
+        matchDiacritics: false,
+        matchWholeWords: false,
+      });
+      const starts = current.getSectionFractions();
+      for (const [index, section] of current.book.sections.entries()) {
+        if (!section.createDocument) continue;
+        const doc = await section.createDocument();
+        if (signal.aborted || destroyed.signal.aborted) return;
+        const start = starts[index] ?? 0;
+        const span = (starts[index + 1] ?? start) - start;
+        const tocEntry = entryForSection(tocSections, index);
+        const shareBefore = textShareBefore(doc);
+        for (const { range, excerpt } of matcher(doc, query)) {
+          if (signal.aborted) return;
+          const result: SearchResult = {
+            location: current.getCFI(index, range),
+            excerpt: { before: excerpt.pre, match: excerpt.match, after: excerpt.post },
+            fraction: start + span * shareBefore(range),
+            ...(tocEntry ? { tocEntry } : {}),
+          };
+          yield result;
+        }
+        await new Promise((resolve) => setTimeout(resolve));
+      }
+    },
+    highlight(result, matches) {
+      search.clearHighlights();
+      const current = view;
+      const shown = overlayer();
+      if (!current || !shown?.overlayer) return;
+      const { doc, overlayer: layer } = shown;
+      const generation = highlightGeneration;
+      const section = sectionOf(result.location);
+      const others = matches.filter(({ location }) => location !== result.location && sectionOf(location) === section);
+      const marks: [string, HighlightKind][] = [...others.map(({ location }): [string, HighlightKind] => [location, 'other']), [result.location, 'picked']];
+      const keys: string[] = [];
+      highlighted = { overlayer: layer, keys };
+      void (async () => {
+        for (const [location, kind] of marks) {
+          const target = await current.resolveNavigation(location);
+          if (generation !== highlightGeneration) return;
+          const range = target?.anchor?.(doc);
+          if (!range || !('startContainer' in range)) continue;
+          const key = `search:${location}`;
+          layer.add(key, range, drawHighlight(kind));
+          keys.push(key);
+        }
+      })();
+    },
+    clearHighlights() {
+      highlightGeneration += 1;
+      if (highlighted) for (const key of highlighted.keys) highlighted.overlayer.remove(key);
+      highlighted = undefined;
+    },
+  };
+
   const renderer: FoliateRenderer = {
     get toc() {
       return toc;
@@ -149,6 +224,9 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
     },
     get refusedResources() {
       return refusedResources;
+    },
+    get overlay() {
+      return overlayer()?.overlayer?.element;
     },
     async open(blob, container, { location }) {
       const created = document.createElement('foliate-view') as FoliateView;
@@ -226,8 +304,13 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
       if (view?.renderer && !view.renderer.setStyles) return undefined;
       return (styles: ReaderStyles) => view?.renderer.setStyles?.(stylesheet(styles));
     },
+    get search() {
+      if (view?.book && !view.book.sections.some((section) => section.createDocument)) return undefined;
+      return search;
+    },
     destroy() {
       destroyed.abort();
+      highlighted = undefined;
       if (view) {
         if (opening) view.remove();
         else teardown(view);
@@ -246,6 +329,40 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
     },
   };
   return renderer;
+}
+
+function sectionOf(cfi: string): string {
+  return cfi.slice(0, cfi.indexOf('!'));
+}
+
+function drawHighlight(kind: HighlightKind) {
+  return (rects: DOMRectList) => {
+    const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    group.dataset.highlight = kind;
+    group.setAttribute('fill', highlightColor);
+    group.setAttribute('fill-opacity', highlightOpacity[kind]);
+    for (const { left, top, width, height } of rects) {
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      for (const [name, value] of Object.entries({ x: left, y: top, width, height })) rect.setAttribute(name, String(value));
+      group.append(rect);
+    }
+    return group;
+  };
+}
+
+// Takes ranges in document order, so each call only counts the text since the last.
+function textShareBefore(doc: Document): (range: Range) => number {
+  const root = doc.body ?? doc.documentElement;
+  const total = root.textContent?.length ?? 0;
+  const gap = doc.createRange();
+  gap.setStart(root, 0);
+  let counted = 0;
+  return (range) => {
+    gap.setEnd(range.startContainer, range.startOffset);
+    counted += gap.toString().length;
+    gap.setStart(range.startContainer, range.startOffset);
+    return total > 0 ? Math.min(counted / total, 1) : 0;
+  };
 }
 
 // The paginator re-renders on the first notification from its own ResizeObserver. If that lands
