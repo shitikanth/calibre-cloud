@@ -1,6 +1,6 @@
 # Deploy checklist (owner)
 
-CD runs on Cloudflare Workers Builds, connected to the `calibre-cloud` Worker. CI runs on GitHub Actions (`.github/workflows/ci.yml`). Neither needs a Cloudflare API token or GitHub secrets.
+CD runs on Cloudflare Workers Builds, connected to the `calibre-cloud` Worker. CI runs on GitHub Actions (`.github/workflows/ci.yml`). Neither needs a Cloudflare API token. CI's only GitHub secret is `SONAR_TOKEN` (section 5).
 
 These steps need the owner's Cloudflare and GitHub access.
 
@@ -67,6 +67,16 @@ Until it is published, the app stays in *Testing*: only listed test users can si
 - [ ] Google Search Console: verify `<account-subdomain>.workers.dev` (for this account, `golu3990.workers.dev`) with the HTML file method. The verification file goes in `web/public/` in a small PR.
 - [ ] Google Auth Platform → Branding: home page `https://calibre-cloud.golu3990.workers.dev/about`, privacy policy `…/privacy`, terms of service `…/terms`, and authorized domain `golu3990.workers.dev`.
 - [ ] Audience → Publish app.
+
+## 5. SonarCloud
+
+CI scans the code with SonarCloud after `pnpm test:coverage` and uploads the three `lcov.info` reports. The scope and exclusions are in `sonar-project.properties`. The project is `shitikanth_calibre-cloud` in the `shitikanth` organization.
+
+- [ ] Install the SonarCloud GitHub App on the repo and import it.
+- [ ] Administration → Analysis Method: turn **Automatic Analysis** off. While it is on, the CI scan fails.
+- [ ] My Account → Security: create a token and add it as the repo secret `SONAR_TOKEN`.
+
+The quality gate is reported on each PR but is not a required check.
 
 ## Local commands
 
