@@ -1,6 +1,8 @@
 import { userEvent, type Locator } from 'vitest/browser';
 import { expect, test } from 'vitest';
+import { createFoliateRenderer, type FoliateRenderer } from './reader/foliate/renderer.ts';
 import { buildCalibreLibrary } from './test/calibre-library.ts';
+import twoChaptersUrl from './test/fixtures/two-chapters.epub?url';
 import { fakeRenderers, type FakeRenderer } from './test/fake-renderer.ts';
 import { FakeStorage } from './test/fake-storage.ts';
 import { renderApp } from './test/render-app.tsx';
@@ -216,4 +218,28 @@ test('closing the reader stops a search in progress', async () => {
   release();
 
   await expect.poll(() => searching.abandonedSearches).toBe(1);
+});
+
+test('with the real EPUB renderer, picking a result shows its chapter with the match highlighted, and a page turn clears it', async () => {
+  const files = await buildCalibreLibrary([{ title: 'Two Chapters', authors: ['Calibre Cloud'], formats: { EPUB: '' } }]);
+  files['Calibre Cloud/Two Chapters (1)/Two Chapters - Calibre Cloud.epub'] = new Uint8Array(await (await fetch(twoChaptersUrl)).arrayBuffer());
+  let renderer: FoliateRenderer | undefined;
+  const { screen } = await renderApp({
+    storage: new FakeStorage(files),
+    connected: true,
+    path: '/books/1/read/EPUB',
+    renderers: { EPUB: async () => (renderer = await createFoliateRenderer('epub')) },
+  });
+  await expect.poll(() => renderer?.sectionDocument?.querySelector('p')).toBeTruthy();
+
+  const panel = await searchFor(screen, 'pear tree', '2 matches');
+  expect(panel.getByRole('heading').elements().map((heading) => heading.textContent)).toEqual(['Two: The Unsent Letters']);
+  await userEvent.click(results(panel).nth(0));
+
+  await expect.poll(() => renderer?.sectionDocument?.getElementById('chapter-two')).toBeTruthy();
+  await expect.poll(() => renderer?.overlay?.querySelector('[data-highlight="picked"] rect')).toBeTruthy();
+
+  await tapZone(screen, 'Next page');
+
+  await expect.poll(() => renderer?.overlay?.querySelector('[data-highlight]') ?? null).toBeNull();
 });
