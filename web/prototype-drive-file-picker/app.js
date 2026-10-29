@@ -56,7 +56,7 @@ $('sign-in').addEventListener('click', () => {
   const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
   url.search = new URLSearchParams({
     client_id: config.clientId,
-    redirect_uri: `${location.origin}/`,
+    redirect_uri: `${location.origin}/api/auth/google/callback`,
     response_type: 'token',
     scope,
     include_granted_scopes: 'false',

@@ -5,13 +5,14 @@ import { join } from 'node:path';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const headersFile = join(here, '../../deploy/cloudflare/_headers');
-const port = 8156;
+const port = 8787;
+const callbackPath = '/api/auth/google/callback';
 
-for (const name of ['PICKER_CLIENT_ID', 'PICKER_API_KEY', 'PICKER_APP_ID']) {
+for (const name of ['GOOGLE_CLIENT_ID', 'PICKER_API_KEY', 'PICKER_APP_ID']) {
   if (!process.env[name]) console.warn(`missing ${name}; see README.md`);
 }
 const config = {
-  clientId: process.env.PICKER_CLIENT_ID ?? '',
+  clientId: process.env.GOOGLE_CLIENT_ID ?? '',
   apiKey: process.env.PICKER_API_KEY ?? '',
   appId: process.env.PICKER_APP_ID ?? '',
 };
@@ -50,7 +51,7 @@ createServer(async (req, res) => {
     return;
   }
 
-  const file = url.pathname === '/' ? 'index.html' : url.pathname.slice(1);
+  const file = url.pathname === '/' || url.pathname === callbackPath ? 'index.html' : url.pathname.slice(1);
   const ext = file.slice(file.lastIndexOf('.'));
   if (!['index.html', 'app.js', 'config.json'].includes(file)) {
     res.writeHead(404).end();
