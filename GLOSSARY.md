@@ -52,6 +52,10 @@ _Avoid_: plugin, viewer, library
 Where in a format the user of this device last left off. A book has at most one per format, and it belongs to the device, not the library.
 _Avoid_: bookmark, progress, last page
 
+**In-book search**:
+Finding a word or phrase in the text of the book open in the reader. Library search matches book metadata only.
+_Avoid_: full-text search, find
+
 **Reader settings**:
 The device-wide reading preferences the user applies to every book, such as font size and theme.
 _Avoid_: preferences, per-book settings

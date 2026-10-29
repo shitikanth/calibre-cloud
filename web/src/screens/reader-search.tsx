@@ -1,8 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { BookRenderer, BookSearch, SearchResult, TocEntry } from '../reader/renderer.ts';
-import { ReaderPopover, type PopoverPlacement } from './reader-popover.tsx';
+import { panelClass, ReaderPopover, scrollToCurrent, type PopoverPlacement } from './reader-popover.tsx';
 
 const SETTLE_MS = 250;
+
+const searchIcon = (
+  <>
+    <circle cx="11" cy="11" r="7" />
+    <path d="M20 20l-4-4" />
+  </>
+);
 
 export type SearchState = { query: string; results: SearchResult[]; searching: boolean; picked: SearchResult | undefined };
 
@@ -94,7 +101,7 @@ type SearchToolProps = { control: BookSearchControl; placement: PopoverPlacement
 
 export function SearchTool({ control, placement, onPick }: SearchToolProps) {
   return (
-    <ReaderPopover label="Search" icon={<><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></>} placement={placement}>
+    <ReaderPopover label="Search" icon={searchIcon} placement={placement}>
       {(close) => (
         <SearchPanel
           control={control}
@@ -127,7 +134,7 @@ function positionOf({ page, fraction }: SearchResult): string {
 
 function countLabel({ query, results, searching }: SearchState): string {
   if (query.trim() === '') return '';
-  if (!searching && results.length === 0) return 'No matches';
+  if (results.length === 0) return searching ? 'Searching…' : 'No matches';
   const count = `${results.length.toLocaleString()} ${results.length === 1 ? 'match' : 'matches'}`;
   return searching ? `${count}…` : count;
 }
@@ -138,11 +145,7 @@ function SearchPanel({ control, pick }: { control: BookSearchControl; pick: (res
   const input = useRef<HTMLInputElement>(null);
   useEffect(() => {
     input.current?.focus();
-    const panel = list.current;
-    const marked = panel?.querySelector<HTMLElement>('[aria-current="true"]');
-    if (!panel || !marked) return;
-    const offset = marked.getBoundingClientRect().top - panel.getBoundingClientRect().top + panel.scrollTop;
-    panel.scrollTop = offset - (panel.clientHeight - marked.offsetHeight) / 2;
+    scrollToCurrent(list.current);
   }, []);
   const count = countLabel(state);
 
@@ -150,12 +153,11 @@ function SearchPanel({ control, pick }: { control: BookSearchControl; pick: (res
     <div
       role="search"
       aria-label="Search in book"
-      className="flex max-h-[70dvh] w-72 flex-col rounded border border-(--reader-line) bg-(--reader-bg) text-sm text-(--reader-fg) shadow-lg"
+      className={`${panelClass} flex flex-col text-sm`}
     >
       <div className="m-3 flex h-10 items-center gap-2 rounded-md border border-(--reader-line) px-2.5 focus-within:outline-2 focus-within:outline-(--reader-muted)">
         <svg aria-hidden="true" viewBox="0 0 24 24" className="size-4 shrink-0 fill-none stroke-(--reader-muted) stroke-2">
-          <circle cx="11" cy="11" r="7" />
-          <path d="M20 20l-4-4" />
+          {searchIcon}
         </svg>
         <input
           ref={input}

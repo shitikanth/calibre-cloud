@@ -212,6 +212,7 @@ test('closing the reader stops a search in progress', async () => {
   const panel = await openSearch(screen);
   await userEvent.fill(field(panel), 'whale');
   await expect.poll(() => searching.searches).toEqual(['whale']);
+  expect(panel.getByRole('status').element().textContent).toBe('Searching…');
 
   await userEvent.click(screen.getByRole('link', { name: 'Back to book' }));
   await expect.element(screen.getByRole('heading', { level: 1, name: 'Moby-Dick' })).toBeVisible();

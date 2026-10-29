@@ -15,7 +15,7 @@ export type SearchResult = { location: string; excerpt: SearchExcerpt; fraction:
 export interface BookSearch {
   // Matching ignores case and diacritics. Results come in book order, and stop once the signal aborts.
   find(query: string, signal: AbortSignal): AsyncIterable<SearchResult>;
-  // Call once goTo(result.location) resolves. The other matches on the same page are drawn fainter.
+  // Call once goTo(result.location) resolves. Those of the other matches that show on the same page are drawn fainter.
   highlight(result: SearchResult, matches: readonly SearchResult[]): void;
   clearHighlights(): void;
 }

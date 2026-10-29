@@ -35,7 +35,7 @@ class PdfRenderer implements BookRenderer {
   private container: HTMLElement | undefined;
   private scroller: HTMLElement | undefined;
   private canvas: HTMLCanvasElement | undefined;
-  private marks: HTMLElement | undefined;
+  private highlightLayer: HTMLElement | undefined;
   private viewport: PageViewport | undefined;
   private highlights: Highlights | undefined;
   private readonly pageTexts = new Map<number, PageText>();
@@ -64,11 +64,11 @@ class PdfRenderer implements BookRenderer {
     this.scroller.style.cssText = 'height: 100%; overflow: auto; scrollbar-gutter: stable';
     this.canvas = document.createElement('canvas');
     this.canvas.style.display = 'block';
-    this.marks = document.createElement('div');
-    this.marks.style.cssText = 'position: absolute; inset: 0; pointer-events: none';
+    this.highlightLayer = document.createElement('div');
+    this.highlightLayer.style.cssText = 'position: absolute; inset: 0; pointer-events: none';
     const sheet = document.createElement('div');
     sheet.style.cssText = 'position: relative; width: fit-content';
-    sheet.append(this.canvas, this.marks);
+    sheet.append(this.canvas, this.highlightLayer);
     this.scroller.append(sheet);
     this.listenForGestures(this.scroller);
     container.replaceChildren(this.scroller);
@@ -160,7 +160,7 @@ class PdfRenderer implements BookRenderer {
     this.container = undefined;
     this.scroller = undefined;
     this.canvas = undefined;
-    this.marks = undefined;
+    this.highlightLayer = undefined;
     this.viewport = undefined;
     this.highlights = undefined;
     this.pageTexts.clear();
@@ -203,9 +203,9 @@ class PdfRenderer implements BookRenderer {
   }
 
   private drawHighlights(): void {
-    const { marks, viewport, highlights, scroller } = this;
-    if (!marks) return;
-    marks.replaceChildren();
+    const { highlightLayer, viewport, highlights, scroller } = this;
+    if (!highlightLayer) return;
+    highlightLayer.replaceChildren();
     const text = highlights && this.pageTexts.get(highlights.page);
     if (!highlights || !text || !viewport || highlights.page !== this.currentPage) return;
     for (const { match, kind } of highlights.marks) {
@@ -213,7 +213,7 @@ class PdfRenderer implements BookRenderer {
         const element = document.createElement('div');
         element.dataset.highlight = kind;
         element.style.cssText = `position: absolute; left: ${box.left}px; top: ${box.top}px; width: ${box.width}px; height: ${box.height}px; background: ${highlightColors[kind]}; mix-blend-mode: multiply`;
-        marks.append(element);
+        highlightLayer.append(element);
         if (kind === 'picked' && !highlights.scrolled && scroller) {
           highlights.scrolled = true;
           const visible = box.top >= scroller.scrollTop && box.top + box.height <= scroller.scrollTop + scroller.clientHeight;

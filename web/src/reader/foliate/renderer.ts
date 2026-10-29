@@ -12,7 +12,7 @@ type HighlightKind = 'picked' | 'other';
 
 type SectionLoad = { doc: Document; index: number };
 
-type TocSection = { entry: TocEntry; index: number };
+type TocSection = { entry: TocEntry; index: number; anchor?: ((doc: Document) => Range | Element | null) | undefined };
 
 const themes: Record<ReaderTheme, { background: string; text: string; link: string }> = {
   light: { background: '#ffffff', text: '#171717', link: '#1d4ed8' },
@@ -149,7 +149,7 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
       });
   };
 
-  const overlayer = () => view?.renderer?.getContents?.().find((contents) => contents.overlayer);
+  const shownSection = () => view?.renderer?.getContents?.().find((contents) => contents.overlayer);
 
   const search: BookSearch = {
     async *find(query, signal) {
@@ -169,10 +169,11 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
         if (signal.aborted || destroyed.signal.aborted) return;
         const start = starts[index] ?? 0;
         const span = (starts[index + 1] ?? start) - start;
-        const tocEntry = entryForSection(tocSections, index);
+        const chapterOf = chaptersIn(tocSections, index, doc);
         const shareBefore = textShareBefore(doc);
         for (const { range, excerpt } of matcher(doc, query)) {
           if (signal.aborted) return;
+          const tocEntry = chapterOf(range);
           const result: SearchResult = {
             location: current.getCFI(index, range),
             excerpt: { before: excerpt.pre, match: excerpt.match, after: excerpt.post },
@@ -187,7 +188,7 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
     highlight(result, matches) {
       search.clearHighlights();
       const current = view;
-      const shown = overlayer();
+      const shown = shownSection();
       if (!current || !shown?.overlayer) return;
       const { doc, overlayer: layer } = shown;
       const generation = highlightGeneration;
@@ -226,7 +227,7 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
       return refusedResources;
     },
     get overlay() {
-      return overlayer()?.overlayer?.element;
+      return shownSection()?.overlayer?.element;
     },
     async open(blob, container, { location }) {
       const created = document.createElement('foliate-view') as FoliateView;
@@ -401,8 +402,8 @@ async function isResolvable(view: FoliateView, location: string): Promise<boolea
 async function tocSectionsOf(view: FoliateView, toc: TocEntry[]): Promise<TocSection[]> {
   const sections = await Promise.all(
     toc.map(async (entry) => {
-      const index = (await view.resolveNavigation(entry.location))?.index;
-      const own = index === undefined ? [] : [{ entry, index }];
+      const target = await view.resolveNavigation(entry.location);
+      const own = target ? [{ entry, index: target.index, anchor: target.anchor }] : [];
       return [...own, ...(await tocSectionsOf(view, entry.children ?? []))];
     }),
   );
@@ -422,6 +423,26 @@ function entryForSection(sections: TocSection[], section: number): TocEntry | un
   const startsHere = sections.find((candidate) => candidate.index === section);
   if (startsHere) return startsHere.entry;
   return sections.findLast((candidate) => candidate.index < section)?.entry;
+}
+
+function chaptersIn(sections: TocSection[], index: number, doc: Document): (range: Range) => TocEntry | undefined {
+  const starts = sections.flatMap(({ entry, index: at, anchor }): { entry: TocEntry; start: Range | undefined }[] => {
+    if (at !== index) return [];
+    const node = anchor?.(doc);
+    if (!node || typeof node !== 'object') return [{ entry, start: undefined }];
+    const start = doc.createRange();
+    if ('startContainer' in node) start.setStart(node.startContainer, node.startOffset);
+    else start.setStartBefore(node);
+    return [{ entry, start }];
+  });
+  const fallback = entryForSection(sections, index);
+  if (starts.length === 0) return () => fallback;
+  const previous = sections.findLast((candidate) => candidate.index < index)?.entry;
+  return (range) => {
+    let chapter = previous;
+    for (const { entry, start } of starts) if (!start || start.compareBoundaryPoints(Range.START_TO_START, range) <= 0) chapter = entry;
+    return chapter ?? starts[0]?.entry;
+  };
 }
 
 function toTocEntry(item: TocItem, entries: WeakMap<TocItem, TocEntry>): TocEntry {

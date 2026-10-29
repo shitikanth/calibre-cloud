@@ -9,6 +9,7 @@ import fbzUrl from '../../test/fixtures/two-chapters.fbz?url';
 import mobiUrl from '../../test/fixtures/two-chapters.mobi?url';
 import cbzUrl from '../../test/fixtures/two-pages.cbz?url';
 import fixedLayoutEpubUrl from '../../test/fixtures/two-fixed-pages.epub?url';
+import oneFileTwoChaptersUrl from '../../test/fixtures/one-file-two-chapters.epub?url';
 
 type OpenedBook = { renderer: FoliateRenderer; relocations: Relocation[]; container: HTMLElement };
 
@@ -405,6 +406,14 @@ test('search finds every match in book order, ignoring case and diacritics, unde
   await renderer.goTo(results[3]?.location ?? '');
 
   expect(renderer.sectionDocument?.getElementById('chapter-two')).not.toBeNull();
+});
+
+test('search places each match under the chapter it falls in when one file holds several chapters', async () => {
+  const { renderer } = await openFixture(undefined, { extension: 'epub', url: oneFileTwoChaptersUrl });
+
+  const results = await searchAll(renderer, 'lamp');
+
+  expect(results.map(({ tocEntry }) => tocEntry?.label)).toEqual(['One: The Keeper', 'One: The Keeper', 'Two: The Visitor']);
 });
 
 test('search stops once its signal aborts', async () => {

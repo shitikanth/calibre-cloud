@@ -3,4 +3,5 @@
 - `two-chapters.fb2`: the same two chapters, hand-written as two titled `<section>`s. `two-chapters.fbz` is that file zipped.
 - `two-pages.cbz`: two 300×400 PNG pages, `page-1.png` (red) and `page-2.png` (blue), each labelled with its name.
 - `two-fixed-pages.epub`: a two-page fixed-layout (`rendition:layout` `pre-paginated`) EPUB 3 of our own text, 300×400 per page, with a two-entry nav TOC ("Page one", "Page two").
+- `one-file-two-chapters.epub`: an EPUB 3 of our own text whose one spine file holds both chapters ("One: The Keeper", "Two: The Visitor"), with a nav TOC that points at each by fragment. "lamp" appears twice in chapter one and once in chapter two. Made with Python's `zipfile`, `mimetype` stored first.
 - `two-pages.pdf`: two pages of our own text with a two-entry outline ("Page one", "Page two"), for the PDF renderer test.
