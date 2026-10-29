@@ -20,6 +20,8 @@ jobs:
       WRANGLER_SEND_METRICS: 'false'
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
@@ -45,6 +47,9 @@ jobs:
         with:
           name: coverage
           path: coverage/
+      - uses: SonarSource/sonarqube-scan-action@4d1dc0c91ee400dcf8a6dddf2f705ac36542e304 # v8.4.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       - run: pnpm build
       - name: Smoke-check the built app under wrangler dev
         run: pnpm --filter @calibre-cloud/deploy-cloudflare run smoke:local
