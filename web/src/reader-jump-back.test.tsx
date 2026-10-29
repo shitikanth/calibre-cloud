@@ -3,7 +3,7 @@ import { afterEach, expect, test } from 'vitest';
 import { buildCalibreLibrary } from './test/calibre-library.ts';
 import { fakeRenderers } from './test/fake-renderer.ts';
 import { FakeStorage } from './test/fake-storage.ts';
-import { showControls, tapZone } from './test/reader.ts';
+import { expectControls, showControls, tapZone } from './test/reader.ts';
 import { renderApp } from './test/render-app.tsx';
 
 const epub = ['# Chapter one', 'line 2', 'line 3', '# Chapter two', 'line 5'].join('\n');
@@ -130,6 +130,48 @@ test('a seek that lands where you are offers no Back, and nor do page turns afte
   await showControls(screen);
 
   expect(backButton(screen).query()).toBeNull();
+});
+
+test('Back is the next stop after the bar for a keyboard, and goes and comes with the controls', async () => {
+  const { fake, screen, bar } = await openReader('/books/1/read/EPUB');
+  await fake.latest.next();
+  seek(bar, 100);
+  await expect.element(screen.getByText('line 5')).toBeVisible();
+  const back = screen.getByRole('contentinfo').getByRole('button', { name: 'Back to 25%' });
+  await expect.element(back).toBeVisible();
+
+  await userEvent.keyboard('{Escape}');
+  await expectControls(screen, false);
+
+  (bar.element() as HTMLElement).focus();
+  await userEvent.keyboard('{Tab}');
+  await expectControls(screen, true);
+  await expect.element(back).toHaveFocus();
+  await userEvent.keyboard('{Enter}');
+
+  await expect.element(screen.getByText('line 2')).toBeVisible();
+});
+
+test.each([
+  [390, 844],
+  [1280, 800],
+])('at %i×%i, Back sits at the bottom left of the controls, clear of the place and the tools', async (width, height) => {
+  await page.viewport(width, height);
+  const { screen, bar } = await openReader('/books/1/read/EPUB');
+  seek(bar, 100);
+  const controls = screen.getByRole('contentinfo');
+  const back = controls.getByRole('button', { name: 'Back to 0%' });
+  await expect.element(back).toBeVisible();
+
+  const pill = back.element().getBoundingClientRect();
+  const panel = controls.element().getBoundingClientRect();
+  const where = controls.getByText('Chapter two · 100%').element().getBoundingClientRect();
+  expect(pill.left).toBeGreaterThanOrEqual(panel.left);
+  expect(pill.left - panel.left).toBeLessThan(panel.width / 4);
+  expect(pill.top).toBeGreaterThanOrEqual(bar.element().getBoundingClientRect().bottom);
+  expect(pill.right).toBeLessThanOrEqual(where.left);
+  for (const tool of controls.getByRole('button', { name: /Table of contents|Settings/ }).elements())
+    expect(pill.right).toBeLessThanOrEqual(tool.getBoundingClientRect().left);
 });
 
 test('a table-of-contents jump offers Back too, and Back returns there, goes away, and is where the book reopens', async () => {
