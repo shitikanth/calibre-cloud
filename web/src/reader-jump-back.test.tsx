@@ -92,6 +92,46 @@ test('Back is still offered after two page turns, either way, and goes on the th
   await expect.poll(() => backButton(screen).query()).toBeNull();
 });
 
+test('after a seek then a contents jump, Back returns to before the first, and the turn count starts again from the second', async () => {
+  const { fake, screen, bar } = await openReader('/books/1/read/EPUB');
+  await fake.latest.next();
+  await expect.element(screen.getByText('line 2')).toBeVisible();
+  seek(bar, 50);
+  await expect.element(screen.getByText('line 3')).toBeVisible();
+  await tapZone(screen, 'Next page');
+  await tapZone(screen, 'Next page');
+  await expect.element(screen.getByText('line 5')).toBeVisible();
+
+  await showControls(screen);
+  await userEvent.click(screen.getByRole('button', { name: 'Table of contents' }));
+  await userEvent.click(screen.getByRole('navigation', { name: 'Table of contents' }).getByRole('button', { name: 'Chapter one' }));
+  await expect.element(screen.getByText('# Chapter one')).toBeVisible();
+  await tapZone(screen, 'Next page');
+  await tapZone(screen, 'Next page');
+  await expect.element(screen.getByText('line 3')).toBeVisible();
+  await showControls(screen);
+  const back = screen.getByRole('contentinfo').getByRole('button', { name: 'Back to 25%' });
+  await expect.element(back).toBeVisible();
+
+  await userEvent.click(back);
+
+  await expect.element(screen.getByText('line 2')).toBeVisible();
+});
+
+test('a seek that lands where you are offers no Back, and nor do page turns after it', async () => {
+  const { fake, screen, bar } = await openReader('/books/1/read/PDF');
+  await fake.latest.next();
+  await expect.element(screen.getByText('Page two')).toBeVisible();
+
+  seek(bar, 2);
+  await expect.poll(() => fake.latest.calls.at(-1)).toEqual({ op: 'goToFraction', fraction: 0.5 });
+  await tapZone(screen, 'Next page');
+  await expect.element(screen.getByText('Page three')).toBeVisible();
+  await showControls(screen);
+
+  expect(backButton(screen).query()).toBeNull();
+});
+
 test('a table-of-contents jump offers Back too, and Back returns there, goes away, and is where the book reopens', async () => {
   const { fake, app, screen } = await openReader('/books/1/read/EPUB');
   await fake.latest.next();
