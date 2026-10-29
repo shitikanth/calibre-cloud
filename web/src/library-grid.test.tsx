@@ -1,10 +1,11 @@
-import { afterEach, expect, test } from 'vitest';
+import { afterEach, expect, test, vi } from 'vitest';
 import { page } from 'vitest/browser';
 import { buildCalibreLibrary, type BookSpec } from './test/calibre-library.ts';
 import { FakeStorage } from './test/fake-storage.ts';
 import { renderApp } from './test/render-app.tsx';
 
 afterEach(async () => {
+  vi.unstubAllGlobals();
   await page.viewport(414, 896);
 });
 
@@ -126,4 +127,44 @@ test('more books load as the owner scrolls to the end of the grid', async () => 
     })
     .not.toBeNull();
   expect(tileTitles(app.screen)).toEqual(numberedBooks(150).map(({ title }) => title).reverse());
+});
+
+async function nextFrames(count: number) {
+  for (let frame = 0; frame < count; frame++) await new Promise(requestAnimationFrame);
+}
+
+function holdIntersections() {
+  let holding = true;
+  const held: Array<() => void> = [];
+  vi.stubGlobal(
+    'IntersectionObserver',
+    class extends IntersectionObserver {
+      constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+        const queued: IntersectionObserverEntry[] = [];
+        super((entries, observer) => {
+          if (!holding) return callback(entries, observer);
+          if (queued.length === 0) held.push(() => callback(queued.splice(0), observer));
+          queued.push(...entries);
+        }, options);
+      }
+    },
+  );
+  return () => {
+    holding = false;
+    for (const deliver of held.splice(0)) deliver();
+  };
+}
+
+test('more books load when a busy page reports the end of the grid leaving and re-entering view at once', async () => {
+  const release = holdIntersections();
+  const storage = new FakeStorage(await buildCalibreLibrary(numberedBooks(150)));
+  const app = await renderApp({ storage, connected: true });
+  await expect.element(app.screen.getByRole('heading', { name: 'Book 150', exact: true })).toBeVisible();
+  await nextFrames(2);
+
+  window.scrollTo(0, document.documentElement.scrollHeight);
+  await nextFrames(2);
+  release();
+
+  await expect.element(app.screen.getByRole('heading', { name: 'Book 1', exact: true })).toBeInTheDocument();
 });
