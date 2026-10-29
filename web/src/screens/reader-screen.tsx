@@ -1,10 +1,11 @@
 import { Link, useNavigate } from '@tanstack/react-router';
-import { useCallback, useEffect, useRef, useState, type MouseEvent, type PointerEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type MouseEvent, type PointerEvent, type ReactNode } from 'react';
 import { bookFilename } from '../download/save-blob.ts';
 import { useDownload } from '../download/use-download.ts';
 import type { BookDetail, BookFormat } from '../library/protocol.ts';
 import { forgetBookFile } from '../reader/book-cache.ts';
 import { useRenderers } from '../reader/context.tsx';
+import { trackJumps, type Jumps, type JumpTarget } from '../reader/jumps.ts';
 import { loadPosition, trackPosition } from '../reader/positions.ts';
 import { loadReaderSettings, saveReaderSettings, type ReaderSettings } from '../reader/reader-settings.ts';
 import type { BookRenderer, ReaderTheme, Relocation } from '../reader/renderer.ts';
@@ -16,8 +17,8 @@ import { describeError } from './describe-error.ts';
 import { ExternalLinkDialog } from './external-link-dialog.tsx';
 import { formatSize } from './format.ts';
 import { ProgressBar } from './progress-bar.tsx';
-import { BackToBookLink, BottomBar, TapZone, TopBar, zoneAt, type ControlsState } from './reader-controls.tsx';
-import { whereYouAreLabel, positionLabel, SeekBar } from './reader-seek-bar.tsx';
+import { BackToBookLink, BottomBar, JumpBack, TapZone, TopBar, zoneAt, type ControlsState } from './reader-controls.tsx';
+import { backLabel, whereYouAreLabel, positionLabel, SeekBar } from './reader-seek-bar.tsx';
 import { SettingsTool } from './reader-settings-tool.tsx';
 import { TocTool } from './reader-toc.tsx';
 import { ReconnectLink } from './reconnect-link.tsx';
@@ -195,7 +196,8 @@ function toggled(state: ControlsState): ControlsState {
   return state === 'hidden' ? 'pinned' : 'hidden';
 }
 
-function turnPage(renderer: BookRenderer, direction: SwipeDirection) {
+function turnPage(renderer: BookRenderer, jumps: Jumps, direction: SwipeDirection) {
+  jumps.turn();
   return direction === 'next' ? renderer.next() : renderer.previous();
 }
 
@@ -219,6 +221,8 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
   const [zoom, setZoom] = useState(1);
   const [attempt, setAttempt] = useState(0);
   const [controls, setControls] = useState<ControlsState>('hidden');
+  const [jumps] = useState(trackJumps);
+  const origin = useSyncExternalStore(jumps.subscribe, () => jumps.origin);
   const wide = useWide();
 
   useEffect(() => {
@@ -248,6 +252,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
         unsubscribe.push(
           created.onRelocate((next) => {
             position.relocate(next);
+            jumps.relocate(next);
             setRelocation(next);
             setRenderError(undefined);
           }),
@@ -256,9 +261,12 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
           created.onTap(({ x }) => {
             const zone = zoneAt(x, host);
             setControls(zone ? 'hidden' : toggled);
-            if (zone) void turnPage(created, zone);
+            if (zone) void turnPage(created, jumps, zone);
           }),
-          created.onTurn(() => setControls('hidden')),
+          created.onTurn(() => {
+            jumps.turn();
+            setControls('hidden');
+          }),
         );
         await created.open(blob, host, saved ? { location: saved.location } : {});
         if (cancelled) return;
@@ -277,7 +285,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
       opened?.destroy();
       host.replaceChildren();
     };
-  }, [renderers, book.id, format.format, blob, attempt]);
+  }, [renderers, book.id, format.format, blob, attempt, jumps]);
 
   useEffect(() => {
     renderer?.setStyles?.(settings);
@@ -296,10 +304,23 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
   const turn = useCallback(
     (direction: SwipeDirection) => {
       setControls('hidden');
-      if (renderer) void turnPage(renderer, direction);
+      if (renderer) void turnPage(renderer, jumps, direction);
     },
-    [renderer],
+    [renderer, jumps],
   );
+
+  const jump = useCallback(
+    (target: JumpTarget) =>
+      jumps.jump(() => {
+        if (!renderer) return Promise.resolve();
+        return 'fraction' in target ? renderer.goToFraction(target.fraction) : renderer.goTo(target.location);
+      }),
+    [renderer, jumps],
+  );
+
+  const goBack = () => {
+    if (renderer) void jumps.back((location) => renderer.goTo(location));
+  };
 
   useEffect(() => {
     if (!renderer) return;
@@ -332,7 +353,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
   const placement = wide ? 'below' : 'above';
   const tools = reading && (
     <>
-      <TocTool renderer={reading} current={relocation?.tocEntry} placement={placement} />
+      <TocTool renderer={reading} jump={jump} current={relocation?.tocEntry} placement={placement} />
       {(reading.setStyles || reading.setZoom) && (
         <SettingsTool
           renderer={reading}
@@ -375,8 +396,9 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
       {reading && (
         <>
           <BottomBar
-            seekBar={<SeekBar renderer={reading} relocation={relocation} />}
+            seekBar={<SeekBar renderer={reading} jump={jump} relocation={relocation} />}
             whereYouAre={whereYouAreLabel(relocation)}
+            back={origin && <JumpBack label={backLabel(origin)} onBack={goBack} />}
             tools={tools}
             wide={wide}
             shown={shown}

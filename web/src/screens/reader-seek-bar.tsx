@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import type { Jump } from '../reader/jumps.ts';
 import type { BookRenderer, Relocation } from '../reader/renderer.ts';
 
 const thumb = 16;
@@ -17,7 +18,13 @@ export function whereYouAreLabel(relocation: Relocation | undefined): string {
   return chapter ? `${chapter} · ${position}` : position;
 }
 
-export function SeekBar({ renderer, relocation }: { renderer: BookRenderer; relocation: Relocation | undefined }) {
+export function backLabel({ page, fraction }: Relocation): string {
+  return page ? `Back to page ${page.current}` : `Back to ${Math.round(fraction * 100)}%`;
+}
+
+type SeekBarProps = { renderer: BookRenderer; jump: Jump; relocation: Relocation | undefined };
+
+export function SeekBar({ renderer, jump, relocation }: SeekBarProps) {
   const bar = useRef<HTMLInputElement>(null);
   const [draggedTo, setDraggedTo] = useState<number | undefined>(undefined);
   const [width, setWidth] = useState(0);
@@ -29,12 +36,12 @@ export function SeekBar({ renderer, relocation }: { renderer: BookRenderer; relo
   useEffect(() => {
     const element = bar.current;
     if (!element) return;
-    const jump = () => {
-      void renderer.goToFraction(fractionOf(Number(element.value), min, max)).finally(() => setDraggedTo(undefined));
+    const seek = () => {
+      void jump({ fraction: fractionOf(Number(element.value), min, max) }).finally(() => setDraggedTo(undefined));
     };
-    element.addEventListener('change', jump);
-    return () => element.removeEventListener('change', jump);
-  }, [renderer, min, max]);
+    element.addEventListener('change', seek);
+    return () => element.removeEventListener('change', seek);
+  }, [jump, min, max]);
 
   useEffect(() => {
     const element = bar.current;
