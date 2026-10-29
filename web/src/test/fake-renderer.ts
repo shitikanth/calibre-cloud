@@ -1,5 +1,6 @@
-import type { BookRenderer, ReaderStyles, Relocation, Renderers, Tap, TocEntry } from '../reader/renderer.ts';
+import type { BookRenderer, BookSearch, ReaderStyles, Relocation, Renderers, SearchResult, Tap, TocEntry } from '../reader/renderer.ts';
 import type { SwipeDirection } from '../reader/swipe.ts';
+import { excerptOf, findMatches } from '../reader/text-search.ts';
 import { entryStartingAt } from '../reader/toc.ts';
 
 export type RendererCall =
@@ -9,6 +10,8 @@ export type RendererCall =
   | { op: 'previous' }
   | { op: 'setStyles'; styles: ReaderStyles }
   | { op: 'setZoom'; zoom: number }
+  | { op: 'highlight'; location: string; matches: string[] }
+  | { op: 'clearHighlights' }
   | { op: 'destroy' };
 
 export type FakeRendererOptions = { pages?: boolean };
@@ -18,6 +21,19 @@ export class FakeRenderer implements BookRenderer {
   failOpen = false;
   readonly calls: RendererCall[] = [];
   opened: { blob: Blob; location: string | undefined } | undefined;
+  readonly searches: string[] = [];
+  abandonedSearches = 0;
+  ignoresSearchCancel = false;
+  search: BookSearch | undefined = {
+    find: (query, signal) => this.find(query, signal),
+    highlight: (result, matches) => {
+      this.calls.push({ op: 'highlight', location: result.location, matches: matches.map(({ location }) => location) });
+    },
+    clearHighlights: () => {
+      this.calls.push({ op: 'clearHighlights' });
+    },
+  };
+  private searchHold: Promise<void> | undefined;
   private readonly reportsPages: boolean;
   private lines: string[] = [];
   private index = 0;
@@ -116,6 +132,16 @@ export class FakeRenderer implements BookRenderer {
     this.turnListeners.clear();
   }
 
+  // Until the returned release is called, a search in progress waits before reading its next line.
+  holdSearch(): () => void {
+    let release = () => {};
+    this.searchHold = new Promise((resolve) => (release = resolve));
+    return () => {
+      this.searchHold = undefined;
+      release();
+    };
+  }
+
   emitRelocation(relocation: Relocation): void {
     for (const listener of this.relocateListeners) listener(relocation);
   }
@@ -131,6 +157,27 @@ export class FakeRenderer implements BookRenderer {
   swipe(direction: SwipeDirection): void {
     this.show(direction === 'next' ? Math.min(this.index + 1, this.lines.length - 1) : Math.max(this.index - 1, 0));
     for (const listener of this.turnListeners) listener();
+  }
+
+  private async *find(query: string, signal: AbortSignal): AsyncGenerator<SearchResult> {
+    this.searches.push(query);
+    const total = this.lines.length;
+    for (const [index, line] of this.lines.entries()) {
+      await (this.searchHold ?? new Promise((resolve) => setTimeout(resolve)));
+      if (signal.aborted && !this.ignoresSearchCancel) {
+        this.abandonedSearches += 1;
+        return;
+      }
+      const tocEntry = entryStartingAt(this.toc, index + 1);
+      for (const match of findMatches(line, query))
+        yield {
+          location: String(index + 1),
+          excerpt: excerptOf(line, match),
+          fraction: total > 1 ? index / (total - 1) : 0,
+          ...(this.reportsPages ? { page: index + 1 } : {}),
+          ...(tocEntry ? { tocEntry } : {}),
+        };
+    }
   }
 
   private indexAt(fraction: number): number {

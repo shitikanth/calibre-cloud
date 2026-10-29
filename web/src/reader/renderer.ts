@@ -8,6 +8,18 @@ export type ReaderTheme = 'light' | 'sepia' | 'dark';
 
 export type ReaderStyles = { fontSize: number; theme: ReaderTheme };
 
+export type SearchExcerpt = { before: string; match: string; after: string };
+
+export type SearchResult = { location: string; excerpt: SearchExcerpt; fraction: number; page?: number; tocEntry?: TocEntry };
+
+export interface BookSearch {
+  // Matching ignores case and diacritics. Results come in book order, and stop once the signal aborts.
+  find(query: string, signal: AbortSignal): AsyncIterable<SearchResult>;
+  // Call once goTo(result.location) resolves. The other matches on the same page are drawn fainter.
+  highlight(result: SearchResult, matches: readonly SearchResult[]): void;
+  clearHighlights(): void;
+}
+
 export interface BookRenderer {
   readonly toc: TocEntry[];
   // Key and pointer presses inside the book must reach the container, as if the book were part of the page.
@@ -27,6 +39,7 @@ export interface BookRenderer {
   // Read once open resolves: a renderer can drop a capability when the book turns out to be fixed-layout.
   setStyles?: ((styles: ReaderStyles) => void) | undefined;
   setZoom?(zoom: number): void;
+  search?: BookSearch | undefined;
   destroy(): void;
 }
 
