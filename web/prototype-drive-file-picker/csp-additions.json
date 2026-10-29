@@ -1,0 +1,4 @@
+{
+  "script-src": ["https://apis.google.com"],
+  "frame-src": ["https://docs.google.com"]
+}

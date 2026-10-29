@@ -11,7 +11,8 @@
     "typecheck": "tsc -p tsconfig.json && pnpm -r run typecheck",
     "test": "vitest run --project web --project tooling && vitest run --project deploy-cloudflare && vitest run --project api",
     "test:coverage": "vitest run --project web --project tooling --coverage --coverage.reportsDirectory=coverage/web && vitest run --project deploy-cloudflare --coverage --coverage.reportsDirectory=coverage/deploy-cloudflare && vitest run --project api --coverage --coverage.reportsDirectory=coverage/api",
-    "build": "pnpm --filter @calibre-cloud/deploy-cloudflare run build"
+    "build": "pnpm --filter @calibre-cloud/deploy-cloudflare run build",
+    "prototype:drive-file": "node --env-file-if-exists=web/prototype-drive-file-picker/.env.local web/prototype-drive-file-picker/server.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

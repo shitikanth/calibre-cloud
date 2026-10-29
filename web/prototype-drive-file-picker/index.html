@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PROTOTYPE #156: drive.file + Picker</title>
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <h1>PROTOTYPE #156: does picking a folder under drive.file grant the whole library?</h1>
+  <p><strong>Throwaway.</strong> Branch <code>prototype/drive-file-picker</code>, never merged.</p>
+
+  <h2>Page</h2>
+  <pre id="page"></pre>
+  <p>Switch: <a href="/">prod CSP + Picker additions</a> · <a href="/?csp=prod">prod CSP only</a> · <a href="/?referrer=strict-origin-when-cross-origin">additions + referrer strict-origin-when-cross-origin</a></p>
+
+  <h2>CSP violations on this page</h2>
+  <pre id="violations">none yet</pre>
+
+  <h2>Session (step 5)</h2>
+  <pre id="session"></pre>
+  <button id="sign-in">Sign in (drive.file only, new token)</button>
+  <button id="sign-out">Forget this tab's token</button>
+
+  <h2>Step 1: pick a library root</h2>
+  <button data-pick="my-drive">Pick: My Drive library root</button>
+  <button data-pick="shared-with-me">Pick: folder shared to me</button>
+  <button data-pick="shared-drive">Pick: shared-drive folder</button>
+  <pre id="picks"></pre>
+
+  <h2>Steps 2–4, 6, 7: walk a picked root</h2>
+  <p>Each walk lists the whole tree, range-reads <code>metadata.db</code>, a <code>cover.jpg</code> and a nested EPUB, and diffs against the previous walk of the same root (step 6).</p>
+  <div id="walk-buttons"></div>
+  <pre id="progress"></pre>
+
+  <h2>Results (paste onto #156)</h2>
+  <button id="copy">Copy</button> <button id="reset">Wipe all prototype state</button>
+  <textarea id="results" rows="30" cols="110" readonly></textarea>
+
+  <h2>Log</h2>
+  <pre id="log"></pre>
+</body>
+</html>

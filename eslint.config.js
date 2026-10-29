@@ -35,7 +35,7 @@ const pdfjs = {
 };
 
 export default defineConfig([
-  globalIgnores(['**/dist/', '**/.wrangler/', '**/.vitest/', '**/coverage/']),
+  globalIgnores(['**/dist/', '**/.wrangler/', '**/.vitest/', '**/coverage/', 'web/prototype-drive-file-picker/']),
   js.configs.recommended,
   tseslint.configs.recommended,
   {
