@@ -1,4 +1,3 @@
-// PROTOTYPE for #156. Throwaway: lives on prototype/drive-file-picker, never merged to main.
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
