@@ -1,4 +1,4 @@
-import { userEvent } from 'vitest/browser';
+import { userEvent, type Locator } from 'vitest/browser';
 import { expect } from 'vitest';
 import type { Screen } from './screen.ts';
 
@@ -11,6 +11,16 @@ export async function showControls(screen: Screen) {
   back.blur();
   back.focus();
   await expectControls(screen, true);
+}
+
+export function drag(bar: Locator, value: number) {
+  const element = bar.element() as HTMLInputElement;
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(element, String(value));
+  element.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+export function release(bar: Locator) {
+  bar.element().dispatchEvent(new Event('change', { bubbles: true }));
 }
 
 export async function tapZone(screen: Screen, name: 'Previous page' | 'Next page') {

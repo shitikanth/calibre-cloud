@@ -1,10 +1,13 @@
 import { page, userEvent, type Locator } from 'vitest/browser';
 import { afterEach, expect, test } from 'vitest';
+import { createFoliateRenderer } from './reader/foliate/renderer.ts';
 import { buildCalibreLibrary } from './test/calibre-library.ts';
 import { fakeRenderers } from './test/fake-renderer.ts';
 import { FakeStorage } from './test/fake-storage.ts';
-import { expectControls, showControls, tapZone } from './test/reader.ts';
+import { drag, expectControls, release, showControls, tapZone } from './test/reader.ts';
 import { renderApp } from './test/render-app.tsx';
+import type { Screen } from './test/screen.ts';
+import twoChaptersUrl from './test/fixtures/two-chapters.epub?url';
 
 const epub = ['# Chapter one', 'line 2', 'line 3', '# Chapter two', 'line 5'].join('\n');
 const pdf = ['Page one', 'Page two', 'Page three'].join('\n');
@@ -25,10 +28,12 @@ async function openReader(path: string) {
 }
 
 function seek(bar: Locator, value: number) {
-  const element = bar.element() as HTMLInputElement;
-  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(element, String(value));
-  element.dispatchEvent(new Event('input', { bubbles: true }));
-  element.dispatchEvent(new Event('change', { bubbles: true }));
+  drag(bar, value);
+  release(bar);
+}
+
+function backButton(screen: Screen) {
+  return screen.getByRole('button', { name: /^Back to (page )?\d/ });
 }
 
 test('a seek offers Back to the % it left from', async () => {
@@ -52,10 +57,6 @@ test('in a paged book, a seek offers Back to the page it left from', async () =>
   await expect.element(screen.getByText('Page three')).toBeVisible();
   await expect.element(screen.getByRole('contentinfo').getByRole('button', { name: 'Back to page 2' })).toBeVisible();
 });
-
-function backButton(screen: Awaited<ReturnType<typeof openReader>>['screen']) {
-  return screen.getByRole('button', { name: /^Back to (page )?\d/ });
-}
 
 test('page turns alone never offer Back', async () => {
   const { fake, screen } = await openReader('/books/1/read/EPUB');
@@ -172,6 +173,34 @@ test.each([
   expect(pill.right).toBeLessThanOrEqual(where.left);
   for (const tool of controls.getByRole('button', { name: /Table of contents|Settings/ }).elements())
     expect(pill.right).toBeLessThanOrEqual(tool.getBoundingClientRect().left);
+});
+
+test('with the real EPUB renderer, a seek offers Back and Back returns there', async () => {
+  const files = await buildCalibreLibrary([{ title: 'Two Chapters', authors: ['Calibre Cloud'], formats: { EPUB: '' } }]);
+  files['Calibre Cloud/Two Chapters (1)/Two Chapters - Calibre Cloud.epub'] = new Uint8Array(await (await fetch(twoChaptersUrl)).arrayBuffer());
+  const app = await renderApp({
+    storage: new FakeStorage(files),
+    connected: true,
+    path: '/books/1/read/EPUB',
+    renderers: { EPUB: () => createFoliateRenderer('epub') },
+  });
+  const screen = app.screen;
+  await expect.element(screen.getByRole('button', { name: 'Next page' })).toBeVisible();
+  await showControls(screen);
+  const bar = screen.getByRole('slider', { name: 'Position in book' });
+  await expect.poll(() => bar.element().getAttribute('aria-valuetext')).toMatch(/^\d+%$/);
+  const start = bar.element().getAttribute('aria-valuetext') ?? '';
+
+  seek(bar, 100);
+
+  const back = screen.getByRole('contentinfo').getByRole('button', { name: `Back to ${start}` });
+  await expect.element(back).toBeVisible();
+  await expect.element(bar).not.toHaveAttribute('aria-valuetext', start);
+
+  await userEvent.click(back);
+
+  await expect.element(bar).toHaveAttribute('aria-valuetext', start);
+  await expect.poll(() => back.query()).toBeNull();
 });
 
 test('a table-of-contents jump offers Back too, and Back returns there, goes away, and is where the book reopens', async () => {

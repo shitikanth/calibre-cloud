@@ -5,7 +5,7 @@ import { useDownload } from '../download/use-download.ts';
 import type { BookDetail, BookFormat } from '../library/protocol.ts';
 import { forgetBookFile } from '../reader/book-cache.ts';
 import { useRenderers } from '../reader/context.tsx';
-import { trackJumps, type JumpTarget } from '../reader/jumps.ts';
+import { trackJumps, type Jumps, type JumpTarget } from '../reader/jumps.ts';
 import { loadPosition, trackPosition } from '../reader/positions.ts';
 import { loadReaderSettings, saveReaderSettings, type ReaderSettings } from '../reader/reader-settings.ts';
 import type { BookRenderer, ReaderTheme, Relocation } from '../reader/renderer.ts';
@@ -196,7 +196,8 @@ function toggled(state: ControlsState): ControlsState {
   return state === 'hidden' ? 'pinned' : 'hidden';
 }
 
-function turnPage(renderer: BookRenderer, direction: SwipeDirection) {
+function turnPage(renderer: BookRenderer, jumps: Jumps, direction: SwipeDirection) {
+  jumps.turn();
   return direction === 'next' ? renderer.next() : renderer.previous();
 }
 
@@ -260,9 +261,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
           created.onTap(({ x }) => {
             const zone = zoneAt(x, host);
             setControls(zone ? 'hidden' : toggled);
-            if (!zone) return;
-            jumps.turn();
-            void turnPage(created, zone);
+            if (zone) void turnPage(created, jumps, zone);
           }),
           created.onTurn(() => {
             jumps.turn();
@@ -305,9 +304,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
   const turn = useCallback(
     (direction: SwipeDirection) => {
       setControls('hidden');
-      if (!renderer) return;
-      jumps.turn();
-      void turnPage(renderer, direction);
+      if (renderer) void turnPage(renderer, jumps, direction);
     },
     [renderer, jumps],
   );
@@ -320,6 +317,10 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
       }),
     [renderer, jumps],
   );
+
+  const goBack = () => {
+    if (renderer) void jumps.back((location) => renderer.goTo(location));
+  };
 
   useEffect(() => {
     if (!renderer) return;
@@ -397,7 +398,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
           <BottomBar
             seekBar={<SeekBar renderer={reading} jump={jump} relocation={relocation} />}
             whereYouAre={whereYouAreLabel(relocation)}
-            back={origin && <JumpBack label={backLabel(origin)} onBack={() => void jumps.back((location) => reading.goTo(location))} />}
+            back={origin && <JumpBack label={backLabel(origin)} onBack={goBack} />}
             tools={tools}
             wide={wide}
             shown={shown}

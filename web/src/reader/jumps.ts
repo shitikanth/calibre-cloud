@@ -19,46 +19,49 @@ export function trackJumps(): Jumps {
   const listeners = new Set<() => void>();
   let current: Relocation | undefined;
   let from: Relocation | undefined;
-  let landed = false;
+  let origin: Relocation | undefined;
   let turns = 0;
   let latestJump = 0;
 
-  const set = (next: Relocation | undefined, nextLanded: boolean) => {
-    const before = landed ? from : undefined;
-    from = next;
-    landed = nextLanded;
-    if ((landed ? from : undefined) !== before) for (const listener of listeners) listener();
+  const showOrigin = (next: Relocation | undefined) => {
+    if (next === origin) return;
+    origin = next;
+    for (const listener of listeners) listener();
+  };
+  const forget = () => {
+    from = undefined;
+    showOrigin(undefined);
   };
 
   return {
     get origin() {
-      return landed ? from : undefined;
+      return origin;
     },
     relocate(relocation) {
       current = relocation;
     },
     async jump(go) {
       const id = ++latestJump;
-      set(from ?? current, landed);
-      turns = 0;
+      from ??= current;
       try {
         await go();
       } finally {
         if (id === latestJump) {
-          if (from && current && current.location !== from.location) set(from, true);
-          else set(undefined, false);
+          turns = 0;
+          if (from && current && current.location !== from.location) showOrigin(from);
+          else forget();
         }
       }
     },
     turn() {
-      if (!from) return;
+      if (!origin) return;
       turns += 1;
-      if (turns >= turnsBeforeForgetting) set(undefined, false);
+      if (turns >= turnsBeforeForgetting) forget();
     },
     async back(goTo) {
-      const target = landed ? from : undefined;
+      const target = origin;
       latestJump += 1;
-      set(undefined, false);
+      forget();
       if (target) await goTo(target.location);
     },
     subscribe(listener) {

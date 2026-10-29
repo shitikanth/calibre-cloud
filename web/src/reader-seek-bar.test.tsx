@@ -3,7 +3,7 @@ import { afterEach, expect, test } from 'vitest';
 import { buildCalibreLibrary } from './test/calibre-library.ts';
 import { fakeRenderers } from './test/fake-renderer.ts';
 import { FakeStorage } from './test/fake-storage.ts';
-import { showControls, tapZone } from './test/reader.ts';
+import { drag, release, showControls, tapZone } from './test/reader.ts';
 import { renderApp } from './test/render-app.tsx';
 import type { Screen } from './test/screen.ts';
 
@@ -54,16 +54,6 @@ test('in a paged book the bar counts pages', async () => {
   await expect.element(bar).toHaveAttribute('aria-valuetext', 'page 2 of 3');
   await expect.element(bar).toHaveValue('2');
 });
-
-function drag(bar: Locator, value: number) {
-  const element = bar.element() as HTMLInputElement;
-  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(element, String(value));
-  element.dispatchEvent(new Event('input', { bubbles: true }));
-}
-
-function release(bar: Locator) {
-  bar.element().dispatchEvent(new Event('change', { bubbles: true }));
-}
 
 function popupTitled(place: Locator, title: string) {
   const heading = place.getByText(title, { exact: true });
