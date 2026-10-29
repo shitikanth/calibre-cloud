@@ -372,7 +372,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
           placement={placement}
           onPick={(result) => {
             setControls('hidden');
-            highlights.show(reading, result, search.state.results);
+            highlights.show(reading, result, search.state.results, jump({ location: result.location }));
           }}
         />
       )}

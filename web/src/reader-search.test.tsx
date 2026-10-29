@@ -110,6 +110,26 @@ test.each([
   await expect.poll(() => clears(fake.latest)).toBe(1);
 });
 
+test('picking a result offers Back to where you were reading, a second pick keeps that place, and Back clears the highlights', async () => {
+  const { fake, screen } = await openReader('/books/1/read/EPUB');
+  await pickSecondWhale(screen, fake.latest);
+  await showControls(screen);
+  const back = screen.getByRole('button', { name: /^Back to / });
+  await expect.element(back).toHaveAccessibleName('Back to 0%');
+
+  const panel = await openSearch(screen);
+  await userEvent.click(results(panel).nth(0));
+  await expect.element(screen.getByText('The whale rose')).toBeVisible();
+  await showControls(screen);
+  await expect.element(back).toHaveAccessibleName('Back to 0%');
+  const cleared = clears(fake.latest);
+
+  await userEvent.click(back);
+
+  await expect.element(screen.getByText('# Chapter one')).toBeVisible();
+  expect(clears(fake.latest)).toBe(cleared + 1);
+});
+
 test('a seek or a table-of-contents jump clears the highlights', async () => {
   const { fake, screen } = await openReader('/books/1/read/EPUB');
   await pickSecondWhale(screen, fake.latest);

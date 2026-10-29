@@ -70,19 +70,25 @@ export function useBookSearch(search: BookSearch | undefined): BookSearchControl
   return { state, change, pick };
 }
 
-export type Highlights = { show: (renderer: BookRenderer, result: SearchResult, matches: readonly SearchResult[]) => void; clear: () => void };
+export type Highlights = {
+  show: (renderer: BookRenderer, result: SearchResult, matches: readonly SearchResult[], arrival: Promise<void>) => void;
+  clear: () => void;
+};
 
 function createHighlights(): Highlights {
   let shownOn: BookRenderer | undefined;
   let generation = 0;
   return {
-    show(renderer, result, matches) {
+    show(renderer, result, matches, arrival) {
       const current = ++generation;
-      void renderer.goTo(result.location).then(() => {
-        if (current !== generation) return;
-        renderer.search?.highlight(result, matches);
-        shownOn = renderer;
-      });
+      arrival.then(
+        () => {
+          if (current !== generation) return;
+          renderer.search?.highlight(result, matches);
+          shownOn = renderer;
+        },
+        () => {},
+      );
     },
     clear() {
       generation += 1;
