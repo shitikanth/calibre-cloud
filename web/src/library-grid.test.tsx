@@ -155,7 +155,7 @@ function holdIntersections() {
   };
 }
 
-test('more books load when a busy page reports the end of the grid leaving and re-entering view at once', async () => {
+test('more books load when the owner scrolls to the end of the grid while the page is busy', async () => {
   const release = holdIntersections();
   const storage = new FakeStorage(await buildCalibreLibrary(numberedBooks(150)));
   const app = await renderApp({ storage, connected: true });
@@ -166,5 +166,5 @@ test('more books load when a busy page reports the end of the grid leaving and r
   await nextFrames(2);
   release();
 
-  await expect.element(app.screen.getByRole('heading', { name: 'Book 1', exact: true })).toBeInTheDocument();
+  await expect.element(app.screen.getByRole('heading', { name: 'Book 31', exact: true })).toBeInTheDocument();
 });
