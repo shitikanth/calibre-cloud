@@ -4,6 +4,13 @@ import { useDismiss } from './use-dismiss.ts';
 export const panelClass =
   'max-h-[70dvh] w-72 overflow-y-auto rounded border border-(--reader-line) bg-(--reader-bg) text-(--reader-fg) shadow-lg';
 
+export function scrollToCurrent(panel: HTMLElement | null) {
+  const marked = panel?.querySelector<HTMLElement>('[aria-current="true"]');
+  if (!panel || !marked) return;
+  const offset = marked.getBoundingClientRect().top - panel.getBoundingClientRect().top + panel.scrollTop;
+  panel.scrollTop = offset - (panel.clientHeight - marked.offsetHeight) / 2;
+}
+
 export type PopoverPlacement = 'below' | 'above';
 
 const placements: Record<PopoverPlacement, string> = { below: 'top-full mt-1', above: 'bottom-full mb-1' };

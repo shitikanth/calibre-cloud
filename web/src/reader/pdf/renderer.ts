@@ -1,8 +1,9 @@
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
-import type { PDFDocumentLoadingTask, PDFDocumentProxy, PDFPageProxy, RenderTask } from 'pdfjs-dist/legacy/build/pdf.mjs';
+import type { PageViewport, PDFDocumentLoadingTask, PDFDocumentProxy, PDFPageProxy, RenderTask } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import workerSrc from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
-import type { BookRenderer, Relocation, Tap, TocEntry } from '../renderer.ts';
+import type { BookRenderer, BookSearch, Relocation, SearchResult, Tap, TocEntry } from '../renderer.ts';
 import { onSwipe } from '../swipe.ts';
+import { excerptOf, findMatches, type TextMatch } from '../text-search.ts';
 import { entryStartingAt } from '../toc.ts';
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
@@ -10,6 +11,18 @@ pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
 const wasmUrl = `${import.meta.env.BASE_URL}pdfjs/wasm/`;
 
 type OutlineItem = NonNullable<Awaited<ReturnType<PDFDocumentProxy['getOutline']>>>[number];
+
+type ContentItem = Awaited<ReturnType<PDFPageProxy['getTextContent']>>['items'][number];
+
+type PlacedText = { start: number; end: number; transform: number[]; width: number };
+
+type PageText = { text: string; pieces: PlacedText[] };
+
+type HighlightKind = 'picked' | 'other';
+
+type Highlights = { page: number; marks: { match: TextMatch; kind: HighlightKind }[]; scrolled: boolean };
+
+const highlightColors: Record<HighlightKind, string> = { picked: '#facc15', other: '#fef3c7' };
 
 export async function createPdfRenderer(): Promise<BookRenderer> {
   return new PdfRenderer();
@@ -22,6 +35,11 @@ class PdfRenderer implements BookRenderer {
   private container: HTMLElement | undefined;
   private scroller: HTMLElement | undefined;
   private canvas: HTMLCanvasElement | undefined;
+  private highlightLayer: HTMLElement | undefined;
+  private viewport: PageViewport | undefined;
+  private highlights: Highlights | undefined;
+  private readonly pageTexts = new Map<number, PageText>();
+  private readonly matchesOf = new WeakMap<SearchResult, TextMatch>();
   private page: PDFPageProxy | undefined;
   private currentPage = 1;
   private zoom = 1;
@@ -46,7 +64,12 @@ class PdfRenderer implements BookRenderer {
     this.scroller.style.cssText = 'height: 100%; overflow: auto; scrollbar-gutter: stable';
     this.canvas = document.createElement('canvas');
     this.canvas.style.display = 'block';
-    this.scroller.append(this.canvas);
+    this.highlightLayer = document.createElement('div');
+    this.highlightLayer.style.cssText = 'position: absolute; inset: 0; pointer-events: none';
+    const sheet = document.createElement('div');
+    sheet.style.cssText = 'position: relative; width: fit-content';
+    sheet.append(this.canvas, this.highlightLayer);
+    this.scroller.append(sheet);
     this.listenForGestures(this.scroller);
     container.replaceChildren(this.scroller);
     this.toc = await mapOutline(doc, (await doc.getOutline()) ?? []);
@@ -100,6 +123,26 @@ class PdfRenderer implements BookRenderer {
     if (this.currentPage > 1) await this.show(this.currentPage - 1);
   }
 
+  readonly search: BookSearch = {
+    find: (query, signal) => this.find(query, signal),
+    highlight: (result, matches) => {
+      const page = Number(result.location);
+      const marks: Highlights['marks'] = matches.flatMap((candidate) => {
+        const match = this.matchesOf.get(candidate);
+        if (!match || candidate === result || candidate.location !== result.location) return [];
+        return [{ match, kind: 'other' as const }];
+      });
+      const picked = this.matchesOf.get(result);
+      if (picked) marks.push({ match: picked, kind: 'picked' });
+      this.highlights = { page, marks, scrolled: false };
+      this.drawHighlights();
+    },
+    clearHighlights: () => {
+      this.highlights = undefined;
+      this.drawHighlights();
+    },
+  };
+
   setZoom(zoom: number): void {
     this.zoom = zoom;
     void this.show(this.currentPage);
@@ -117,10 +160,67 @@ class PdfRenderer implements BookRenderer {
     this.container = undefined;
     this.scroller = undefined;
     this.canvas = undefined;
+    this.highlightLayer = undefined;
+    this.viewport = undefined;
+    this.highlights = undefined;
+    this.pageTexts.clear();
     this.relocateListeners.clear();
     this.errorListeners.clear();
     this.tapListeners.clear();
     this.turnListeners.clear();
+  }
+
+  private async *find(query: string, signal: AbortSignal): AsyncGenerator<SearchResult> {
+    const { doc } = this;
+    if (!doc) return;
+    for (let page = 1; page <= doc.numPages; page++) {
+      const content = await this.pageText(doc, page);
+      if (signal.aborted || doc !== this.doc) return;
+      const tocEntry = entryStartingAt(this.toc, page);
+      for (const match of findMatches(content.text, query)) {
+        if (signal.aborted) return;
+        const result: SearchResult = {
+          location: String(page),
+          excerpt: excerptOf(content.text, match),
+          fraction: doc.numPages > 1 ? (page - 1) / (doc.numPages - 1) : 0,
+          page,
+          ...(tocEntry ? { tocEntry } : {}),
+        };
+        this.matchesOf.set(result, match);
+        yield result;
+      }
+    }
+  }
+
+  private async pageText(doc: PDFDocumentProxy, pageNumber: number): Promise<PageText> {
+    const cached = this.pageTexts.get(pageNumber);
+    if (cached) return cached;
+    const page = await doc.getPage(pageNumber);
+    const content = await page.getTextContent();
+    const placed = placeText(content.items);
+    this.pageTexts.set(pageNumber, placed);
+    return placed;
+  }
+
+  private drawHighlights(): void {
+    const { highlightLayer, viewport, highlights, scroller } = this;
+    if (!highlightLayer) return;
+    highlightLayer.replaceChildren();
+    const text = highlights && this.pageTexts.get(highlights.page);
+    if (!highlights || !text || !viewport || highlights.page !== this.currentPage) return;
+    for (const { match, kind } of highlights.marks) {
+      for (const box of boxesOf(text, match, viewport)) {
+        const element = document.createElement('div');
+        element.dataset.highlight = kind;
+        element.style.cssText = `position: absolute; left: ${box.left}px; top: ${box.top}px; width: ${box.width}px; height: ${box.height}px; background: ${highlightColors[kind]}; mix-blend-mode: multiply`;
+        highlightLayer.append(element);
+        if (kind === 'picked' && !highlights.scrolled && scroller) {
+          highlights.scrolled = true;
+          const visible = box.top >= scroller.scrollTop && box.top + box.height <= scroller.scrollTop + scroller.clientHeight;
+          if (!visible) scroller.scrollTop = box.top - (scroller.clientHeight - box.height) / 2;
+        }
+      }
+    }
   }
 
   private listenForGestures(scroller: HTMLElement): void {
@@ -158,6 +258,7 @@ class PdfRenderer implements BookRenderer {
     await inFlight?.promise.catch(() => undefined);
     if (this.renderTask === inFlight) this.renderTask = undefined;
     if (generation !== this.generation) return;
+    if (this.highlights && this.highlights.page !== pageNumber) this.highlights = undefined;
     this.currentPage = pageNumber;
     try {
       const page = await doc.getPage(pageNumber);
@@ -177,7 +278,9 @@ class PdfRenderer implements BookRenderer {
       await task.promise;
       if (generation !== this.generation) return;
       this.renderTask = undefined;
+      this.viewport = viewport;
       scroller.scrollTop = 0;
+      this.drawHighlights();
       this.emitRelocation(pageNumber, doc.numPages);
     } catch (error) {
       if (generation !== this.generation || error instanceof pdfjs.RenderingCancelledException) return;
@@ -195,6 +298,32 @@ class PdfRenderer implements BookRenderer {
     };
     for (const listener of this.relocateListeners) listener(relocation);
   }
+}
+
+function placeText(items: ContentItem[]): PageText {
+  let text = '';
+  const pieces: PlacedText[] = [];
+  for (const item of items) {
+    if (!('str' in item)) continue;
+    pieces.push({ start: text.length, end: text.length + item.str.length, transform: item.transform as number[], width: item.width });
+    text += item.str;
+    if (item.hasEOL) text += ' ';
+  }
+  return { text, pieces };
+}
+
+function boxesOf({ pieces }: PageText, { start, end }: TextMatch, viewport: PageViewport) {
+  return pieces.flatMap((piece) => {
+    const from = Math.max(start, piece.start);
+    const to = Math.min(end, piece.end);
+    if (from >= to) return [];
+    const [, , c = 0, d = 0, x = 0, y = 0] = pdfjs.Util.transform(viewport.transform, piece.transform);
+    const height = Math.hypot(c, d);
+    const width = piece.width * viewport.scale;
+    const length = piece.end - piece.start;
+    const left = x + (width * (from - piece.start)) / length;
+    return [{ left, top: y - height, width: (width * (to - from)) / length, height }];
+  });
 }
 
 async function mapOutline(doc: PDFDocumentProxy, items: OutlineItem[]): Promise<TocEntry[]> {

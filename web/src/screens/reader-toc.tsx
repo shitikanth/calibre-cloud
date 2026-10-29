@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { Jump } from '../reader/jumps.ts';
 import type { BookRenderer, TocEntry } from '../reader/renderer.ts';
-import { panelClass, ReaderPopover, type PopoverPlacement } from './reader-popover.tsx';
+import { panelClass, ReaderPopover, scrollToCurrent, type PopoverPlacement } from './reader-popover.tsx';
 
 type TocToolProps = { renderer: BookRenderer; jump: Jump; current: TocEntry | undefined; placement: PopoverPlacement };
 
@@ -26,13 +26,7 @@ type TocProps = { entries: TocEntry[]; current: TocEntry | undefined; jump: (ent
 
 function TocPanel({ entries, current, jump }: TocProps) {
   const nav = useRef<HTMLElement>(null);
-  useEffect(() => {
-    const panel = nav.current;
-    const marked = panel?.querySelector<HTMLElement>('[aria-current="true"]');
-    if (!panel || !marked) return;
-    const offset = marked.getBoundingClientRect().top - panel.getBoundingClientRect().top + panel.scrollTop;
-    panel.scrollTop = offset - (panel.clientHeight - marked.offsetHeight) / 2;
-  }, [current]);
+  useEffect(() => scrollToCurrent(nav.current), [current]);
 
   return (
     <nav ref={nav} aria-label="Table of contents" className={`${panelClass} py-1`}>

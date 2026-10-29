@@ -18,6 +18,7 @@ import { ExternalLinkDialog } from './external-link-dialog.tsx';
 import { formatSize } from './format.ts';
 import { ProgressBar } from './progress-bar.tsx';
 import { BackToBookLink, BottomBar, JumpBack, TapZone, TopBar, zoneAt, type ControlsState } from './reader-controls.tsx';
+import { SearchTool, useBookSearch, useHighlights } from './reader-search.tsx';
 import { backLabel, whereYouAreLabel, positionLabel, SeekBar } from './reader-seek-bar.tsx';
 import { SettingsTool } from './reader-settings-tool.tsx';
 import { TocTool } from './reader-toc.tsx';
@@ -224,6 +225,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
   const [jumps] = useState(trackJumps);
   const origin = useSyncExternalStore(jumps.subscribe, () => jumps.origin);
   const wide = useWide();
+  const highlights = useHighlights();
 
   useEffect(() => {
     const factory = renderers[format.format];
@@ -259,11 +261,13 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
           created.onRenderError(setRenderError),
           created.onExternalLink(setExternalLink),
           created.onTap(({ x }) => {
+            highlights.clear();
             const zone = zoneAt(x, host);
             setControls(zone ? 'hidden' : toggled);
             if (zone) void turnPage(created, jumps, zone);
           }),
           created.onTurn(() => {
+            highlights.clear();
             jumps.turn();
             setControls('hidden');
           }),
@@ -285,7 +289,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
       opened?.destroy();
       host.replaceChildren();
     };
-  }, [renderers, book.id, format.format, blob, attempt, jumps]);
+  }, [renderers, book.id, format.format, blob, attempt, jumps, highlights]);
 
   useEffect(() => {
     renderer?.setStyles?.(settings);
@@ -303,22 +307,26 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
 
   const turn = useCallback(
     (direction: SwipeDirection) => {
+      highlights.clear();
       setControls('hidden');
       if (renderer) void turnPage(renderer, jumps, direction);
     },
-    [renderer, jumps],
+    [renderer, jumps, highlights],
   );
 
   const jump = useCallback(
-    (target: JumpTarget) =>
-      jumps.jump(() => {
+    (target: JumpTarget) => {
+      highlights.clear();
+      return jumps.jump(() => {
         if (!renderer) return Promise.resolve();
         return 'fraction' in target ? renderer.goToFraction(target.fraction) : renderer.goTo(target.location);
-      }),
-    [renderer, jumps],
+      });
+    },
+    [renderer, jumps, highlights],
   );
 
   const goBack = () => {
+    highlights.clear();
     if (renderer) void jumps.back((location) => renderer.goTo(location));
   };
 
@@ -337,11 +345,15 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
   }, [renderer, turn]);
 
   const reading = status === 'open' && renderer ? renderer : undefined;
+  const search = useBookSearch(reading?.search);
   const shown = !reading || controls !== 'hidden';
   const tapMargin = (event: MouseEvent<HTMLElement>) => {
     const zone = zoneAt(event.clientX, container.current);
     if (zone) turn(zone);
-    else setControls(toggled);
+    else {
+      highlights.clear();
+      setControls(toggled);
+    }
   };
   const pin = () => setControls('pinned');
   const unpeek = () => setControls((state) => (state === 'peek' ? 'hidden' : state));
@@ -354,6 +366,16 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
   const tools = reading && (
     <>
       <TocTool renderer={reading} jump={jump} current={relocation?.tocEntry} placement={placement} />
+      {reading.search && (
+        <SearchTool
+          control={search}
+          placement={placement}
+          onPick={(result) => {
+            setControls('hidden');
+            highlights.show(reading, result, search.state.results, jump({ location: result.location }));
+          }}
+        />
+      )}
       {(reading.setStyles || reading.setZoom) && (
         <SettingsTool
           renderer={reading}

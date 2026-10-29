@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from 'vitest';
-import type { Relocation } from '../renderer.ts';
+import type { Relocation, SearchResult } from '../renderer.ts';
 import { swipe } from '../../test/swipe.ts';
 import { createFoliateRenderer, type FoliateRenderer } from './renderer.ts';
 import fixtureUrl from '../../test/fixtures/two-chapters.epub?url';
@@ -9,6 +9,7 @@ import fbzUrl from '../../test/fixtures/two-chapters.fbz?url';
 import mobiUrl from '../../test/fixtures/two-chapters.mobi?url';
 import cbzUrl from '../../test/fixtures/two-pages.cbz?url';
 import fixedLayoutEpubUrl from '../../test/fixtures/two-fixed-pages.epub?url';
+import oneFileTwoChaptersUrl from '../../test/fixtures/one-file-two-chapters.epub?url';
 
 type OpenedBook = { renderer: FoliateRenderer; relocations: Relocation[]; container: HTMLElement };
 
@@ -377,6 +378,93 @@ test('a tap on the page is reported with where it landed across the screen, but 
   if (paragraph) doc?.getSelection()?.selectAllChildren(paragraph);
   clickAt(paragraph, 50);
   expect(taps).toEqual([50, 550]);
+});
+
+async function searchAll(renderer: FoliateRenderer, query: string, signal = new AbortController().signal) {
+  const search = renderer.search;
+  if (!search) throw new Error('No search');
+  const results: SearchResult[] = [];
+  for await (const result of search.find(query, signal)) results.push(result);
+  return results;
+}
+
+test('search finds every match in book order, ignoring case and diacritics, under its chapter with an excerpt and a fraction', async () => {
+  const { renderer } = await openFixture();
+
+  const results = await searchAll(renderer, 'MÁRIT');
+
+  expect(results.map(({ excerpt }) => excerpt.match)).toEqual(['Marit', 'Marit', 'Marit', 'Marit', 'Marit']);
+  expect(results.map(({ tocEntry }) => tocEntry)).toEqual([...Array(3).fill(renderer.toc[0]), ...Array(2).fill(renderer.toc[1])]);
+  expect(results[0]?.excerpt).toEqual({ before: '', match: 'Marit', after: expect.stringMatching(/^ Halvorsen kept the ledger/) });
+  const fractions = results.map(({ fraction }) => fraction);
+  expect(fractions).toEqual([...fractions].sort((a, b) => a - b));
+  expect(new Set(fractions).size).toBe(5);
+  const chapterTwo = renderer.tocEntryAt(fractions[3] ?? 0);
+  expect(chapterTwo).toBe(renderer.toc[1]);
+  expect(renderer.tocEntryAt(fractions[2] ?? 0)).toBe(renderer.toc[0]);
+
+  await renderer.goTo(results[3]?.location ?? '');
+
+  expect(renderer.sectionDocument?.getElementById('chapter-two')).not.toBeNull();
+});
+
+test('search places each match under the chapter it falls in when one file holds several chapters', async () => {
+  const { renderer } = await openFixture(undefined, { extension: 'epub', url: oneFileTwoChaptersUrl });
+
+  const results = await searchAll(renderer, 'lamp');
+
+  expect(results.map(({ tocEntry }) => tocEntry?.label)).toEqual(['One: The Keeper', 'One: The Keeper', 'Two: The Visitor']);
+});
+
+test('search stops once its signal aborts', async () => {
+  const { renderer } = await openFixture();
+  const controller = new AbortController();
+  const results: SearchResult[] = [];
+
+  for await (const result of renderer.search?.find('Marit', controller.signal) ?? []) {
+    results.push(result);
+    controller.abort();
+  }
+
+  expect(results).toHaveLength(1);
+});
+
+function highlightsIn(renderer: FoliateRenderer) {
+  return Array.from(renderer.overlay?.querySelectorAll<SVGGElement>('g[data-highlight]') ?? [], (group) => ({
+    kind: group.dataset.highlight,
+    rects: group.querySelectorAll('rect').length,
+  }));
+}
+
+test('highlight marks the picked match and, fainter, the other matches in its chapter, until cleared', async () => {
+  const { renderer } = await openFixture();
+  const results = await searchAll(renderer, 'pear tree');
+  expect(results).toHaveLength(2);
+  const [picked, other] = results;
+  if (!picked || !other) throw new Error('Expected two results');
+  const elsewhere = (await searchAll(renderer, 'lighthouse'))[0];
+  if (!elsewhere) throw new Error('Expected a match in chapter one');
+
+  await renderer.goTo(picked.location);
+  renderer.search?.highlight(picked, [elsewhere, picked, other]);
+
+  await vi.waitFor(() =>
+    expect(highlightsIn(renderer)).toEqual([
+      { kind: 'other', rects: expect.any(Number) },
+      { kind: 'picked', rects: expect.any(Number) },
+    ]),
+  );
+  expect(highlightsIn(renderer).every(({ rects }) => rects > 0)).toBe(true);
+
+  renderer.search?.clearHighlights();
+
+  expect(highlightsIn(renderer)).toEqual([]);
+});
+
+test('a comic book has nothing to search', async () => {
+  const { renderer } = await openFixture(undefined, { extension: 'cbz', url: cbzUrl });
+
+  expect(renderer.search).toBeUndefined();
 });
 
 test.each(fixedLayout)('fixed-layout $extension: a tap on a scaled page is reported where it landed across the screen', async (fixture) => {

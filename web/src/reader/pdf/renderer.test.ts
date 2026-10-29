@@ -1,7 +1,7 @@
 import { afterEach, expect, test, vi } from 'vitest';
 import { getDocument, type PDFDocumentProxy, type PDFPageProxy } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import fixtureUrl from '../../test/fixtures/two-pages.pdf?url';
-import type { BookRenderer, Relocation } from '../renderer.ts';
+import type { BookRenderer, Relocation, SearchResult } from '../renderer.ts';
 import { swipe } from '../../test/swipe.ts';
 import { createPdfRenderer } from './renderer.ts';
 
@@ -51,7 +51,7 @@ test('opens on page 1 of 2 at fit-width and reports it as the first relocation',
 
   expect(relocations[0]).toEqual({ location: '1', fraction: 0, page: { current: 1, total: 2 }, tocEntry: { label: 'Page one', location: '1' } });
   const canvas = canvasIn(container);
-  const viewportWidth = canvas.parentElement?.clientWidth ?? 0;
+  const viewportWidth = container.firstElementChild?.clientWidth ?? 0;
   expect(viewportWidth).toBeGreaterThan(500);
   expect(canvas.style.width).toBe(`${viewportWidth}px`);
 });
@@ -126,7 +126,7 @@ test('a swipe turns the page and is reported as a turn, unless it pans a zoomed 
 
   renderer.setZoom?.(2);
   await expect.poll(() => relocations.length).toBe(4);
-  const scroller = canvasIn(container).parentElement as HTMLElement;
+  const scroller = container.firstElementChild as HTMLElement;
   const panning = () => (scroller.scrollLeft += 100);
   scroller.addEventListener('touchmove', panning);
   await swipe(canvasIn(container), 500, 100);
@@ -214,4 +214,104 @@ test('destroy empties the container', async () => {
   renderer.destroy();
 
   expect(container.childElementCount).toBe(0);
+});
+
+async function searchAll(renderer: BookRenderer, query: string, signal = new AbortController().signal) {
+  const results: SearchResult[] = [];
+  for await (const result of renderer.search?.find(query, signal) ?? []) results.push(result);
+  return results;
+}
+
+test('search lists each match by page, ignoring case, under the outline entry for its page', async () => {
+  const { renderer } = await openFixture();
+
+  const results = await searchAll(renderer, 'PAGE');
+
+  expect(results.map(({ location, page, fraction, tocEntry }) => ({ location, page, fraction, tocEntry: tocEntry?.label }))).toEqual([
+    { location: '1', page: 1, fraction: 0, tocEntry: 'Page one' },
+    { location: '1', page: 1, fraction: 0, tocEntry: 'Page one' },
+    { location: '2', page: 2, fraction: 1, tocEntry: 'Page two' },
+    { location: '2', page: 2, fraction: 1, tocEntry: 'Page two' },
+  ]);
+  expect(results[1]?.excerpt).toEqual({ before: 'Page one The first ', match: 'page', after: ' of the calibre-cloud PDF…' });
+  expect(await searchAll(renderer, 'whale')).toEqual([]);
+});
+
+test('search stops once its signal aborts', async () => {
+  const { renderer } = await openFixture();
+  const controller = new AbortController();
+  const results: SearchResult[] = [];
+
+  for await (const result of renderer.search?.find('page', controller.signal) ?? []) {
+    results.push(result);
+    controller.abort();
+  }
+
+  expect(results).toHaveLength(1);
+});
+
+function highlightBoxes(container: HTMLElement) {
+  return Array.from(container.querySelectorAll<HTMLElement>('[data-highlight]'), (box) => ({
+    kind: box.dataset.highlight,
+    rect: box.getBoundingClientRect(),
+  }));
+}
+
+test('highlight boxes the picked match and, fainter, the other matches on its page, over the words, until cleared', async () => {
+  const { renderer, container } = await openFixture();
+  const results = await searchAll(renderer, 'page');
+  const [, , heading, body] = results;
+  if (!heading || !body) throw new Error('Expected two matches on page 2');
+
+  await renderer.goTo('2');
+  renderer.search?.highlight(body, results);
+
+  const boxes = highlightBoxes(container);
+  expect(boxes.map(({ kind }) => kind)).toEqual(['other', 'picked']);
+  const page = canvasIn(container).getBoundingClientRect();
+  const [other, picked] = boxes.map(({ rect }) => rect);
+  if (!other || !picked) throw new Error('Expected two boxes');
+  for (const box of [other, picked]) {
+    expect(box.width).toBeGreaterThan(0);
+    expect(box.left).toBeGreaterThanOrEqual(page.left);
+    expect(box.right).toBeLessThanOrEqual(page.right);
+  }
+  expect(other.top).toBeLessThan(picked.top);
+  expect(other.height).toBeGreaterThan(picked.height);
+
+  renderer.setZoom?.(2);
+  await expect.poll(() => highlightBoxes(container)[1]?.rect.width).toBeCloseTo(picked.width * 2, 0);
+
+  renderer.search?.clearHighlights();
+
+  expect(highlightBoxes(container)).toEqual([]);
+});
+
+test('turning to another page drops the highlights', async () => {
+  const { renderer, container } = await openFixture();
+  const [first] = await searchAll(renderer, 'page');
+  if (!first) throw new Error('Expected a match on page 1');
+  renderer.search?.highlight(first, [first]);
+  expect(highlightBoxes(container)).toHaveLength(1);
+
+  await renderer.next();
+  await renderer.previous();
+
+  expect(highlightBoxes(container)).toEqual([]);
+});
+
+test('a highlighted match below the fold is scrolled into view', async () => {
+  const { renderer, container } = await openFixture();
+  container.style.height = '200px';
+  renderer.setZoom?.(2);
+  await expect.poll(() => canvasIn(container).getBoundingClientRect().height).toBeGreaterThan(1000);
+  const [, body] = await searchAll(renderer, 'page');
+  if (!body) throw new Error('Expected a second match on page 1');
+  const scroller = container.firstElementChild;
+
+  renderer.search?.highlight(body, [body]);
+
+  const box = highlightBoxes(container)[0]?.rect;
+  const view = scroller?.getBoundingClientRect();
+  expect(box && view && box.top >= view.top && box.bottom <= view.bottom).toBe(true);
 });
