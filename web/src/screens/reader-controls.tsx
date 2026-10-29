@@ -59,9 +59,27 @@ export function TopBar({ book, tools, wide, ...bar }: TopBarProps) {
   );
 }
 
-type BottomBarProps = BarState & { seekBar: ReactNode; whereYouAre: string; tools?: ReactNode | undefined; wide: boolean };
+export function JumpBack({ label, onBack }: { label: string; onBack: () => void }) {
+  return (
+    <button
+      type="button"
+      className="min-h-9 shrink-0 rounded-full border border-(--reader-line) px-3 text-sm whitespace-nowrap hover:bg-(--reader-hover)"
+      onClick={onBack}
+    >
+      {label}
+    </button>
+  );
+}
 
-export function BottomBar({ seekBar, whereYouAre, tools, wide, ...bar }: BottomBarProps) {
+type BottomBarProps = BarState & {
+  seekBar: ReactNode;
+  whereYouAre: string;
+  back?: ReactNode | undefined;
+  tools?: ReactNode | undefined;
+  wide: boolean;
+};
+
+export function BottomBar({ seekBar, whereYouAre, back, tools, wide, ...bar }: BottomBarProps) {
   const where = <p className={`min-w-0 truncate text-sm text-(--reader-muted) ${wide ? 'text-center' : 'flex-1'}`}>{whereYouAre}</p>;
   return (
     <Bar
@@ -75,9 +93,13 @@ export function BottomBar({ seekBar, whereYouAre, tools, wide, ...bar }: BottomB
     >
       {seekBar}
       {wide ? (
-        where
+        <div className="grid grid-cols-[1fr_minmax(0,auto)_1fr] items-center gap-2">
+          <div className="flex">{back}</div>
+          {where}
+        </div>
       ) : (
         <div className="flex items-center gap-2">
+          {back}
           {where}
           {tools}
         </div>

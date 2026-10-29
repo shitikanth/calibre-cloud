@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react';
+import type { Jump } from '../reader/jumps.ts';
 import type { BookRenderer, TocEntry } from '../reader/renderer.ts';
 import { panelClass, ReaderPopover, type PopoverPlacement } from './reader-popover.tsx';
 
-type TocToolProps = { renderer: BookRenderer; current: TocEntry | undefined; placement: PopoverPlacement };
+type TocToolProps = { renderer: BookRenderer; jump: Jump; current: TocEntry | undefined; placement: PopoverPlacement };
 
-export function TocTool({ renderer, current, placement }: TocToolProps) {
+export function TocTool({ renderer, jump, current, placement }: TocToolProps) {
   return (
     <ReaderPopover label="Table of contents" icon={<path d="M4 6h16M4 12h16M4 18h10" />} placement={placement}>
       {(close) => (
@@ -13,7 +14,7 @@ export function TocTool({ renderer, current, placement }: TocToolProps) {
           current={current}
           jump={(entry) => {
             close();
-            void renderer.goTo(entry.location);
+            void jump({ location: entry.location });
           }}
         />
       )}
