@@ -9,6 +9,12 @@ import './index.css';
 const root = document.getElementById('root');
 if (!root) throw new Error('Missing #root element');
 
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((error: unknown) => console.warn('Service worker not registered; the app needs a connection to open', error));
+  });
+}
+
 createRoot(root).render(
   <StrictMode>
     <App router={createAppRouter()} providers={storageProviders} renderers={renderers} />
