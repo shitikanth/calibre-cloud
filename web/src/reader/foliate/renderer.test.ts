@@ -356,7 +356,7 @@ function frameOf(doc: Document | undefined) {
   return doc?.defaultView?.frameElement as HTMLElement;
 }
 
-async function pagePositionsAfterRelease(renderer: FoliateRenderer) {
+async function pagePositionsUntilSettled(renderer: FoliateRenderer) {
   const frame = frameOf(renderer.sectionDocument);
   const positions = [frame.getBoundingClientRect().left];
   for (let still = 0; still < 10 && frame.isConnected; ) {
@@ -373,14 +373,46 @@ async function pagePositionsAfterRelease(renderer: FoliateRenderer) {
 
 test('a swipe past the turn threshold slides the rest of the way to the next page', async () => {
   const { renderer, relocations } = await openFixture();
+  await settled(relocations);
   const opening = relocations.at(-1)?.fraction ?? Number.NaN;
 
   await swipe(renderer.sectionDocument?.body as Element, 500, 100);
-  const positions = await pagePositionsAfterRelease(renderer);
+  const positions = await pagePositionsUntilSettled(renderer);
 
   expect(positions.length).toBeGreaterThan(3);
   expect(positions).toEqual([...positions].sort((a, b) => b - a));
   await vi.waitFor(() => expect(relocations.at(-1)?.fraction).toBeGreaterThan(opening));
+});
+
+test('a short swipe that does not turn slides back to the current page', async () => {
+  const { renderer, relocations } = await openFixture();
+  await settled(relocations);
+  const opening = relocations.at(-1)?.fraction;
+  const start = frameOf(renderer.sectionDocument).getBoundingClientRect().left;
+
+  await swipe(renderer.sectionDocument?.body as Element, 300, 280);
+  const positions = await pagePositionsUntilSettled(renderer);
+
+  expect(positions.length).toBeGreaterThan(3);
+  expect(positions).toEqual([...positions].sort((a, b) => a - b));
+  expect(positions.at(-1)).toBe(start);
+  expect(relocations.at(-1)?.fraction).toBe(opening);
+});
+
+test('turning the page with next and previous jumps straight there with no slide', async () => {
+  const { renderer, relocations } = await openFixture();
+  await settled(relocations);
+  const start = frameOf(renderer.sectionDocument).getBoundingClientRect().left;
+
+  void renderer.next();
+  const forward = await pagePositionsUntilSettled(renderer);
+  const turned = forward.at(-1);
+  void renderer.previous();
+  const back = await pagePositionsUntilSettled(renderer);
+
+  expect(turned).toBeLessThan(start);
+  expect(forward.filter((left) => left !== start)).toEqual([turned]);
+  expect(back.filter((left) => left !== turned)).toEqual([start]);
 });
 
 function clickAt(element: Element | null | undefined, x: number) {
