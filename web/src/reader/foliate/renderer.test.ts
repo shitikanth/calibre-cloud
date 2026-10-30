@@ -400,6 +400,23 @@ test('a short swipe that does not turn slides back to the current page', async (
   expect(relocations.at(-1)?.fraction).toBe(opening);
 });
 
+test('a turn while the page is still sliding back lands on the next page', async () => {
+  const { renderer, relocations } = await openFixture();
+  await settled(relocations);
+  const opening = relocations.at(-1)?.fraction ?? Number.NaN;
+  const start = frameOf(renderer.sectionDocument).getBoundingClientRect().left;
+
+  await swipe(renderer.sectionDocument?.body as Element, 300, 280);
+  await nextFrame();
+  await nextFrame();
+  void renderer.next();
+  const positions = await pagePositionsUntilSettled(renderer);
+
+  expect(positions.at(-1)).toBeLessThan(start);
+  await settled(relocations);
+  expect(relocations.at(-1)?.fraction).toBeGreaterThan(opening);
+});
+
 test('with reduced motion, a swipe past the turn threshold snaps to the next page with no slide', async () => {
   await commands.emulateReducedMotion('reduce');
   onTestFinished(() => commands.emulateReducedMotion(null));

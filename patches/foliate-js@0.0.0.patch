@@ -41,10 +41,38 @@ index 20c77a83db677cc01a0549bc8dad073ab7e9f030..5bc898205a99c9896fc7c73510a211dc
          return url
      }
 diff --git a/paginator.js b/paginator.js
-index 7980c20297049e38b5e5a1d44a9eee11b1fbd68e..1512b0306533cb9ad57fa305d6a0fada043c3062 100644
+index 7980c20297049e38b5e5a1d44a9eee11b1fbd68e..630de5295ec89cd736cd5526d3033d9fcebef531 100644
 --- a/paginator.js
 +++ b/paginator.js
-@@ -898,7 +898,10 @@ export class Paginator extends HTMLElement {
+@@ -448,6 +448,7 @@ export class Paginator extends HTMLElement {
+     #scrollBounds
+     #touchState
+     #touchScrolled
++    #scrollGeneration = 0
+     #lastVisibleRange
+     constructor() {
+         super()
+@@ -812,7 +813,10 @@ export class Paginator extends HTMLElement {
+             Math.max(min, Math.min(max, (start + end) / 2
+                 + (isNaN(d) ? 0 : d))) / size)
+ 
+-        this.#scrollToPage(page, 'snap').then(() => {
++        const snapped = this.#scrollToPage(page, 'snap')
++        const generation = this.#scrollGeneration
++        snapped.then(() => {
++            if (generation !== this.#scrollGeneration) return
+             const dir = page <= 0 ? -1 : page >= pages - 1 ? 1 : null
+             if (dir) return this.#goTo({
+                 index: this.#adjacentIndex(dir),
+@@ -889,6 +893,7 @@ export class Paginator extends HTMLElement {
+         return this.#scrollToPage(Math.floor(offset / this.size) + (this.#rtl ? -1 : 1), reason)
+     }
+     async #scrollTo(offset, reason, smooth) {
++        const generation = ++this.#scrollGeneration
+         const element = this.#container
+         const { scrollProp, size } = this
+         if (element[scrollProp] === offset) {
+@@ -898,10 +903,14 @@ export class Paginator extends HTMLElement {
          }
          // FIXME: vertical-rl only, not -lr
          if (this.scrolled && this.#vertical) offset = -offset
@@ -54,5 +82,10 @@ index 7980c20297049e38b5e5a1d44a9eee11b1fbd68e..1512b0306533cb9ad57fa305d6a0fada
 +            : smooth && this.hasAttribute('animated')
 +        if (animated) return animate(
              element[scrollProp], offset, 300, easeOutQuad,
-             x => element[scrollProp] = x,
+-            x => element[scrollProp] = x,
++            x => { if (generation === this.#scrollGeneration) element[scrollProp] = x },
          ).then(() => {
++            if (generation !== this.#scrollGeneration) return
+             this.#scrollBounds = [offset, this.atStart ? 0 : size, this.atEnd ? 0 : size]
+             this.#afterScroll(reason)
+         })
