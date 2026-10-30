@@ -1,11 +1,11 @@
 import { expect, test } from 'vitest';
-import { routeRequest, shellPaths } from './app-shell.ts';
+import { belongsInShell, responseSource, shellPaths } from './app-shell.ts';
 
 const origin = 'https://app.example';
 const precached = new Set(['/', '/assets/index-abc123.js', '/pdfjs/wasm/openjpeg.wasm', '/manifest.webmanifest']);
 
 function route(url: string, mode: RequestMode = 'no-cors', method = 'GET') {
-  return routeRequest({ url, mode, method }, origin, precached);
+  return responseSource({ url, mode, method }, origin, precached);
 }
 
 test.each(['/', '/books/1', '/books/1/read/EPUB', '/smoke/deep-link', '/?code=x'])('an app navigation to %s gets the cached shell', (path) => {
@@ -36,6 +36,17 @@ test.each([
 
 test('a write to the app goes to the network', () => {
   expect(route(`${origin}/`, 'navigate', 'POST')).toBe('network');
+});
+
+test.each([
+  ['/', 200, 'text/html; charset=utf-8', true],
+  ['/assets/index-abc123.js', 200, 'text/javascript', true],
+  ['/assets/sqlite3-789abc.wasm', 200, 'application/wasm', true],
+  ['/assets/index-abc123.js', 200, 'text/html', false],
+  ['/icons/icon-192.png', 200, 'TEXT/HTML; charset=utf-8', false],
+  ['/', 404, 'text/html', false],
+])('%s answered %i %s belongs in the shell: %s', (path, status, type, belongs) => {
+  expect(belongsInShell(path, new Response('', { status, headers: { 'content-type': type } }))).toBe(belongs);
 });
 
 test('the shell is the HTML entry, the built assets, and the files the shell renders with', () => {

@@ -1,4 +1,9 @@
-export type Route = 'shell' | 'precached' | 'network';
+export type ResponseSource = 'shell' | 'precached' | 'network';
+
+export interface AppShell {
+  readonly version: string;
+  readonly paths: readonly string[];
+}
 
 export interface RoutedRequest {
   readonly url: string;
@@ -12,9 +17,14 @@ export function shellPaths(builtFiles: readonly string[]): string[] {
   return builtFiles.filter((file) => shellFile.test(file)).map((file) => (file === 'index.html' ? '/' : `/${file}`));
 }
 
+export function belongsInShell(path: string, response: Response): boolean {
+  const type = (response.headers.get('content-type') ?? '').split(';')[0]!.trim().toLowerCase();
+  return response.ok && (path === '/') === (type === 'text/html');
+}
+
 const outsideTheApp = /^\/(api(\/|$)|(about|privacy|terms)(\.html)?\/?$)/;
 
-export function routeRequest(request: RoutedRequest, origin: string, precached: ReadonlySet<string>): Route {
+export function responseSource(request: RoutedRequest, origin: string, precached: ReadonlySet<string>): ResponseSource {
   const url = new URL(request.url);
   if (request.method !== 'GET' || url.origin !== origin || outsideTheApp.test(url.pathname)) return 'network';
   if (request.mode === 'navigate') return 'shell';

@@ -4,6 +4,11 @@ import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, beforeEach, expect, test } from 'vitest';
 import { checkInstallableOffline } from './pwa.ts';
 
+const csp = readFileSync(new URL('../_headers', import.meta.url), 'utf8')
+  .split('\n')
+  .find((line) => line.trim().startsWith('Content-Security-Policy:'))!
+  .replace(/^\s*Content-Security-Policy:\s*/, '');
+
 const icon = (name: string) => readFileSync(new URL(`../../../web/public/icons/${name}`, import.meta.url));
 
 const manifest = JSON.stringify({
@@ -16,13 +21,15 @@ const manifest = JSON.stringify({
   ],
 });
 
-const serviceWorker = (precache: string[]) => `
+const fromCache = 'caches.match(key).then((cached) => cached ?? fetch(event.request))';
+
+const serviceWorker = (precache: string[], respond = fromCache) => `
   self.addEventListener('install', (event) => event.waitUntil(caches.open('shell').then((cache) => cache.addAll(${JSON.stringify(precache)}))));
   self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
     if (url.pathname.startsWith('/api/')) return;
     const key = event.request.mode === 'navigate' ? '/' : event.request;
-    event.respondWith(caches.match(key).then((cached) => cached ?? fetch(event.request)));
+    event.respondWith(${respond});
   });
 `;
 
@@ -54,7 +61,7 @@ beforeAll(async () => {
   server = createServer((req, res) => {
     const path = new URL(req.url ?? '/', 'http://x').pathname;
     const file = site[path] ?? (path.includes('.') ? undefined : site['/']);
-    res.writeHead(file ? 200 : 404, { 'content-type': file?.type ?? 'text/html', ...file?.headers });
+    res.writeHead(file ? 200 : 404, { 'content-type': file?.type ?? 'text/html', 'content-security-policy': csp, ...file?.headers });
     res.end(file?.body ?? 'not found');
   });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -89,6 +96,13 @@ test('reports a service worker that caches an /api/ response', async () => {
   site['/sw.js'] = { ...site['/sw.js']!, body: serviceWorker(['/', '/app.js', '/api/auth/token']) };
 
   expect(await checkInstallableOffline(origin, ['/'])).toContain(`service worker cache shell holds ${origin}/api/auth/token`);
+});
+
+test('reports a shell served offline without its CSP', async () => {
+  const withoutHeaders = "caches.match('/').then((cached) => cached.text()).then((body) => new Response(body, { headers: { 'content-type': 'text/html' } }))";
+  site['/sw.js'] = { ...site['/sw.js']!, body: serviceWorker(['/', '/app.js'], `event.request.mode === 'navigate' ? ${withoutHeaders} : ${fromCache}`) };
+
+  expect(await checkInstallableOffline(origin, ['/books/1'])).toContain('/books/1 offline: no Content-Security-Policy header');
 });
 
 test('reports an app that does not open offline', async () => {

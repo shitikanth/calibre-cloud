@@ -1,7 +1,9 @@
 import { chromium, type BrowserContext, type Page } from 'playwright';
+import { cspProblems } from './csp.ts';
+import { publicPages } from './pages.ts';
 
 const serviceWorkerCacheControl = 'no-cache';
-const outsideTheShell = /^\/(api\/|(about|privacy|terms)(\.html)?$)/;
+const outsideTheShell = new RegExp(`^/(api(/|$)|(${publicPages.map((page) => page.path.slice(1)).join('|')})(\\.html)?/?$)`);
 
 async function serviceWorkerScriptProblems(origin: string): Promise<string[]> {
   const response = await fetch(new URL('/sw.js', origin));
@@ -28,7 +30,7 @@ interface Manifest {
 async function pngProblem(label: string, url: string): Promise<string | undefined> {
   const response = await fetch(url);
   await response.body?.cancel();
-  const type = response.headers.get('content-type') ?? '(none)';
+  const type = (response.headers.get('content-type') ?? '(none)').split(';')[0]!.trim().toLowerCase();
   return response.ok && type === 'image/png' ? undefined : `${label}: HTTP ${response.status} ${type}, expected 200 image/png`;
 }
 
@@ -41,7 +43,7 @@ async function installabilityProblems(page: Page): Promise<string[]> {
   const manifest = JSON.parse(data ?? '{}') as Manifest;
   if (!manifest.name && !manifest.short_name) problems.push('manifest: no name or short_name');
   if (!manifest.start_url) problems.push('manifest: no start_url');
-  if (!['standalone', 'fullscreen', 'minimal-ui'].includes(manifest.display ?? '')) problems.push(`manifest: display ${manifest.display ?? '(none)'}, expected standalone`);
+  if (!['standalone', 'fullscreen', 'minimal-ui'].includes(manifest.display ?? '')) problems.push(`manifest: display ${manifest.display ?? '(none)'}, expected standalone, fullscreen or minimal-ui`);
   for (const size of ['192x192', '512x512']) {
     const icon = manifest.icons?.find((candidate) => candidate.type === 'image/png' && candidate.sizes?.split(' ').includes(size));
     const problem = icon?.src ? await pngProblem(`manifest icon ${size}`, new URL(icon.src, url).href) : `manifest: no ${size} PNG icon`;
@@ -84,7 +86,10 @@ async function offlineProblems(context: BrowserContext, origin: string, path: st
   const problems: string[] = [];
   page.on('pageerror', (error) => problems.push(`${path} offline: uncaught ${error.name}: ${error.message}`));
   try {
-    await page.goto(new URL(path, origin).href, { waitUntil: 'load' });
+    const response = await page.goto(new URL(path, origin).href, { waitUntil: 'load' });
+    const csp = await response?.headerValue('content-security-policy');
+    if (!csp) problems.push(`${path} offline: no Content-Security-Policy header`);
+    else for (const problem of cspProblems(csp)) problems.push(`${path} offline: CSP ${problem}`);
     const rendered = await page.evaluate(() => document.getElementById('root')?.hasChildNodes());
     if (!rendered) problems.push(`${path} offline: #root is empty`);
   } catch (error) {
