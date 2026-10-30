@@ -63,3 +63,7 @@ _Avoid_: preferences, per-book settings
 **Continue reading**:
 The home-view row of formats that have a reading position on this device, most recently opened first.
 _Avoid_: recent books, history, currently reading
+
+**Installed app**:
+The app added to a device's home screen or app list, opening in its own window without browser controls. On iPhone and iPad it is added with Safari's Add to Home Screen. The opposite is the app in the browser.
+_Avoid_: standalone mode, Home Screen mode, web app, PWA, web clip
