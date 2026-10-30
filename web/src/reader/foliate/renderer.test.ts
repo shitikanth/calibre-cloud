@@ -360,12 +360,12 @@ function frameOf(doc: Document | undefined) {
 async function pagePositionsUntilSettled(renderer: FoliateRenderer) {
   const frame = frameOf(renderer.sectionDocument);
   const positions = [frame.getBoundingClientRect().left];
-  for (let still = 0; still < 10 && frame.isConnected; ) {
+  for (let stillFrames = 0; stillFrames < 10 && frame.isConnected; ) {
     await nextFrame();
     const left = frame.getBoundingClientRect().left;
-    if (left === positions.at(-1)) still += 1;
+    if (left === positions.at(-1)) stillFrames += 1;
     else {
-      still = 0;
+      stillFrames = 0;
       positions.push(left);
     }
   }
