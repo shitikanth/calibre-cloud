@@ -38,7 +38,7 @@ type Site = Record<string, { body: string | Buffer; type?: string; headers?: Rec
 function installableSite(): Site {
   return {
     '/': {
-      body: '<link rel="manifest" href="/app.webmanifest"><link rel="apple-touch-icon" href="/touch.png"><div id="root"></div><script src="/app.js"></script>',
+      body: '<meta name="viewport" content="width=device-width, viewport-fit=cover"><link rel="manifest" href="/app.webmanifest"><link rel="apple-touch-icon" href="/touch.png"><div id="root"></div><script src="/app.js"></script>',
     },
     '/app.js': {
       type: 'text/javascript',
@@ -84,6 +84,12 @@ test('reports an app the browser cannot install', async () => {
   site['/'] = { body: site['/']!.body.toString().replace('<link rel="manifest" href="/app.webmanifest">', '') };
 
   expect((await checkInstallableOffline(origin, ['/'])).join('\n')).toMatch(/^manifest: .*/m);
+});
+
+test('reports an app that does not lay out into the iPhone safe areas', async () => {
+  site['/'] = { body: site['/']!.body.toString().replace(', viewport-fit=cover', '') };
+
+  expect(await checkInstallableOffline(origin, ['/'])).toContain('viewport: no viewport-fit=cover');
 });
 
 test('reports a service worker script served with long-lived caching', async () => {

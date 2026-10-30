@@ -9,7 +9,7 @@ export function AppBar() {
   const disconnect = useDisconnect();
   const copyLink = useCopyConnectLink();
   return (
-    <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white">
+    <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]">
       <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2 sm:px-6">
         <Link to="/" className="shrink-0 font-semibold">
           calibre-cloud

@@ -46,7 +46,7 @@ export function TopBar({ book, tools, wide, ...bar }: TopBarProps) {
     <Bar
       as="header"
       {...bar}
-      className={`inset-x-0 top-0 border-b border-(--reader-line) px-2 py-1 ${
+      className={`inset-x-0 top-0 border-b border-(--reader-line) pt-[calc(0.25rem+env(safe-area-inset-top))] pr-[calc(0.5rem+env(safe-area-inset-right))] pb-1 pl-[calc(0.5rem+env(safe-area-inset-left))] ${
         wide ? 'grid grid-cols-[1fr_minmax(0,auto)_1fr] items-center gap-2' : 'flex items-center gap-2'
       }`}
     >
@@ -87,8 +87,8 @@ export function BottomBar({ seekBar, whereYouAre, back, tools, wide, ...bar }: B
       {...bar}
       className={
         wide
-          ? 'bottom-3 left-1/2 w-[calc(100%-2rem)] max-w-[560px] -translate-x-1/2 rounded-xl border border-(--reader-line) px-4 pb-2 shadow-lg'
-          : 'inset-x-0 bottom-0 border-t border-(--reader-line) px-4 pb-[max(0.25rem,env(safe-area-inset-bottom))]'
+          ? 'bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-1/2 w-[calc(100%-2rem)] max-w-[560px] -translate-x-1/2 rounded-xl border border-(--reader-line) px-4 pb-2 shadow-lg'
+          : 'inset-x-0 bottom-0 border-t border-(--reader-line) pr-[calc(1rem+env(safe-area-inset-right))] pb-[max(0.25rem,env(safe-area-inset-bottom))] pl-[calc(1rem+env(safe-area-inset-left))]'
       }
     >
       {seekBar}
