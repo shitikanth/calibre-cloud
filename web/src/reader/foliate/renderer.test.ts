@@ -356,6 +356,33 @@ function frameOf(doc: Document | undefined) {
   return doc?.defaultView?.frameElement as HTMLElement;
 }
 
+async function pagePositionsAfterRelease(renderer: FoliateRenderer) {
+  const frame = frameOf(renderer.sectionDocument);
+  const positions = [frame.getBoundingClientRect().left];
+  for (let still = 0; still < 10 && frame.isConnected; ) {
+    await nextFrame();
+    const left = frame.getBoundingClientRect().left;
+    if (left === positions.at(-1)) still += 1;
+    else {
+      still = 0;
+      positions.push(left);
+    }
+  }
+  return positions;
+}
+
+test('a swipe past the turn threshold slides the rest of the way to the next page', async () => {
+  const { renderer, relocations } = await openFixture();
+  const opening = relocations.at(-1)?.fraction ?? Number.NaN;
+
+  await swipe(renderer.sectionDocument?.body as Element, 500, 100);
+  const positions = await pagePositionsAfterRelease(renderer);
+
+  expect(positions.length).toBeGreaterThan(3);
+  expect(positions).toEqual([...positions].sort((a, b) => b - a));
+  await vi.waitFor(() => expect(relocations.at(-1)?.fraction).toBeGreaterThan(opening));
+});
+
 function clickAt(element: Element | null | undefined, x: number) {
   const frame = frameOf(element?.ownerDocument);
   const { left, width } = frame.getBoundingClientRect();

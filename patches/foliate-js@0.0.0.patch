@@ -40,3 +40,19 @@ index 20c77a83db677cc01a0549bc8dad073ab7e9f030..5bc898205a99c9896fc7c73510a211dc
          this.#cache.set(section, url)
          return url
      }
+diff --git a/paginator.js b/paginator.js
+index 7980c20297049e38b5e5a1d44a9eee11b1fbd68e..1512b0306533cb9ad57fa305d6a0fada043c3062 100644
+--- a/paginator.js
++++ b/paginator.js
+@@ -898,7 +898,10 @@ export class Paginator extends HTMLElement {
+         }
+         // FIXME: vertical-rl only, not -lr
+         if (this.scrolled && this.#vertical) offset = -offset
+-        if ((reason === 'snap' || smooth) && this.hasAttribute('animated')) return animate(
++        const animated = reason === 'snap'
++            ? this.hasAttribute('animated') || this.hasAttribute('animated-snap')
++            : smooth && this.hasAttribute('animated')
++        if (animated) return animate(
+             element[scrollProp], offset, 300, easeOutQuad,
+             x => element[scrollProp] = x,
+         ).then(() => {
