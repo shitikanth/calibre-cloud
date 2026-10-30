@@ -17,9 +17,9 @@ granted to this project, so a later `drive.file` re-test here would not start cl
 ## One-time setup (owner)
 
 1. In the live app's Cloud project, enable **Google Picker API**.
-2. Credentials → API key, restricted to the Google Picker API and Google Drive API, website
-   restriction `https://docs.google.com/*` (what the Picker guide prescribes).
-   "API developer key is invalid" in the Picker means this step, not CSP or referrer.
+2. Credentials → API key. API restriction: Google Picker API (the page calls Drive with the OAuth
+   token, not the key). Website restrictions: `http://localhost:8787/*` and `https://docs.google.com/*`;
+   the Picker guide requires both. "API developer key is invalid" in the Picker means this step.
 3. Write `web/prototype-drive-file-picker/.env.local` (gitignored):
 
    ```
