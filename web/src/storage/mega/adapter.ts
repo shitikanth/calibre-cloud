@@ -25,25 +25,25 @@ export function createMegaAdapter(link: string): StorageAdapter {
     return fetched;
   };
 
-  const find = (root: MegaNode, path: LibraryPath) => {
+  const resolveOrThrow = (root: MegaNode, path: LibraryPath) => {
     const node = resolveLibraryPath(root, path);
     if (!node) throw new NotFound(path);
     return node;
   };
 
-  const findCached = async (path: LibraryPath) => {
+  const findRefetchingOnMiss = async (path: LibraryPath) => {
     const cached = listing;
     const node = cached && resolveLibraryPath(await cached, path);
-    return node ?? find(await fetchListing(), path);
+    return node ?? resolveOrThrow(await fetchListing(), path);
   };
 
   return {
     async stat(path: LibraryPath): Promise<FileStat> {
-      const node = find(await fetchListing(), path);
+      const node = resolveOrThrow(await fetchListing(), path);
       return { size: node.size ?? 0, version: String(node.timestamp) };
     },
     async read(path: LibraryPath, options?: ReadOptions): Promise<Blob> {
-      const node = await findCached(path);
+      const node = await findRefetchingOnMiss(path);
       return downloadToBlob((downloadOptions) => node.download(downloadOptions), options);
     },
   };

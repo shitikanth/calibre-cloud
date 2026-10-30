@@ -48,9 +48,11 @@ beforeEach(() => {
   remote.failure = undefined;
 });
 
+const connect = () => createMegaAdapter('https://mega.nz/folder/abc#key');
+
 describe('MEGA adapter listing', () => {
   test('stat sees a metadata.db that changed since the last call', async () => {
-    const mega = createMegaAdapter('https://mega.nz/folder/abc#key');
+    const mega = connect();
     await expect(mega.stat('metadata.db')).resolves.toMatchObject({ version: '100' });
 
     remote.files = [{ name: 'metadata.db', timestamp: 200 }];
@@ -59,7 +61,7 @@ describe('MEGA adapter listing', () => {
   });
 
   test('read finds a book added after the listing was fetched', async () => {
-    const mega = createMegaAdapter('https://mega.nz/folder/abc#key');
+    const mega = connect();
     await mega.stat('metadata.db');
 
     remote.files = [...remote.files, { name: 'Emma.epub', timestamp: 300, content: 'an epub of emma' }];
@@ -67,8 +69,17 @@ describe('MEGA adapter listing', () => {
     await expect(mega.read('Emma.epub').then((blob) => blob.text())).resolves.toBe('an epub of emma');
   });
 
+  test('read of a listed path reuses the last listing', async () => {
+    const mega = connect();
+    await mega.stat('metadata.db');
+
+    await mega.read('metadata.db');
+
+    expect(remote.loads).toBe(1);
+  });
+
   test('read of a path in neither listing is NotFound after one refetch', async () => {
-    const mega = createMegaAdapter('https://mega.nz/folder/abc#key');
+    const mega = connect();
     await mega.stat('metadata.db');
 
     await expect(mega.read('Emma.epub')).rejects.toBeInstanceOf(NotFound);
@@ -76,7 +87,7 @@ describe('MEGA adapter listing', () => {
   });
 
   test('a failed fetch is a storage error and the next call fetches again', async () => {
-    const mega = createMegaAdapter('https://mega.nz/folder/abc#key');
+    const mega = connect();
     remote.failure = new Error('MEGA returned a 503 status code');
 
     await expect(mega.read('metadata.db')).rejects.toBeInstanceOf(Network);
