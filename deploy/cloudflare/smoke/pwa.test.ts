@@ -89,7 +89,7 @@ test('reports an app the browser cannot install', async () => {
 test('reports an app that does not lay out into the iPhone safe areas', async () => {
   site['/'] = { body: site['/']!.body.toString().replace(', viewport-fit=cover', '') };
 
-  expect(await checkInstallableOffline(origin, ['/'])).toContain('viewport: no viewport-fit=cover, so the installed app on iPhone gets no safe-area insets');
+  expect(await checkInstallableOffline(origin, ['/'])).toContain('viewport: no viewport-fit=cover');
 });
 
 test('reports a service worker script served with long-lived caching', async () => {

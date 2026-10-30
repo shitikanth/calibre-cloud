@@ -38,7 +38,7 @@ function Layout() {
   const library = useMatch({ from: '/', shouldThrow: false }) !== undefined;
   if (!connection) {
     return (
-      <div className="pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)]">
+      <div className="safe-area-padding">
         <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
           <Outlet />
         </main>
