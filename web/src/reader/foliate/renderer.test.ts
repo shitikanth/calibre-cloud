@@ -1,4 +1,5 @@
-import { afterEach, expect, test, vi } from 'vitest';
+import { afterEach, expect, onTestFinished, test, vi } from 'vitest';
+import { commands } from 'vitest/browser';
 import type { Relocation, SearchResult } from '../renderer.ts';
 import { swipe } from '../../test/swipe.ts';
 import { createFoliateRenderer, type FoliateRenderer } from './renderer.ts';
@@ -355,6 +356,96 @@ test('a swipe inside the section document while the browser is pinch-zoomed neit
 function frameOf(doc: Document | undefined) {
   return doc?.defaultView?.frameElement as HTMLElement;
 }
+
+async function pagePositionsUntilSettled(renderer: FoliateRenderer) {
+  const frame = frameOf(renderer.sectionDocument);
+  const positions = [frame.getBoundingClientRect().left];
+  for (let stillFrames = 0; stillFrames < 10 && frame.isConnected; ) {
+    await nextFrame();
+    const left = frame.getBoundingClientRect().left;
+    if (left === positions.at(-1)) stillFrames += 1;
+    else {
+      stillFrames = 0;
+      positions.push(left);
+    }
+  }
+  return positions;
+}
+
+test('a swipe past the turn threshold slides the rest of the way to the next page', async () => {
+  const { renderer, relocations } = await openFixture();
+  await settled(relocations);
+  const opening = relocations.at(-1)?.fraction ?? Number.NaN;
+
+  await swipe(renderer.sectionDocument?.body as Element, 500, 100);
+  const positions = await pagePositionsUntilSettled(renderer);
+
+  expect(positions.length).toBeGreaterThan(3);
+  expect(positions).toEqual([...positions].sort((a, b) => b - a));
+  await vi.waitFor(() => expect(relocations.at(-1)?.fraction).toBeGreaterThan(opening));
+});
+
+test('a short swipe that does not turn slides back to the current page', async () => {
+  const { renderer, relocations } = await openFixture();
+  await settled(relocations);
+  const opening = relocations.at(-1)?.fraction;
+  const start = frameOf(renderer.sectionDocument).getBoundingClientRect().left;
+
+  await swipe(renderer.sectionDocument?.body as Element, 300, 280);
+  const positions = await pagePositionsUntilSettled(renderer);
+
+  expect(positions.length).toBeGreaterThan(3);
+  expect(positions).toEqual([...positions].sort((a, b) => a - b));
+  expect(positions.at(-1)).toBe(start);
+  expect(relocations.at(-1)?.fraction).toBe(opening);
+});
+
+test('a turn while the page is still sliding back lands on the next page', async () => {
+  const { renderer, relocations } = await openFixture();
+  await settled(relocations);
+  const opening = relocations.at(-1)?.fraction ?? Number.NaN;
+  const start = frameOf(renderer.sectionDocument).getBoundingClientRect().left;
+
+  await swipe(renderer.sectionDocument?.body as Element, 300, 280);
+  await nextFrame();
+  await nextFrame();
+  void renderer.next();
+  const positions = await pagePositionsUntilSettled(renderer);
+
+  expect(positions.at(-1)).toBeLessThan(start);
+  await settled(relocations);
+  expect(relocations.at(-1)?.fraction).toBeGreaterThan(opening);
+});
+
+test('with reduced motion, a swipe past the turn threshold snaps to the next page with no slide', async () => {
+  await commands.emulateReducedMotion('reduce');
+  onTestFinished(() => commands.emulateReducedMotion(null));
+  const { renderer, relocations } = await openFixture();
+  await settled(relocations);
+  const opening = relocations.at(-1)?.fraction ?? Number.NaN;
+
+  await swipe(renderer.sectionDocument?.body as Element, 500, 100);
+  const positions = await pagePositionsUntilSettled(renderer);
+
+  expect(positions.length).toBeLessThanOrEqual(2);
+  await vi.waitFor(() => expect(relocations.at(-1)?.fraction).toBeGreaterThan(opening));
+});
+
+test('turning the page with next and previous jumps straight there with no slide', async () => {
+  const { renderer, relocations } = await openFixture();
+  await settled(relocations);
+  const start = frameOf(renderer.sectionDocument).getBoundingClientRect().left;
+
+  void renderer.next();
+  const forward = await pagePositionsUntilSettled(renderer);
+  const turned = forward.at(-1);
+  void renderer.previous();
+  const back = await pagePositionsUntilSettled(renderer);
+
+  expect(turned).toBeLessThan(start);
+  expect(forward.filter((left) => left !== start)).toEqual([turned]);
+  expect(back.filter((left) => left !== turned)).toEqual([start]);
+});
 
 function clickAt(element: Element | null | undefined, x: number) {
   const frame = frameOf(element?.ownerDocument);

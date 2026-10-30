@@ -7,7 +7,12 @@ import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { playwright } from '@vitest/browser-playwright';
+import type { BrowserCommand } from 'vitest/node';
 import { shellPaths } from './src/pwa/app-shell.ts';
+
+const emulateReducedMotion: BrowserCommand<[reducedMotion: 'reduce' | null]> = async ({ page }, reducedMotion) => {
+  await page.emulateMedia({ reducedMotion });
+};
 
 const megaSmokeLink = process.env.CI ? '' : (loadEnv('test', decodeURIComponent(new URL('..', import.meta.url).pathname), 'MEGA_SMOKE_').MEGA_SMOKE_LINK ?? '');
 
@@ -84,6 +89,7 @@ export default defineConfig({
       headless: true,
       provider: playwright(),
       instances: [{ browser: 'chromium' }],
+      commands: { emulateReducedMotion },
     },
   },
 });
