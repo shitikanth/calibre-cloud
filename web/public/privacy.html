@@ -11,7 +11,7 @@
     <main>
       <p class="wordmark"><a href="/about">calibre-cloud</a></p>
       <h1>Privacy policy</h1>
-      <p class="updated">Last updated 28 October 2026</p>
+      <p class="updated">Last updated 30 October 2026</p>
       <p class="lead">
         calibre-cloud reads your Calibre library from your own storage and shows it in your browser. Your library and
         books go straight from your storage to your browser. We never receive them, and we store nothing about you.
@@ -68,6 +68,14 @@
         library you connected, a copy of the library's <code>metadata.db</code>, covers, the last three books you opened,
         your place in each book, and your reader settings. None of it is sent to us.
       </p>
+      <p>
+        It also keeps a copy of the app itself, through a service worker, so the app opens without a connection. That
+        copy holds nothing of yours, and the service worker never handles your library, your books, or sign-in.
+      </p>
+      <p>
+        On an iPhone or iPad, an app added to the Home Screen keeps its own storage, separate from Safari's. Connect your
+        library again inside the installed app.
+      </p>
 
       <h2>Cookies</h2>
       <p>
@@ -91,7 +99,7 @@
       <h2>Removing access and data</h2>
       <ul>
         <li>
-          <strong>Disconnect</strong> in the app deletes everything it keeps on this device (reader settings stay),
+          <strong>Disconnect</strong> in the app deletes everything it keeps on this device (reader settings and the app's own copy stay),
           asks Google to revoke calibre-cloud's access to your Google account, and deletes the sign-in cookie.
         </li>
         <li>
