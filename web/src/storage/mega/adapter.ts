@@ -9,34 +9,41 @@ interface MegaNode extends FolderTreeNode<MegaNode> {
 }
 
 export function createMegaAdapter(link: string): StorageAdapter {
-  let tree: Promise<MegaNode> | undefined;
+  let listing: Promise<MegaNode> | undefined;
 
-  const loadTree = () => {
-    tree ??= (async () => {
+  const fetchListing = () => {
+    const fetched: Promise<MegaNode> = (async () => {
       const { File: MegaFile } = await import('megajs');
       const root = MegaFile.fromURL(link);
       await root.loadAttributes();
       return root as unknown as MegaNode;
     })().catch((error: unknown) => {
-      tree = undefined;
+      if (listing === fetched) listing = undefined;
       throw toStorageError(error);
     });
-    return tree;
+    listing = fetched;
+    return fetched;
   };
 
-  const find = async (path: LibraryPath) => {
-    const node = resolveLibraryPath(await loadTree(), path);
+  const resolveOrThrow = (root: MegaNode, path: LibraryPath) => {
+    const node = resolveLibraryPath(root, path);
     if (!node) throw new NotFound(path);
     return node;
   };
 
+  const findRefetchingOnMiss = async (path: LibraryPath) => {
+    const cached = listing;
+    const node = cached && resolveLibraryPath(await cached, path);
+    return node ?? resolveOrThrow(await fetchListing(), path);
+  };
+
   return {
     async stat(path: LibraryPath): Promise<FileStat> {
-      const node = await find(path);
+      const node = resolveOrThrow(await fetchListing(), path);
       return { size: node.size ?? 0, version: String(node.timestamp) };
     },
     async read(path: LibraryPath, options?: ReadOptions): Promise<Blob> {
-      const node = await find(path);
+      const node = await findRefetchingOnMiss(path);
       return downloadToBlob((downloadOptions) => node.download(downloadOptions), options);
     },
   };
