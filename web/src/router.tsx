@@ -38,9 +38,11 @@ function Layout() {
   const library = useMatch({ from: '/', shouldThrow: false }) !== undefined;
   if (!connection) {
     return (
-      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-        <Outlet />
-      </main>
+      <div className="pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)]">
+        <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+          <Outlet />
+        </main>
+      </div>
     );
   }
   if (reading) return <Outlet />;

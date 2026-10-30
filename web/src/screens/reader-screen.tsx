@@ -101,7 +101,7 @@ function Reader({ book, format }: { book: BookDetail; format: BookFormat }) {
 
 function ReaderShell({ book, theme, children }: { book: BookDetail; theme: ReaderTheme; children?: ReactNode }) {
   return (
-    <div className="reader flex h-dvh flex-col" data-theme={theme}>
+    <div className="reader flex h-dvh flex-col pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)]" data-theme={theme}>
       <header className="flex items-center gap-2 border-b border-(--reader-line) px-2 py-1">
         <BackToBookLink book={book} />
         <h1 className="min-w-0 flex-1 truncate text-sm font-medium">{book.title}</h1>
@@ -391,7 +391,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
   const runningHeadAndFolioClass = `h-8 shrink-0 truncate px-16 text-center text-xs leading-8 text-(--reader-muted) ${shown ? 'invisible' : ''}`;
 
   return (
-    <div ref={shell} className="reader relative h-dvh overflow-hidden" data-theme={settings.theme}>
+    <div ref={shell} className="reader relative h-dvh overflow-hidden pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)]" data-theme={settings.theme}>
       <TopBar book={book} tools={tools} wide={wide} shown={shown} onPin={pin} onLeave={unpeek} />
       <main className="group/page relative flex h-full flex-col" onPointerEnter={unpeek} onPointerMove={peekAtEdge}>
         <p aria-hidden="true" className={runningHeadAndFolioClass} onClick={tapMargin}>

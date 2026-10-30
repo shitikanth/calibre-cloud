@@ -8,7 +8,7 @@ import { FormatList } from './format-list.tsx';
 export function BookDetails({ book }: { book: BookDetail }) {
   return (
     <article className="grid grid-cols-[minmax(0,1fr)] gap-6 sm:grid-cols-[minmax(0,16rem)_minmax(0,1fr)] lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
-      <div className="w-40 sm:sticky sm:top-18 sm:w-full sm:self-start">
+      <div className="w-40 sm:sticky sm:top-[calc(4.5rem+env(safe-area-inset-top))] sm:w-full sm:self-start">
         <BookCover book={book} loading="eager" />
       </div>
       <div className="flex min-w-0 flex-col gap-6">

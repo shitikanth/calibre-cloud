@@ -59,6 +59,12 @@ async function touchIconProblems(page: Page): Promise<string[]> {
   return problem ? [problem] : [];
 }
 
+async function safeAreaProblems(page: Page): Promise<string[]> {
+  const viewport = await page.evaluate(() => document.querySelector<HTMLMetaElement>('meta[name="viewport"]')?.content ?? '');
+  const coversScreen = viewport.split(',').some((setting) => setting.replace(/\s/g, '') === 'viewport-fit=cover');
+  return coversScreen ? [] : ['viewport: no viewport-fit=cover, so the installed app on iPhone gets no safe-area insets'];
+}
+
 async function takesControl(page: Page): Promise<boolean> {
   const ready = await page.evaluate(() =>
     Promise.race([navigator.serviceWorker.ready.then(() => true), new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 5_000))]),
@@ -107,7 +113,7 @@ export async function checkInstallableOffline(origin: string, offlinePaths: read
     const context = await browser.newContext();
     const page = await context.newPage();
     await page.goto(new URL('/', origin).href, { waitUntil: 'networkidle' });
-    problems.push(...(await installabilityProblems(page)), ...(await touchIconProblems(page)));
+    problems.push(...(await installabilityProblems(page)), ...(await touchIconProblems(page)), ...(await safeAreaProblems(page)));
     if (await takesControl(page)) problems.push(...(await cachedOutsideTheShell(page, origin)));
     else problems.push('no service worker took control of /');
     await page.close();
