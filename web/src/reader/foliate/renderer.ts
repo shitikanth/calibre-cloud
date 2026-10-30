@@ -248,7 +248,7 @@ export async function createFoliateRenderer(extension = 'epub'): Promise<Foliate
         transforms?.addEventListener('load', refuseScripts);
         transforms?.addEventListener('data', transformResource);
         created.renderer.setAttribute('flow', 'paginated');
-        created.renderer.setAttribute('animated-snap', '');
+        if (!matchMedia('(prefers-reduced-motion: reduce)').matches) created.renderer.setAttribute('animated-snap', '');
         toc = (created.book.toc ?? []).map((item) => toTocEntry(item, tocEntries));
         tocSections = await tocSectionsOf(created, toc);
         if (destroyed.signal.aborted) return;

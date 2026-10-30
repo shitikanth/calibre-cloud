@@ -1,4 +1,5 @@
-import { afterEach, expect, test, vi } from 'vitest';
+import { afterEach, expect, onTestFinished, test, vi } from 'vitest';
+import { commands } from 'vitest/browser';
 import type { Relocation, SearchResult } from '../renderer.ts';
 import { swipe } from '../../test/swipe.ts';
 import { createFoliateRenderer, type FoliateRenderer } from './renderer.ts';
@@ -397,6 +398,20 @@ test('a short swipe that does not turn slides back to the current page', async (
   expect(positions).toEqual([...positions].sort((a, b) => a - b));
   expect(positions.at(-1)).toBe(start);
   expect(relocations.at(-1)?.fraction).toBe(opening);
+});
+
+test('with reduced motion, a swipe past the turn threshold snaps to the next page with no slide', async () => {
+  await commands.emulateReducedMotion('reduce');
+  onTestFinished(() => commands.emulateReducedMotion(null));
+  const { renderer, relocations } = await openFixture();
+  await settled(relocations);
+  const opening = relocations.at(-1)?.fraction ?? Number.NaN;
+
+  await swipe(renderer.sectionDocument?.body as Element, 500, 100);
+  const positions = await pagePositionsUntilSettled(renderer);
+
+  expect(positions.length).toBeLessThanOrEqual(2);
+  await vi.waitFor(() => expect(relocations.at(-1)?.fraction).toBeGreaterThan(opening));
 });
 
 test('turning the page with next and previous jumps straight there with no slide', async () => {
