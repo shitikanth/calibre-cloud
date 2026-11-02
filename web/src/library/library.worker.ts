@@ -1,10 +1,13 @@
-import type { LibraryOperations, LibraryRequest, LibraryResponse, Operation } from './protocol.ts';
+import { IN_MEMORY_WORKER_NAME, type LibraryOperations, type LibraryRequest, type LibraryResponse, type Operation } from './protocol.ts';
 import { getBook } from './book-query.ts';
 import { listBookFormats, listBooks, listCoverVersions } from './books-query.ts';
-import { forgetOtherDatabases, importDatabase, openStoredDatabase, releasePool, wipeDatabases } from './db-store.ts';
+import { createDbStore, libraryDirectory } from './db-store.ts';
 import type { Database } from './sqlite.ts';
 
+const store = createDbStore(self.name === IN_MEMORY_WORKER_NAME ? async () => undefined : libraryDirectory);
+
 let db: Database | undefined;
+let openFile: string | undefined;
 
 type Handlers = {
   [Op in Operation]: (args: LibraryOperations[Op]['args']) => Promise<LibraryOperations[Op]['result']> | LibraryOperations[Op]['result'];
@@ -12,25 +15,25 @@ type Handlers = {
 
 const handlers: Handlers = {
   async open({ bytes }) {
-    const imported = await importDatabase(bytes);
-    replaceDb(imported.db);
-    await forgetOtherDatabases(imported.file);
+    const imported = await store.importDatabase(bytes);
+    replaceDb(imported.db, imported.file);
+    await store.forgetOtherDatabases(imported.file);
     return imported.file ?? null;
   },
   async openStored({ file }) {
-    const stored = await openStoredDatabase(file);
-    await forgetOtherDatabases(stored && file);
-    if (!stored) return false;
-    replaceDb(stored);
-    return true;
+    if (db && file === openFile) return 'unchanged';
+    const stored = await store.openStoredDatabase(file);
+    await store.forgetOtherDatabases(stored && file);
+    if (!stored) return 'missing';
+    replaceDb(stored, file);
+    return 'opened';
   },
   async clear() {
     replaceDb(undefined);
-    await wipeDatabases();
+    await store.wipeDatabases();
   },
-  async close() {
+  close() {
     replaceDb(undefined);
-    await releasePool();
   },
   countBooks() {
     return Number(requireDb().selectValue('SELECT count(*) FROM books'));
@@ -49,9 +52,10 @@ const handlers: Handlers = {
   },
 };
 
-function replaceDb(next: Database | undefined) {
+function replaceDb(next: Database | undefined, file?: string) {
   db?.close();
   db = next;
+  openFile = file;
 }
 
 function requireDb(): Database {
@@ -64,8 +68,8 @@ async function handle(request: LibraryRequest): Promise<LibraryResponse> {
     const handler = handlers[request.op] as (args: LibraryRequest) => unknown;
     return { id: request.id, ok: true, result: await handler(request) };
   } catch (error) {
-    const { name, message } = error instanceof Error ? error : new Error(String(error));
-    return { id: request.id, ok: false, error: { name, message } };
+    const { message } = error instanceof Error ? error : new Error(String(error));
+    return { id: request.id, ok: false, error: { message } };
   }
 }
 

@@ -15,7 +15,7 @@ export async function openLibrary(
   onProgress: ReadOptions['onProgress'],
 ): Promise<OpenedLibrary> {
   const stored = loadStoredLibrary();
-  if (stored && (await index.openStored(stored.file))) return { fromCache: true };
+  if (stored && (await index.openStored(stored.file)) !== 'missing') return { fromCache: true };
   const { version } = await storage.stat(METADATA);
   await download(index, storage, version, onProgress);
   return { fromCache: false };
@@ -23,7 +23,11 @@ export async function openLibrary(
 
 export async function updateLibrary(index: LibraryIndex, storage: StorageAdapter): Promise<boolean> {
   const { version } = await storage.stat(METADATA);
-  if (loadStoredLibrary()?.version === version) return false;
+  const stored = loadStoredLibrary();
+  if (stored?.version === version) {
+    const opened = await index.openStored(stored.file);
+    if (opened !== 'missing') return opened === 'opened';
+  }
   await download(index, storage, version);
   return true;
 }

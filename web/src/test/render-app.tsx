@@ -52,7 +52,18 @@ export async function renderApp({
   };
   let history = createMemoryHistory({ initialEntries: [path] });
   const mount = async () => {
-    const mountedScreen = await render(<App router={createAppRouter({ history })} providers={pageProviders()} renderers={renderers} />);
+    const container = document.body.appendChild(document.createElement('div'));
+    const rendered = await render(<App router={createAppRouter({ history })} providers={pageProviders()} renderers={renderers} />, {
+      container,
+      baseElement: container,
+    });
+    const mountedScreen = {
+      ...rendered,
+      async unmount() {
+        await rendered.unmount();
+        container.remove();
+      },
+    };
     mounted.add(mountedScreen);
     return mountedScreen;
   };

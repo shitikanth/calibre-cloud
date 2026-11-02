@@ -1,4 +1,3 @@
-import { LibraryInUse } from '../library/errors.ts';
 import { Aborted, Network, NotFound, QuotaExceeded, ReconnectRequired } from '../storage/adapter.ts';
 
 export type ErrorCopy = {
@@ -13,14 +12,6 @@ export type ErrorSubject = 'library' | 'file';
 
 export function describeError(error: Error, subject: ErrorSubject): ErrorCopy {
   const library = subject === 'library';
-  if (error instanceof LibraryInUse)
-    return {
-      title: 'Library is open in another tab',
-      detail: 'This browser can show the library in one tab at a time. Close the other tab, then try again.',
-      canRetry: true,
-      canSwitchLibrary: false,
-      canReconnect: false,
-    };
   if (error instanceof NotFound)
     return library
       ? {

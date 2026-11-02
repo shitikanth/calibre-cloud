@@ -63,10 +63,9 @@ A Calibre library can be many GB, but only `metadata.db` is needed to list the w
 
 ### Caching on the device
 
-- `metadata.db` lives in OPFS through SQLite's `opfs-sahpool` VFS. The version `stat` reported for it is kept in localStorage.
-- A returning visit opens the cached copy at once. The app calls `stat('metadata.db')` once per page load and on "Refresh library", with no polling. A new version downloads to a separate file and replaces the old one only when complete.
+- The downloaded `metadata.db` is kept as a plain file in OPFS. A localStorage record names that file and holds the version `stat` reported for it. Each tab reads the file with the async File API, which takes no lock, and loads it into its own in-memory SQLite database, so any number of tabs can open the library at once. The cost is one copy of `metadata.db` in memory per tab: about 2 MB for a 650-book library.
+- A returning visit opens the cached copy at once. The app calls `stat('metadata.db')` once per page load and on "Refresh library", with no polling. A new version downloads to a separate file and replaces the old one only when complete. Readers hold a shared Web Lock while reading the file and the swap deletes the old file under an exclusive one, so a tab mid-read never sees a torn or missing file. Other open tabs keep their in-memory copy until their next refresh or reload.
 - If the check fails, the cached library stays browsable with a banner saying why.
-- Only one tab can hold the OPFS pool, so a second tab asks the user to close the first.
 - Where OPFS is unavailable, the library is held in memory and downloaded on every visit.
 - Covers are cached in the Cache API, keyed by book and its `last_modified`. The grid and the detail page share this one cache, since Calibre stores a single `cover.jpg` per book. Whenever a downloaded `metadata.db` is opened, cached covers it no longer refers to are deleted.
 - The reader keeps the last 3 opened book files in the Cache API, keyed by book, format, and the version `stat` reports. Opening a book calls `stat` first and skips the download when the version matches; if `stat` fails with `Network` and a cached copy exists, that copy opens. Opening a 4th book evicts the least recently opened. A failed cache write is ignored and the book opens from the downloaded Blob. Entries for books no longer in the library are deleted on a library refresh.

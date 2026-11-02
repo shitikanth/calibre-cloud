@@ -1,14 +1,16 @@
-import { LibraryIndexError, libraryIndexError } from './errors.ts';
-import type {
-  BookDetail,
-  BookFormatKey,
-  BookListQuery,
-  BookSummary,
-  CoverVersion,
-  LibraryOperations,
-  LibraryRequest,
-  LibraryResponse,
-  Operation,
+import { LibraryIndexError } from './errors.ts';
+import {
+  IN_MEMORY_WORKER_NAME,
+  type BookDetail,
+  type BookFormatKey,
+  type BookListQuery,
+  type BookSummary,
+  type CoverVersion,
+  type LibraryOperations,
+  type LibraryRequest,
+  type LibraryResponse,
+  type OpenStoredResult,
+  type Operation,
 } from './protocol.ts';
 
 type Pending = { resolve(result: unknown): void; reject(error: Error): void };
@@ -19,12 +21,17 @@ export class LibraryIndex {
   private worker: Worker | undefined;
   private nextId = 1;
   private readonly pending = new Map<number, Pending>();
+  private readonly onDevice: boolean;
+
+  constructor({ onDevice = true }: { onDevice?: boolean } = {}) {
+    this.onDevice = onDevice;
+  }
 
   open(bytes: ArrayBuffer): Promise<string | null> {
     return this.call('open', { bytes }, [bytes]);
   }
 
-  openStored(file: string): Promise<boolean> {
+  openStored(file: string): Promise<OpenStoredResult> {
     return this.call('openStored', { file });
   }
 
@@ -87,13 +94,16 @@ export class LibraryIndex {
 
   private ensureWorker(): Worker {
     if (this.worker) return this.worker;
-    const worker = new Worker(new URL('./library.worker.ts', import.meta.url), { type: 'module' });
+    const worker = new Worker(new URL('./library.worker.ts', import.meta.url), {
+      type: 'module',
+      name: this.onDevice ? 'library-index' : IN_MEMORY_WORKER_NAME,
+    });
     worker.onmessage = ({ data }: MessageEvent<LibraryResponse>) => {
       const pending = this.pending.get(data.id);
       if (!pending) return;
       this.pending.delete(data.id);
       if (data.ok) pending.resolve(data.result);
-      else pending.reject(libraryIndexError(data.error));
+      else pending.reject(new LibraryIndexError(data.error.message));
     };
     worker.onerror = (event) => {
       event.preventDefault();
