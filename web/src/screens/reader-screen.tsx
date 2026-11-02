@@ -19,7 +19,7 @@ import { ExternalLinkDialog } from './external-link-dialog.tsx';
 import { formatSize } from './format.ts';
 import { ProgressBar } from './progress-bar.tsx';
 import type { PopoverToggle } from './reader-popover.tsx';
-import { BackToBookLink, BottomBar, isTapZone, JumpBack, TapZone, TopBar, zoneAt, type ControlsState } from './reader-controls.tsx';
+import { BackToBookLink, BottomBar, JumpBack, TapZone, TopBar, zoneAt, type ControlsState } from './reader-controls.tsx';
 import { adjacentHit, SearchTool, useBookSearch, useHighlights } from './reader-search.tsx';
 import { backLabel, whereYouAreLabel, positionLabel, SeekBar } from './reader-seek-bar.tsx';
 import { SettingsTool } from './reader-settings-tool.tsx';
@@ -373,7 +373,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
       else if (event.key === 'ArrowRight') turn('next');
       else if (event.key === 'ArrowLeft') turn('previous');
       else if (withBrowserModifier(event)) return;
-      else if (event.key === ' ' && (!isControl(event.target) || isTapZone(event.target))) {
+      else if (event.key === ' ' && !isControl(event.target)) {
         event.preventDefault();
         turn(event.shiftKey ? 'previous' : 'next');
       } else if (event.key === 'PageDown' || event.key === 'PageUp') {

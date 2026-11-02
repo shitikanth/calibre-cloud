@@ -55,17 +55,6 @@ test('Space on a focused control presses the control and does not turn the page'
   expect(fake.latest.calls.filter(({ op }) => op === 'next')).toEqual([]);
 });
 
-test('on a focused page-turn zone, Space and Shift+Space still mean next and previous page', async () => {
-  const { fake, screen } = await openReader();
-  await fake.latest.goTo('3');
-  (screen.getByRole('button', { name: 'Next page' }).element() as HTMLElement).focus();
-
-  await userEvent.keyboard('{Shift>} {/Shift}');
-
-  await expect.element(screen.getByText('line 2')).toBeVisible();
-  expect(fake.latest.calls.filter(({ op }) => op === 'next')).toEqual([]);
-});
-
 test('with Control, Meta or Alt held, Space and the page keys are left to the browser', async () => {
   const { fake } = await openReader();
 

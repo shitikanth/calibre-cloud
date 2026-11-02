@@ -120,17 +120,12 @@ export function zoneAt(x: number, page: HTMLElement | null): SwipeDirection | un
   return undefined;
 }
 
-export function isTapZone(target: EventTarget | null): boolean {
-  return target instanceof Element && target.hasAttribute('data-tap-zone');
-}
-
 // Pointer taps go through to the book, so a link under a zone still works; the screen turns the page from where a tap lands.
 export function TapZone({ direction, onTurn }: { direction: SwipeDirection; onTurn: (direction: SwipeDirection) => void }) {
   const previous = direction === 'previous';
   return (
     <button
       type="button"
-      data-tap-zone
       aria-label={previous ? 'Previous page' : 'Next page'}
       aria-keyshortcuts={previous ? 'ArrowLeft Shift+Space PageUp' : 'ArrowRight Space PageDown'}
       className={`group/zone pointer-events-none absolute inset-y-0 z-10 flex items-center focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--reader-muted) ${
