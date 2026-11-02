@@ -55,6 +55,20 @@ test('Space on a focused control presses the control and does not turn the page'
   expect(fake.latest.calls.filter(({ op }) => op === 'next')).toEqual([]);
 });
 
+test('Space on a focused page-turn zone presses that zone', async () => {
+  const { fake, screen } = await openReader();
+  await fake.latest.goTo('3');
+
+  (screen.getByRole('button', { name: 'Previous page' }).element() as HTMLElement).focus();
+  await userEvent.keyboard(' ');
+  await expect.element(screen.getByText('line 2')).toBeVisible();
+
+  (screen.getByRole('button', { name: 'Next page' }).element() as HTMLElement).focus();
+  await userEvent.keyboard(' ');
+  await expect.element(screen.getByText('line 3')).toBeVisible();
+  expect(fake.latest.calls.filter(({ op }) => op === 'next' || op === 'previous')).toEqual([{ op: 'previous' }, { op: 'next' }]);
+});
+
 test('with Control, Meta or Alt held, Space and the page keys are left to the browser', async () => {
   const { fake } = await openReader();
 
