@@ -4,13 +4,13 @@ Browse and read your [Calibre](https://calibre-ebook.com/) ebook library in a we
 
 Point the app at the Calibre library folder (the one containing `metadata.db`) in your cloud storage, and start reading.
 
-> **Status:** usable with Google Drive, Dropbox, and MEGA.
+> **Status:** usable with Google Drive, OneDrive, Dropbox, and MEGA.
 >
 > Try it: <https://calibre-cloud.golu3990.workers.dev/>
 
 ## How it works
 
-1. Open the web app and connect your cloud storage: sign in with Google or Dropbox and pick the folder that holds your library, or paste a MEGA shared folder link.
+1. Open the web app and connect your cloud storage: sign in with Google, Microsoft, or Dropbox and pick the folder that holds your library, or paste a MEGA shared folder link.
 2. The app downloads `metadata.db` and opens it in the browser.
 3. Browse and search your books by title, author, series, and tag, with their covers.
 4. Open a book to read it in the browser (EPUB, KEPUB, PDF, MOBI, AZW3, FB2, CBZ, and more), or download any format. Book files and covers are fetched only when you need them.
@@ -21,6 +21,7 @@ Your library and book files go straight from your storage provider to your brows
 ## Storage providers
 
 - Google Drive
+- OneDrive
 - Dropbox
 - MEGA
 

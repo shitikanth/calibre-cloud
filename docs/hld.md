@@ -1,6 +1,6 @@
 # calibre-cloud: High-Level Design
 
-Status: the first slice is built: browse, search, book detail, and download from a MEGA shared folder. The reader is built for EPUB, KEPUB, PDF, MOBI, PRC, AZW, AZW3, KF8, FB2, FBZ, and CBZ. Google Drive is built: sign-in through the serverless auth functions, then a library-root picker. Dropbox is built the same way.
+Status: the first slice is built: browse, search, book detail, and download from a MEGA shared folder. The reader is built for EPUB, KEPUB, PDF, MOBI, PRC, AZW, AZW3, KF8, FB2, FBZ, and CBZ. Google Drive is built: sign-in through the serverless auth functions, then a library-root picker. Dropbox and OneDrive are built the same way.
 
 ## Goal
 
@@ -93,6 +93,7 @@ A Calibre library can be many GB, but only `metadata.db` is needed to list the w
 | Dropbox | OAuth redirect flow through the serverless auth functions; read-only `files.metadata.read` and `files.content.read` | Path-based; the library root is the folder's lower-case path | Library root found by search or our folder browser, since the search index can lag behind recent uploads. |
 | Google Drive | OAuth redirect flow through the serverless auth functions; `drive.readonly` | ID-based, so paths are resolved folder by folder and cached per session | Library root found by search or our folder browser, in My Drive and Shared with me. |
 | MEGA | No OAuth | Encrypted nodes, decrypted in the browser | Use a shared folder link instead of the user's password. |
+| OneDrive | OAuth redirect flow through the serverless auth functions on the Microsoft identity platform's `common` tenant (personal and work or school accounts); read-only `Files.Read` plus `offline_access`. Microsoft rotates the refresh token on every refresh, so the auth function reseals the new one. | Path-based through Microsoft Graph; the library root is the folder's path under the drive root | Library root found by search or our folder browser. A read never fetches `/content`: its 302 is refused after the CORS preflight the `Authorization` header causes. It reads the item's `@microsoft.graph.downloadUrl` and fetches that with no `Authorization` header, fresh on every read, replacing an expired URL once. `connect-src` therefore admits the download hosts as well as Graph. Microsoft cannot revoke one app's grant (`revokeSignInSessions` would sign the user out of every app), so Disconnect only drops the sealed token and links to Microsoft's app-access pages. Work or school tenants with risk-based step-up consent refuse apps from an unverified publisher; personal accounts are unaffected. |
 
 ## Cost model
 
@@ -104,4 +105,5 @@ A Calibre library can be many GB, but only `metadata.db` is needed to list the w
 
 1. **Google Drive scope:** settled for now (#4, #12). The app uses `drive.readonly` and is never submitted for verification, so it stays capped at 100 users and needs no paid security assessment. In *Testing*, only listed test users can sign in and refresh tokens expire after 7 days. Publishing it needs, on Google's Branding page, links to the three public pages, their domain listed as an authorized domain, and that domain verified in Search Console (#147). The domain is the account's `<account-subdomain>.workers.dev`, since `workers.dev` is on the Public Suffix List; a custom domain only if Google refuses it. `drive.file` with the Google Picker would lift the cap, but whether picking a folder covers its descendants is unconfirmed; it only matters for a public launch.
 2. **MEGA transfer quota:** free accounts have a bandwidth limit, so large books may fail to download. A download that hits the quota fails at once with `QuotaExceeded` rather than retrying.
-3. **Formats:** settled. Every format foliate-js or pdf.js reads is read in the browser; every other format is download-only.
+3. **OneDrive publisher verification:** deferred, like Google's. Organisations with risk-based step-up consent block consent to an unverified multitenant app; personal accounts never do. Verification needs a Microsoft AI Cloud Partner Program account and a work tenant with a custom domain. The OneDrive download hosts the CSP admits (`*.files.1drv.com`, `*.microsoftpersonalcontent.com`, `*.sharepoint.com`) are confirmed only by a live download from each kind of account.
+4. **Formats:** settled. Every format foliate-js or pdf.js reads is read in the browser; every other format is download-only.

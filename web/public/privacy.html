@@ -17,9 +17,9 @@
         books go straight from your storage to your browser. We never receive them, and we store nothing about you.
       </p>
 
-      <h2>What the app reads from Google Drive and Dropbox</h2>
+      <h2>What the app reads from Google Drive, OneDrive, and Dropbox</h2>
       <p>
-        When you connect Google Drive or Dropbox, you sign in there and allow calibre-cloud to see and download your
+        When you connect Google Drive, OneDrive, or Dropbox, you sign in there and allow calibre-cloud to see and download your
         files. The app asks for read-only access to your files and never reads your name, your email address, or your
         profile. With that access, the app reads:
       </p>
@@ -47,19 +47,19 @@
 
       <h2>Where it goes</h2>
       <p>
-        Your browser fetches everything above straight from Google or Dropbox. None of it passes through our server: not your book
+        Your browser fetches everything above straight from Google, Microsoft, or Dropbox. None of it passes through our server: not your book
         files, not <code>metadata.db</code>, not covers, not the names of your files and folders.
       </p>
       <p>Besides serving the app itself, our server only helps you sign in:</p>
       <ul>
         <li>
-          When you sign in, Google or Dropbox sends our server a one-time code. The server swaps it there for a refresh token,
+          When you sign in, Google, Microsoft, or Dropbox sends our server a one-time code. The server swaps it there for a refresh token,
           encrypts the token, and saves it in a cookie in your browser. The server keeps no copy. It has no database.
         </li>
         <li>
           When your browser needs to reach your storage, it sends that cookie back. The server decrypts the refresh token,
-          gets a short-lived access token from Google or Dropbox, and hands it to your browser, which keeps it in memory
-          only.
+          gets a short-lived access token from Google, Microsoft, or Dropbox, and hands it to your browser, which keeps it
+          in memory only. Microsoft also hands back a new refresh token each time, which replaces the one in the cookie.
         </li>
       </ul>
 
@@ -80,7 +80,7 @@
 
       <h2>Cookies</h2>
       <p>
-        calibre-cloud sets cookies only to sign in to Google Drive or Dropbox: one that lasts ten minutes while you sign in, and the
+        calibre-cloud sets cookies only to sign in to Google Drive, OneDrive, or Dropbox: one that lasts ten minutes while you sign in, and the
         encrypted sign-in cookie above. Your browser sends them only to the sign-in part of our server, and page scripts
         can't read them. There are no analytics, advertising, or tracking cookies, and no analytics of any kind.
       </p>
@@ -105,8 +105,15 @@
           calibre-cloud under Connected apps, without access, until you remove it there.
         </li>
         <li>
+          Microsoft offers no way for an app to give up its own access without signing you out of every app, so
+          Disconnect from OneDrive deletes the sign-in cookie and the device's data but leaves calibre-cloud's access
+          granted until you remove it in your Microsoft account. The app shows you where after you disconnect.
+        </li>
+        <li>
           You can also remove calibre-cloud's access at any time from your
-          <a href="https://myaccount.google.com/connections">Google account</a> or Dropbox's
+          <a href="https://myaccount.google.com/connections">Google account</a>, your Microsoft account's
+          <a href="https://account.microsoft.com/privacy/app-access">apps and services</a> (for a work or school account,
+          <a href="https://myapplications.microsoft.com/">My Apps</a>), or Dropbox's
           <a href="https://www.dropbox.com/account/connected_apps">Connected apps</a>.
         </li>
         <li>Clearing this site's data in your browser removes everything the app keeps on this device.</li>
