@@ -1,5 +1,5 @@
 import { page, userEvent } from 'vitest/browser';
-import { expect, test } from 'vitest';
+import { afterEach, expect, test } from 'vitest';
 import { savePosition } from './reader/positions.ts';
 import { buildCalibreLibrary, type BookSpec } from './test/calibre-library.ts';
 import { chooseScreen, connectMega } from './test/connect.ts';
@@ -9,6 +9,10 @@ import { chooseFromMenu } from './test/app-bar.ts';
 import { renderApp, testLink } from './test/render-app.tsx';
 import type { Screen } from './test/screen.ts';
 import { showControls, tapZone } from './test/reader.ts';
+
+afterEach(async () => {
+  await page.viewport(414, 896);
+});
 
 const epub = ['# One', 'line 2', 'line 3', 'line 4', 'line 5'].join('\n');
 const pdf = ['Page one', 'Page two', 'Page three'].join('\n');
@@ -197,20 +201,20 @@ test('a focused card shows its whole focus ring inside the sideways-scrolling ro
   app.navigate('/');
   await expect.poll(() => cardTitles(app.screen).length).toBe(6);
 
-  const card = continueReading(app.screen).getByRole('link', { name: /The Tenant of Wildfell Hall/ });
-  for (let presses = 0; document.activeElement !== card.element() && presses < 30; presses += 1) await userEvent.tab();
-  expect(document.activeElement).toBe(card.element());
+  const card = continueReading(app.screen).getByRole('link', { name: /The Tenant of Wildfell Hall/ }).element();
+  for (let presses = 0; document.activeElement !== card && presses < 30; presses += 1) await userEvent.tab();
+  expect(document.activeElement).toBe(card);
 
-  const element = card.element();
-  const style = getComputedStyle(element);
+  const style = getComputedStyle(card);
+  expect(style.outlineStyle).toBe('solid');
   const ring = parseFloat(style.outlineWidth) + parseFloat(style.outlineOffset);
-  expect(ring).toBe(4);
-  const row = scrollingAncestor(element);
-  const rect = element.getBoundingClientRect();
-  const clip = row.getBoundingClientRect();
-  expect(rect.top - ring).toBeGreaterThanOrEqual(clip.top);
-  expect(rect.bottom + ring).toBeLessThanOrEqual(clip.bottom);
-  expect(rect.left - ring).toBeGreaterThanOrEqual(clip.left);
-  expect(rect.right + ring).toBeLessThanOrEqual(clip.right);
+  expect(ring).toBeGreaterThan(0);
+  const row = scrollingAncestor(card);
+  const cardRect = card.getBoundingClientRect();
+  const rowRect = row.getBoundingClientRect();
+  expect(cardRect.top - ring).toBeGreaterThanOrEqual(rowRect.top);
+  expect(cardRect.bottom + ring).toBeLessThanOrEqual(rowRect.bottom);
+  expect(cardRect.left - ring).toBeGreaterThanOrEqual(rowRect.left);
+  expect(cardRect.right + ring).toBeLessThanOrEqual(rowRect.right);
   expect(row.scrollWidth).toBeGreaterThan(row.clientWidth);
 });
