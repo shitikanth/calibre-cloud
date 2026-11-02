@@ -117,6 +117,20 @@ test('Esc closes a table of contents opened with t', async () => {
   await expect.poll(() => screen.getByRole('navigation', { name: 'Table of contents' }).query()).toBeNull();
 });
 
+test.each(['Table of contents', 'Search'])('Esc inside %s closes it and puts focus back on its button', async (name) => {
+  const { screen } = await openReader();
+  await showControls(screen);
+  const button = screen.getByRole('button', { name });
+  await userEvent.click(button);
+  await expect.element(button).not.toHaveFocus();
+
+  await userEvent.keyboard('{Escape}');
+
+  await expect.element(button).toHaveAttribute('aria-expanded', 'false');
+  await expect.element(button).toHaveFocus();
+  await expectControls(screen, true);
+});
+
 test('/ opens search in book with its input focused, without typing the /', async () => {
   const { screen } = await openReader();
   await expect.element(screen.getByRole('button', { name: 'Search' })).toHaveAttribute('aria-keyshortcuts', '/');

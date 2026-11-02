@@ -29,11 +29,19 @@ type ReaderPopoverProps = {
 export function ReaderPopover({ label, icon, placement, toggle, shortcut, children }: ReaderPopoverProps) {
   const { open, setOpen } = toggle;
   const root = useRef<HTMLDivElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
   useDismiss(open, setOpen, root);
 
   return (
-    <div ref={root} className="relative shrink-0">
+    <div
+      ref={root}
+      className="relative shrink-0"
+      onKeyDown={(event) => {
+        if (event.key === 'Escape' && event.target !== button.current) button.current?.focus();
+      }}
+    >
       <button
+        ref={button}
         type="button"
         aria-label={label}
         aria-expanded={open}
