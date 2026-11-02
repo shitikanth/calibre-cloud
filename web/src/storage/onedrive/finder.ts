@@ -8,12 +8,13 @@ export function createLibraryFinder(tokens: AccessTokens): LibraryFinder {
 
   return {
     async findLibraries(signal) {
-      const hits = await graph.search('metadata.db', signal);
+      const hits = (await graph.search('metadata.db', signal)).filter((hit) => hit.file && hit.name.toLowerCase() === 'metadata.db');
+      const roots = await Promise.all(
+        hits.map(async (hit) => pathOfReference(hit.parentReference) ?? pathOfReference((await graph.itemById(hit.id, signal)).parentReference)),
+      );
       const libraries = new Map<string, LibraryCandidate>();
-      for (const hit of hits) {
-        const root = pathOfReference(hit.parentReference);
-        if (!hit.file || hit.name.toLowerCase() !== 'metadata.db' || root === undefined) continue;
-        libraries.set(root.toLowerCase(), { root, path: root || '/' });
+      for (const root of roots) {
+        if (root !== undefined) libraries.set(root.toLowerCase(), { root, path: root || '/' });
       }
       return [...libraries.values()].toSorted((a, b) => byName.compare(a.path, b.path));
     },

@@ -53,6 +53,18 @@ describe('findLibraries', () => {
     expect(graph.requests).toHaveLength(3);
   });
 
+  test('looks each hit up by id when search hits carry no parent path, as a personal OneDrive’s do', async () => {
+    graph.searchHitsCarryParentPath = false;
+
+    await expect(finder().findLibraries()).resolves.toEqual([
+      { root: '/Books/Fiction', path: '/Books/Fiction' },
+      { root: '/Books/Poetry', path: '/Books/Poetry' },
+      { root: '/Calibre Library', path: '/Calibre Library' },
+      { root: '/Émile/Bibliothèque #1', path: '/Émile/Bibliothèque #1' },
+    ]);
+    expect(graph.requestsTo('graph', '/v1.0/me/drive/items/')).toHaveLength(4);
+  });
+
   test('still lists a library whose parent path Graph did not percent-encode', async () => {
     graph.encodesParentPaths = false;
     graph.add({ path: '/Done 100%/metadata.db', content: 'db' });

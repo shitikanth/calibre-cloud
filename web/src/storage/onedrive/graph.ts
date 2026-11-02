@@ -48,6 +48,7 @@ export function createGraphClient(tokens: AccessTokens) {
 
   return {
     item: (path: string, signal: AbortSignal | undefined) => get<DriveItem>(itemUrl(path), signal),
+    itemById: (id: string, signal: AbortSignal | undefined) => get<DriveItem>(`${drive}/items/${encodeURIComponent(id)}`, signal),
     children: (path: string, signal: AbortSignal | undefined) => collect(`${childrenUrl(path)}?${listing('name,folder')}`, signal),
     search: (query: string, signal: AbortSignal | undefined) =>
       collect(`${drive}/root/search(q='${encodeURIComponent(query.replaceAll("'", "''"))}')?${listing('name,file,parentReference')}`, signal),

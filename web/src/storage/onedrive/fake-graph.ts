@@ -6,6 +6,8 @@ export type FakeRequest = { host: 'graph' | 'download'; path: string; token: str
 
 type Entry = { path: string; folder: boolean; content: string; unindexed: boolean };
 
+type ItemShape = 'single' | 'listed' | 'search-hit';
+
 const graphOrigin = 'https://graph.microsoft.com';
 const graphPrefix = '/v1.0/me/drive';
 
@@ -59,6 +61,7 @@ export class FakeGraph {
   readonly validTokens = new Set(['token']);
   downloadHost = 'https://fake.files.1drv.com';
   encodesParentPaths = true;
+  searchHitsCarryParentPath = true;
   maxPageSize = 200;
   chunkSize = 4;
   private downloadGeneration = 1;
@@ -104,7 +107,9 @@ export class FakeGraph {
     if (url.origin !== graphOrigin || !url.pathname.startsWith(graphPrefix)) return failure({ status: 404, code: 'unknownHost' });
     if (!token || !this.validTokens.has(token)) return failure({ status: 401, code: 'InvalidAuthenticationToken' });
 
-    const match = byPathSyntax.exec(url.pathname.slice(graphPrefix.length));
+    const rest = url.pathname.slice(graphPrefix.length);
+    if (rest.startsWith('/items/')) return this.itemById(decodeURIComponent(rest.slice('/items/'.length)));
+    const match = byPathSyntax.exec(rest);
     if (!match) return failure({ status: 400, code: 'invalidRequest' });
     const [, encodedPath = '', collection, query] = match;
     const path = decodePath(encodedPath);
@@ -116,7 +121,16 @@ export class FakeGraph {
 
   private item(path: string): Response {
     const entry = this.entries.get(path.toLowerCase());
-    return entry ? json(200, this.driveItem(entry, true)) : failure({ status: 404, code: 'itemNotFound' });
+    return entry ? json(200, this.driveItem(entry, 'single')) : failure({ status: 404, code: 'itemNotFound' });
+  }
+
+  private itemById(id: string): Response {
+    const entry = [...this.entries.values()].find((candidate) => this.idOf(candidate) === id);
+    return entry ? json(200, this.driveItem(entry, 'single')) : failure({ status: 404, code: 'itemNotFound' });
+  }
+
+  private idOf(entry: Entry): string {
+    return `id-${entry.path.toLowerCase()}`;
   }
 
   private children(path: string, skip: number, url: URL): Response {
@@ -126,21 +140,21 @@ export class FakeGraph {
       if (!folder.folder) return failure({ status: 400, code: 'invalidRequest' });
     }
     const children = [...this.entries.values()].filter((entry) => parentOf(entry.path).toLowerCase() === path.toLowerCase());
-    return this.page(children, skip, url);
+    return this.page(children, skip, url, 'listed');
   }
 
   private search(query: string, skip: number, url: URL): Response {
     const needle = query.toLowerCase();
     const hits = [...this.entries.values()].filter((entry) => !entry.unindexed && nameOf(entry.path).toLowerCase().includes(needle));
-    return this.page(hits, skip, url);
+    return this.page(hits, skip, url, this.searchHitsCarryParentPath ? 'listed' : 'search-hit');
   }
 
-  private page(entries: Entry[], skip: number, url: URL): Response {
+  private page(entries: Entry[], skip: number, url: URL, shape: ItemShape): Response {
     const end = skip + this.maxPageSize;
     const next = new URL(url);
     next.searchParams.set('$skiptoken', String(end));
     return json(200, {
-      value: entries.slice(skip, end).map((entry) => this.driveItem(entry, false)),
+      value: entries.slice(skip, end).map((entry) => this.driveItem(entry, shape)),
       ...(end < entries.length ? { '@odata.nextLink': next.href } : {}),
     });
   }
@@ -154,16 +168,19 @@ export class FakeGraph {
     return new Response(streamOf(bytes, this.chunkSize, signal), { headers: { 'Content-Type': 'application/octet-stream' } });
   }
 
-  private driveItem(entry: Entry, single: boolean) {
+  private driveItem(entry: Entry, shape: ItemShape) {
     const parent = parentOf(entry.path);
+    const single = shape === 'single';
     const common = {
-      id: `id-${entry.path}`,
+      id: this.idOf(entry),
       name: nameOf(entry.path),
       eTag: `etag-${entry.path}`,
       parentReference: {
         driveId: 'drive-1',
-        id: `id-${parent || '/'}`,
-        path: `/drive/root:${parent ? `/${this.encodesParentPaths ? encodePath(parent) : parent.slice(1)}` : ''}`,
+        id: `id-${parent.toLowerCase() || '/'}`,
+        ...(shape === 'search-hit'
+          ? {}
+          : { path: `/drive/root:${parent ? `/${this.encodesParentPaths ? encodePath(parent) : parent.slice(1)}` : ''}` }),
       },
     };
     if (entry.folder) return { ...common, folder: { childCount: 0 } };
