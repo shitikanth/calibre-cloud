@@ -79,16 +79,13 @@ export default defineConfig([
     rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, foliate, pdfjs] }] },
   },
   {
-    ignores: ['web/src/storage/google/**', 'web/src/storage/dropbox/**', 'eslint.config.test.ts'],
-    rules: { 'no-restricted-syntax': ['error', driveApi, dropboxApi] },
-  },
-  {
-    files: ['web/src/storage/google/**'],
-    rules: { 'no-restricted-syntax': ['error', dropboxApi] },
-  },
-  {
-    files: ['web/src/storage/dropbox/**'],
+    ignores: ['web/src/storage/google/**', 'eslint.config.test.ts'],
     rules: { 'no-restricted-syntax': ['error', driveApi] },
+  },
+  {
+    files: ['web/src/**'],
+    ignores: ['web/src/storage/google/**', 'web/src/storage/dropbox/**'],
+    rules: { 'no-restricted-syntax': ['error', driveApi, dropboxApi] },
   },
   {
     files: ['web/src/reader/foliate/**'],

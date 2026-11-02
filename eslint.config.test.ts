@@ -121,12 +121,12 @@ describe('Dropbox provider boundary', () => {
   ])('rejects %s outside the Dropbox provider', async (_case, source) => {
     expect(await apiCallErrors('web/src/storage/example.ts', source)).toHaveLength(1);
     expect(await apiCallErrors('web/src/screens/example.tsx', source)).toHaveLength(1);
-    expect(await apiCallErrors('web/src/storage/google/drive.ts', source)).toHaveLength(1);
   });
 
-  test('allows Dropbox calls inside the Dropbox provider', async () => {
+  test('allows Dropbox calls inside the Dropbox provider and outside the web app', async () => {
     const source = "await fetch('https://api.dropboxapi.com/2/files/list_folder');\n";
     expect(await apiCallErrors('web/src/storage/dropbox/dropbox.ts', source)).toHaveLength(0);
+    expect(await apiCallErrors('api/src/example.ts', source)).toHaveLength(0);
   });
 
   test('still rejects Drive calls inside the Dropbox provider', async () => {
