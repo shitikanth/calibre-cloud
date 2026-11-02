@@ -70,6 +70,12 @@ export function useBookSearch(search: BookSearch | undefined): BookSearchControl
   return { state, change, pick };
 }
 
+export function adjacentHit({ results, picked }: SearchState, direction: 'next' | 'previous'): SearchResult | undefined {
+  const at = picked ? results.indexOf(picked) : -1;
+  if (direction === 'next') return results[at + 1];
+  return at === -1 ? results.at(-1) : results[at - 1];
+}
+
 export type Highlights = {
   show: (renderer: BookRenderer, result: SearchResult, matches: readonly SearchResult[], arrival: Promise<void>) => void;
   clear: () => void;

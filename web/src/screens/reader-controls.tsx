@@ -63,6 +63,7 @@ export function JumpBack({ label, onBack }: { label: string; onBack: () => void 
   return (
     <button
       type="button"
+      aria-keyshortcuts="Backspace"
       className="min-h-9 shrink-0 rounded-full border border-(--reader-line) px-3 text-sm whitespace-nowrap hover:bg-(--reader-hover)"
       onClick={onBack}
     >

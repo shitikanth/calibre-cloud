@@ -145,3 +145,70 @@ test('t does nothing while search is open', async () => {
   await expect.element(input).toBeVisible();
   expect(screen.getByRole('navigation', { name: 'Table of contents' }).query()).toBeNull();
 });
+
+test('] goes to the next chapter and [ to the previous one, stopping at the first and last', async () => {
+  const { fake, screen } = await openReader();
+  await fake.latest.goTo('3');
+
+  await userEvent.keyboard(']');
+  await expect.element(screen.getByText('# Chapter two')).toBeVisible();
+  await userEvent.keyboard(']');
+  await userEvent.keyboard('[[');
+  await expect.element(screen.getByText('# Chapter one')).toBeVisible();
+  await userEvent.keyboard('[[');
+
+  expect(fake.latest.calls.filter(({ op }) => op === 'goTo')).toEqual([
+    { op: 'goTo', location: '3' },
+    { op: 'goTo', location: '4' },
+    { op: 'goTo', location: '1' },
+  ]);
+});
+
+test('[ and ] do nothing in a book with no chapters', async () => {
+  const { fake } = await openReader('/books/1/read/PDF');
+
+  await userEvent.keyboard('[[]');
+
+  expect(fake.latest.calls.filter(({ op }) => op === 'goTo')).toEqual([]);
+});
+
+test('Backspace goes back like the Back to pill, and does nothing when there is no pill', async () => {
+  const { fake, screen } = await openReader();
+  await userEvent.keyboard('{Backspace}');
+  expect(fake.latest.calls.filter(({ op }) => op === 'goTo')).toEqual([]);
+
+  await userEvent.keyboard(']');
+  const back = screen.getByRole('button', { name: 'Back to 0%' });
+  await expect.element(back).toHaveAttribute('aria-keyshortcuts', 'Backspace');
+  await userEvent.keyboard('{Backspace}');
+
+  await expect.element(screen.getByText('# Chapter one')).toBeVisible();
+  await expect.poll(() => back.query()).toBeNull();
+});
+
+test('n and Shift+n step through the search matches with the search panel closed', async () => {
+  const { fake, screen } = await openReader();
+  await userEvent.keyboard('n');
+  expect(fake.latest.calls.filter(({ op }) => op === 'goTo')).toEqual([]);
+
+  await userEvent.keyboard('/');
+  await userEvent.keyboard('line');
+  await expect.element(screen.getByText('3 matches')).toBeVisible();
+  await userEvent.keyboard('{Escape}');
+  await expect.poll(() => screen.getByRole('searchbox', { name: 'Search in book' }).query()).toBeNull();
+
+  await userEvent.keyboard('n');
+  await expect.element(screen.getByText('line 2')).toBeVisible();
+  await userEvent.keyboard('n');
+  await expect.element(screen.getByText('line 3')).toBeVisible();
+  await userEvent.keyboard('N');
+  await expect.element(screen.getByText('line 2')).toBeVisible();
+  await expect.poll(() => fake.latest.calls.filter(({ op }) => op === 'highlight').at(-1)).toEqual({
+    op: 'highlight',
+    location: '2',
+    matches: ['2', '3', '5'],
+  });
+  await userEvent.keyboard('NN');
+
+  expect(fake.latest.calls.filter(({ op }) => op === 'goTo').map((call) => ('location' in call ? call.location : ''))).toEqual(['2', '3', '2']);
+});

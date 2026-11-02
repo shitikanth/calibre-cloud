@@ -8,7 +8,8 @@ import { useRenderers } from '../reader/context.tsx';
 import { trackJumps, type Jumps, type JumpTarget } from '../reader/jumps.ts';
 import { loadPosition, trackPosition } from '../reader/positions.ts';
 import { loadReaderSettings, saveReaderSettings, type ReaderSettings } from '../reader/reader-settings.ts';
-import type { BookRenderer, ReaderTheme, Relocation } from '../reader/renderer.ts';
+import type { BookRenderer, ReaderTheme, Relocation, SearchResult } from '../reader/renderer.ts';
+import { adjacentEntry } from '../reader/toc.ts';
 import type { SwipeDirection } from '../reader/swipe.ts';
 import { useBookFile } from '../reader/use-book-file.ts';
 import { NotFound, OpenBook } from './book-screen.tsx';
@@ -19,7 +20,7 @@ import { formatSize } from './format.ts';
 import { ProgressBar } from './progress-bar.tsx';
 import type { PopoverToggle } from './reader-popover.tsx';
 import { BackToBookLink, BottomBar, JumpBack, TapZone, TopBar, zoneAt, type ControlsState } from './reader-controls.tsx';
-import { SearchTool, useBookSearch, useHighlights } from './reader-search.tsx';
+import { adjacentHit, SearchTool, useBookSearch, useHighlights } from './reader-search.tsx';
 import { backLabel, whereYouAreLabel, positionLabel, SeekBar } from './reader-seek-bar.tsx';
 import { SettingsTool } from './reader-settings-tool.tsx';
 import { dialogOpen, isControl, isTyping, withBrowserModifier } from './shortcut-keys.ts';
@@ -330,10 +331,22 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
     [renderer, jumps, highlights],
   );
 
-  const goBack = () => {
+  const goBack = useCallback(() => {
     highlights.clear();
     if (renderer) void jumps.back((location) => renderer.goTo(location));
-  };
+  }, [renderer, jumps, highlights]);
+
+  const reading = status === 'open' && renderer ? renderer : undefined;
+  const search = useBookSearch(reading?.search);
+  const { state: searchState, pick: pickHit } = search;
+
+  const showHit = useCallback(
+    (on: BookRenderer, result: SearchResult, results: readonly SearchResult[]) => {
+      setControls('hidden');
+      highlights.show(on, result, results, jump({ location: result.location }));
+    },
+    [highlights, jump],
+  );
 
   const openTool = useCallback((name: ReaderTool) => {
     setControls('pinned');
@@ -372,15 +385,24 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
       } else if (event.key === '/' && renderer.search) {
         event.preventDefault();
         openTool('search');
+      } else if (event.key === '[' || event.key === ']') {
+        const entry = adjacentEntry(renderer.toc, relocation?.tocEntry, event.key === ']' ? 'next' : 'previous');
+        if (entry) void jump({ location: entry.location });
+      } else if (event.key === 'n' || event.key === 'N') {
+        const hit = adjacentHit(searchState, event.key === 'n' ? 'next' : 'previous');
+        if (!hit) return;
+        pickHit(hit);
+        showHit(renderer, hit, searchState.results);
+      } else if (event.key === 'Backspace' && origin) {
+        event.preventDefault();
+        goBack();
       }
     };
     // Capture: a popover's own Escape handler closes it first otherwise, and this would hide the controls too.
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [renderer, turn, tool, openTool]);
+  }, [renderer, turn, tool, openTool, relocation, jump, searchState, pickHit, showHit, origin, goBack]);
 
-  const reading = status === 'open' && renderer ? renderer : undefined;
-  const search = useBookSearch(reading?.search);
   const shown = !reading || controls !== 'hidden';
   const tapMargin = (event: MouseEvent<HTMLElement>) => {
     const zone = zoneAt(event.clientX, container.current);
@@ -416,8 +438,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
           placement={placement}
           toggle={toggle('search')}
           onPick={(result) => {
-            setControls('hidden');
-            highlights.show(reading, result, search.state.results, jump({ location: result.location }));
+            showHit(reading, result, search.state.results);
           }}
         />
       )}
