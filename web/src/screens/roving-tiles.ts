@@ -1,12 +1,13 @@
 import { useState, type FocusEvent, type KeyboardEvent } from 'react';
+import { withBrowserModifier } from './shortcut-keys.ts';
 
 type Step = 'previous' | 'next' | 'up' | 'down';
 
 const steps: Partial<Record<string, Step>> = { ArrowLeft: 'previous', ArrowRight: 'next', ArrowUp: 'up', ArrowDown: 'down' };
 
 function columnCount(tiles: HTMLElement[]): number {
-  const top = tiles[0]?.getBoundingClientRect().top;
-  return tiles.filter((tile) => tile.getBoundingClientRect().top === top).length;
+  const top = tiles[0]?.offsetTop;
+  return tiles.filter((tile) => tile.offsetTop === top).length;
 }
 
 function stepFrom(tiles: HTMLElement[], from: number, step: Step): HTMLElement | undefined {
@@ -34,7 +35,7 @@ export function useRovingTiles(keys: string[]): RovingTiles {
       },
       onKeyDown: (event) => {
         const step = steps[event.key];
-        if (!step || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+        if (!step || withBrowserModifier(event.nativeEvent) || event.shiftKey) return;
         const tiles = tilesIn(event.currentTarget);
         const from = tiles.indexOf(event.target as HTMLElement);
         if (from < 0) return;

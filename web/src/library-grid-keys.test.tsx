@@ -79,6 +79,20 @@ test.each([414, 1280])('↑ and ↓ move to the tile directly above and below at
   expect(document.activeElement).toBe(last);
 });
 
+test('↓ steps a full row while the pointer rests on a lifted tile', async () => {
+  await page.viewport(1280, 900);
+  const { screen } = await openLibrary(20);
+  const tiles = gridTiles(screen);
+  const below = tileBelow(tiles, tiles[0]!)!;
+  await userEvent.hover(tiles[0]!);
+  await expect.poll(() => getComputedStyle(tiles[0]!).translate).not.toBe('none');
+  tiles[0]!.focus();
+
+  await userEvent.keyboard('{ArrowDown}');
+
+  expect(document.activeElement).toBe(below);
+});
+
 test('the grid is one Tab stop that comes back to the last tile focused', async () => {
   const { screen } = await openLibrary(5);
   const tiles = gridTiles(screen);
