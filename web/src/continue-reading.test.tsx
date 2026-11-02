@@ -1,4 +1,4 @@
-import { userEvent } from 'vitest/browser';
+import { page, userEvent } from 'vitest/browser';
 import { expect, test } from 'vitest';
 import { savePosition } from './reader/positions.ts';
 import { buildCalibreLibrary, type BookSpec } from './test/calibre-library.ts';
@@ -177,4 +177,40 @@ test('Disconnect forgets every position but keeps the reader settings', async ()
   await expect.element(app.screen.getByText('# One')).toBeVisible();
   expect(fake.latest.opened?.location).toBeUndefined();
   expect(fake.latest.calls.find((call) => call.op === 'setStyles')).toEqual({ op: 'setStyles', styles: { fontSize: 110, theme: 'light' } });
+});
+
+function scrollingAncestor(element: Element): Element {
+  let node = element.parentElement;
+  while (node) {
+    const { overflowX, overflowY } = getComputedStyle(node);
+    if (overflowX !== 'visible' || overflowY !== 'visible') return node;
+    node = node.parentElement;
+  }
+  throw new Error('no scrolling ancestor');
+}
+
+test('a focused card shows its whole focus ring inside the sideways-scrolling row', async () => {
+  await page.viewport(390, 844);
+  const started = await startApp(await bronteLibrary());
+  const { app } = started;
+  for (const bookId of [1, 2, 3, 4, 5, 6, 7]) await read(started, bookId, 'EPUB');
+  app.navigate('/');
+  await expect.poll(() => cardTitles(app.screen).length).toBe(6);
+
+  const card = continueReading(app.screen).getByRole('link', { name: /The Tenant of Wildfell Hall/ });
+  for (let presses = 0; document.activeElement !== card.element() && presses < 30; presses += 1) await userEvent.tab();
+  expect(document.activeElement).toBe(card.element());
+
+  const element = card.element();
+  const style = getComputedStyle(element);
+  const ring = parseFloat(style.outlineWidth) + parseFloat(style.outlineOffset);
+  expect(ring).toBe(4);
+  const row = scrollingAncestor(element);
+  const rect = element.getBoundingClientRect();
+  const clip = row.getBoundingClientRect();
+  expect(rect.top - ring).toBeGreaterThanOrEqual(clip.top);
+  expect(rect.bottom + ring).toBeLessThanOrEqual(clip.bottom);
+  expect(rect.left - ring).toBeGreaterThanOrEqual(clip.left);
+  expect(rect.right + ring).toBeLessThanOrEqual(clip.right);
+  expect(row.scrollWidth).toBeGreaterThan(row.clientWidth);
 });

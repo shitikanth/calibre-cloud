@@ -22,7 +22,7 @@ export function ContinueReading() {
     <section aria-label="Continue reading" className="mb-8">
       <h2 className="text-lg font-semibold">Continue reading</h2>
       <ul
-        className={`-mx-4 mt-3 grid auto-cols-[minmax(min(9rem,calc(50%-0.5rem)),1fr)] grid-flow-col gap-4 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6 ${tileColumnsClass}`}
+        className={`-mx-4 mt-2 grid auto-cols-[minmax(min(9rem,calc(50%-0.5rem)),1fr)] grid-flow-col gap-4 overflow-x-auto px-4 pt-1 pb-2 sm:-mx-6 sm:px-6 ${tileColumnsClass}`}
       >
         {cards.map(({ entry, book }) => (
           <li key={`${entry.bookId}/${entry.format}`} className="min-w-0">
