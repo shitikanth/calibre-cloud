@@ -106,6 +106,56 @@ test('search results move with the arrows like the grid', async () => {
   expect(document.activeElement).toBe(tiles[1]);
 });
 
+test('Home and End focus the first and last book', async () => {
+  const { screen } = await openLibrary(40);
+  const tiles = gridTiles(screen);
+  tiles[5]!.focus();
+
+  await userEvent.keyboard('{End}');
+  expect(document.activeElement).toBe(tiles.at(-1));
+  await expect.element(tiles.at(-1)!).toBeInViewport();
+  await userEvent.keyboard('{Home}');
+  expect(document.activeElement).toBe(tiles[0]);
+  await expect.element(tiles[0]!).toBeInViewport();
+});
+
+test('Page Down and Page Up move focus a screen down and up the same column, and the page scrolls with it', async () => {
+  await page.viewport(1280, 800);
+  const { screen } = await openLibrary(80);
+  const tiles = gridTiles(screen);
+  const second = tiles[1]!;
+  second.focus();
+  const firstScreen = tiles.filter((tile) => tile.getBoundingClientRect().bottom <= window.innerHeight);
+
+  await userEvent.keyboard('{PageDown}');
+
+  const landed = document.activeElement as HTMLElement;
+  expect(tiles).toContain(landed);
+  expect(firstScreen).not.toContain(landed);
+  expect(landed.getBoundingClientRect().left).toBe(second.getBoundingClientRect().left);
+  expect(window.scrollY).toBeGreaterThan(0);
+  await expect.element(landed).toBeInViewport({ ratio: 1 });
+
+  await userEvent.keyboard('{PageUp}');
+
+  expect(document.activeElement).toBe(second);
+  await expect.element(second).toBeInViewport({ ratio: 1 });
+});
+
+test('Page Down near the end stops on the last book, and Page Up near the start on the first', async () => {
+  await page.viewport(1280, 800);
+  const { screen } = await openLibrary(80);
+  const tiles = gridTiles(screen);
+  tiles.at(-2)!.focus();
+
+  await userEvent.keyboard('{PageDown}');
+  expect(document.activeElement).toBe(tiles.at(-1));
+
+  tiles[1]!.focus();
+  await userEvent.keyboard('{PageUp}');
+  expect(document.activeElement).toBe(tiles[0]);
+});
+
 test('the grid is one Tab stop that comes back to the last tile focused', async () => {
   const { screen } = await openLibrary(5);
   const tiles = gridTiles(screen);

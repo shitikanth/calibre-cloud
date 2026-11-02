@@ -11,6 +11,8 @@ const groups: { name: string; shortcuts: Shortcut[] }[] = [
     shortcuts: [
       { keys: [['/']], does: 'Focus the search box' },
       { keys: [['←'], ['→'], ['↑'], ['↓']], does: 'Move between books' },
+      { keys: [['Home'], ['End']], does: 'First / last book' },
+      { keys: [['Page Up'], ['Page Down']], does: 'A screen up / down' },
       { keys: [['Enter']], does: 'Open the focused book' },
       help,
     ],

@@ -40,6 +40,8 @@ test('? on the library opens the shortcuts, grouped as Library and Reader, and E
   await expect.element(dialog.getByRole('heading', { name: 'Reader' })).toBeVisible();
   await expect.element(dialog.getByText('Focus the search box')).toBeVisible();
   await expect.element(dialog.getByText('Open the focused book')).toBeVisible();
+  await expect.element(dialog.getByText('First / last book')).toBeVisible();
+  await expect.element(dialog.getByText('A screen up / down')).toBeVisible();
   await expect.element(dialog.getByText('Show the controls')).toBeVisible();
   await expect.element(dialog.getByText('Hide the controls')).toBeVisible();
   await expect.element(dialog.getByText('Toggle the table of contents')).toBeVisible();

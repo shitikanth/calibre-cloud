@@ -1,20 +1,41 @@
 import { useState, type FocusEvent, type KeyboardEvent } from 'react';
 import { withBrowserModifier } from './shortcut-keys.ts';
 
-type Step = 'previous' | 'next' | 'up' | 'down';
+type Step = 'previous' | 'next' | 'up' | 'down' | 'first' | 'last' | 'pageUp' | 'pageDown';
 
-const steps: Partial<Record<string, Step>> = { ArrowLeft: 'previous', ArrowRight: 'next', ArrowUp: 'up', ArrowDown: 'down' };
+const steps: Partial<Record<string, Step>> = {
+  ArrowLeft: 'previous',
+  ArrowRight: 'next',
+  ArrowUp: 'up',
+  ArrowDown: 'down',
+  Home: 'first',
+  End: 'last',
+  PageUp: 'pageUp',
+  PageDown: 'pageDown',
+};
 
 function columnCount(tiles: HTMLElement[]): number {
   const top = tiles[0]?.offsetTop;
   return tiles.filter((tile) => tile.offsetTop === top).length;
 }
 
+function rowsPerScreen(tiles: HTMLElement[], columns: number): number {
+  const first = tiles[0];
+  if (!first) return 1;
+  const pitch = (tiles[columns]?.offsetTop ?? first.offsetTop) - first.offsetTop || first.offsetHeight;
+  return Math.max(1, Math.floor(window.innerHeight / pitch));
+}
+
 function stepFrom(tiles: HTMLElement[], from: number, step: Step): HTMLElement | undefined {
   if (step === 'previous') return tiles[from - 1];
   if (step === 'next') return tiles[from + 1];
+  if (step === 'first') return tiles[0];
+  if (step === 'last') return tiles.at(-1);
   const columns = columnCount(tiles);
-  return tiles[step === 'up' ? from - columns : from + columns];
+  if (step === 'up') return tiles[from - columns];
+  if (step === 'down') return tiles[from + columns];
+  const screen = columns * rowsPerScreen(tiles, columns);
+  return tiles[step === 'pageUp' ? Math.max(from - screen, 0) : Math.min(from + screen, tiles.length - 1)];
 }
 
 export type RovingTiles = {
@@ -38,9 +59,13 @@ export function useRovingTiles(keys: string[]): RovingTiles {
         if (!step || withBrowserModifier(event.nativeEvent) || event.shiftKey) return;
         const tiles = tilesIn(event.currentTarget);
         const from = tiles.indexOf(event.target as HTMLElement);
-        if (from < 0) return;
+        const current = tiles[from];
+        if (!current) return;
         event.preventDefault();
-        stepFrom(tiles, from, step)?.focus();
+        const target = stepFrom(tiles, from, step);
+        if (!target) return;
+        if (step === 'pageUp' || step === 'pageDown') window.scrollBy(0, target.getBoundingClientRect().top - current.getBoundingClientRect().top);
+        target.focus();
       },
     },
   };
