@@ -1,10 +1,9 @@
 import { Network, NotFound, ReconnectRequired, type StorageError } from '../adapter.ts';
-
-type DropboxFailure = { error: StorageError; transient: boolean; retryAfter: number | undefined };
+import { retryAfterOf, type HttpFailure } from '../http.ts';
 
 const lookupMisses = ['path/not_found/', 'path/not_file/', 'path/not_folder/'];
 
-export async function dropboxFailure(response: Response): Promise<DropboxFailure> {
+export async function dropboxFailure(response: Response): Promise<HttpFailure> {
   const { status } = response;
   const summary = await summaryOf(response);
   const retryAfter = retryAfterOf(response);
@@ -23,13 +22,4 @@ async function summaryOf(response: Response): Promise<string | undefined> {
   } catch {
     return undefined;
   }
-}
-
-function retryAfterOf(response: Response): number | undefined {
-  const header = response.headers.get('Retry-After');
-  if (header === null || header.trim() === '') return undefined;
-  const seconds = Number(header);
-  if (Number.isFinite(seconds)) return Math.max(0, seconds);
-  const date = Date.parse(header);
-  return Number.isNaN(date) ? undefined : Math.max(0, Math.ceil((date - Date.now()) / 1000));
 }

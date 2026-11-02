@@ -1,6 +1,7 @@
-import { Aborted, NotFound, type FileStat, type LibraryPath, type ReadOptions, type StorageAdapter } from '../adapter.ts';
+import { NotFound, type FileStat, type LibraryPath, type ReadOptions, type StorageAdapter } from '../adapter.ts';
+import { readBody } from '../http.ts';
 import type { AccessTokens } from '../sign-in.ts';
-import { createDropboxClient, toStorageError } from './dropbox.ts';
+import { createDropboxClient } from './dropbox.ts';
 
 export function createDropboxAdapter(root: string, tokens: AccessTokens): StorageAdapter {
   const dropbox = createDropboxClient(tokens);
@@ -19,23 +20,9 @@ export function createDropboxAdapter(root: string, tokens: AccessTokens): Storag
 
   return {
     stat: (path: LibraryPath): Promise<FileStat> => file(path, undefined),
-    async read(path: LibraryPath, { signal, onProgress }: ReadOptions = {}): Promise<Blob> {
-      const { size } = await file(path, signal);
-      const response = await dropbox.download(pathOf(path), signal);
-      const chunks: Uint8Array<ArrayBuffer>[] = [];
-      let loaded = 0;
-      try {
-        const reader = response.body?.getReader();
-        for (let chunk = await reader?.read(); chunk && !chunk.done; chunk = await reader?.read()) {
-          if (signal?.aborted) throw new Aborted();
-          chunks.push(chunk.value);
-          loaded += chunk.value.byteLength;
-          onProgress?.(loaded, size);
-        }
-      } catch (error) {
-        throw toStorageError(error, signal);
-      }
-      return new Blob(chunks);
+    async read(path: LibraryPath, options: ReadOptions = {}): Promise<Blob> {
+      const { size } = await file(path, options.signal);
+      return readBody(await dropbox.download(pathOf(path), options.signal), size, options);
     },
   };
 }
