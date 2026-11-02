@@ -16,8 +16,8 @@ function setup() {
   return { auth, storage, drive, registry };
 }
 
-test('the app offers Google Drive and MEGA', () => {
-  expect(providers.map(({ id }) => id)).toEqual(['google', 'mega']);
+test('the app offers Google Drive, Dropbox, and MEGA', () => {
+  expect(providers.map(({ id }) => id)).toEqual(['google', 'dropbox', 'mega']);
 });
 
 test('lists every provider in the order given, whatever its kind', () => {
@@ -42,7 +42,7 @@ describe('readConnection', () => {
     ['nothing stored', null],
     ['a bare link', megaConnection.link],
     ['an object with no provider', { link: megaConnection.link }],
-    ['a provider nobody implements', { provider: 'dropbox', path: '/Calibre Library' }],
+    ['a provider nobody implements', { provider: 'acme-cloud', path: '/Calibre Library' }],
     ['a MEGA connection missing its link', { provider: 'mega' }],
     ['a sign-in connection missing its root', { provider: 'fake' }],
   ])('rejects %s', (_case, value) => {
@@ -66,7 +66,7 @@ describe('openStorage', () => {
 
   test('refuses a provider nobody implements', () => {
     const { registry } = setup();
-    expect(() => registry.openStorage({ provider: 'dropbox' })).toThrow('No storage provider called dropbox');
+    expect(() => registry.openStorage({ provider: 'acme-cloud' })).toThrow('No storage provider called acme-cloud');
   });
 });
 

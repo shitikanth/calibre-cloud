@@ -1,6 +1,6 @@
 # calibre-cloud: High-Level Design
 
-Status: the first slice is built: browse, search, book detail, and download from a MEGA shared folder. The reader is built for EPUB, KEPUB, PDF, MOBI, PRC, AZW, AZW3, KF8, FB2, FBZ, and CBZ. Google Drive is built: sign-in through the serverless auth functions, then a library-root picker. Dropbox is not built yet.
+Status: the first slice is built: browse, search, book detail, and download from a MEGA shared folder. The reader is built for EPUB, KEPUB, PDF, MOBI, PRC, AZW, AZW3, KF8, FB2, FBZ, and CBZ. Google Drive is built: sign-in through the serverless auth functions, then a library-root picker. Dropbox is built the same way.
 
 ## Goal
 
@@ -90,7 +90,7 @@ A Calibre library can be many GB, but only `metadata.db` is needed to list the w
 
 | Provider | Auth | Addressing | Notes |
 |---|---|---|---|
-| Dropbox | OAuth with PKCE, works from the browser alone | Path-based | Simplest fit. |
+| Dropbox | OAuth redirect flow through the serverless auth functions; read-only `files.metadata.read` and `files.content.read` | Path-based; the library root is the folder's lower-case path | Library root found by search or our folder browser, since the search index can lag behind recent uploads. |
 | Google Drive | OAuth redirect flow through the serverless auth functions; `drive.readonly` | ID-based, so paths are resolved folder by folder and cached per session | Library root found by search or our folder browser, in My Drive and Shared with me. |
 | MEGA | No OAuth | Encrypted nodes, decrypted in the browser | Use a shared folder link instead of the user's password. |
 

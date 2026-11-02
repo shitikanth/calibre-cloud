@@ -24,6 +24,21 @@ const googleProvider = {
   message: 'Only web/src/storage/ may import the Google Drive provider. Everything above the storage boundary uses storage/providers.ts.',
 };
 
+const dropboxProvider = {
+  group: ['**/storage/dropbox', '**/storage/dropbox/*'],
+  message: 'Only web/src/storage/ may import the Dropbox provider. Everything above the storage boundary uses storage/providers.ts.',
+};
+
+const driveApi = {
+  selector: 'Literal[value=/googleapis\\.com\\/drive/], TemplateElement[value.raw=/googleapis\\.com\\/drive/]',
+  message: 'Only the Google Drive provider (web/src/storage/google/) may call the Drive API.',
+};
+
+const dropboxApi = {
+  selector: 'Literal[value=/dropboxapi\\.com\\/2\\//], TemplateElement[value.raw=/dropboxapi\\.com\\/2\\//]',
+  message: 'Only the Dropbox provider (web/src/storage/dropbox/) may call the Dropbox API.',
+};
+
 const foliate = {
   group: ['foliate-js', 'foliate-js/*'],
   message: 'Only the foliate renderer (web/src/reader/foliate/) may use foliate-js.',
@@ -49,11 +64,11 @@ export default defineConfig([
   },
   {
     ignores: ['deploy/**'],
-    rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, megaSdk, megaProvider, googleProvider, foliate, pdfjs] }] },
+    rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, megaSdk, megaProvider, googleProvider, dropboxProvider, foliate, pdfjs] }] },
   },
   {
     files: ['web/vite.config.ts'],
-    rules: { 'no-restricted-imports': ['error', { patterns: [megaSdk, megaProvider, googleProvider, foliate, pdfjs] }] },
+    rules: { 'no-restricted-imports': ['error', { patterns: [megaSdk, megaProvider, googleProvider, dropboxProvider, foliate, pdfjs] }] },
   },
   {
     files: ['web/src/storage/**'],
@@ -64,23 +79,20 @@ export default defineConfig([
     rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, foliate, pdfjs] }] },
   },
   {
-    ignores: ['web/src/storage/google/**'],
-    rules: {
-      'no-restricted-syntax': [
-        'error',
-        {
-          selector: 'Literal[value=/googleapis\\.com\\/drive/], TemplateElement[value.raw=/googleapis\\.com\\/drive/]',
-          message: 'Only the Google Drive provider (web/src/storage/google/) may call the Drive API.',
-        },
-      ],
-    },
+    ignores: ['web/src/storage/google/**', 'eslint.config.test.ts'],
+    rules: { 'no-restricted-syntax': ['error', driveApi] },
+  },
+  {
+    files: ['web/src/**'],
+    ignores: ['web/src/storage/google/**', 'web/src/storage/dropbox/**'],
+    rules: { 'no-restricted-syntax': ['error', driveApi, dropboxApi] },
   },
   {
     files: ['web/src/reader/foliate/**'],
-    rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, megaSdk, megaProvider, googleProvider, pdfjs] }] },
+    rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, megaSdk, megaProvider, googleProvider, dropboxProvider, pdfjs] }] },
   },
   {
     files: ['web/src/reader/pdf/**'],
-    rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, megaSdk, megaProvider, googleProvider, foliate] }] },
+    rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, megaSdk, megaProvider, googleProvider, dropboxProvider, foliate] }] },
   },
 ]);

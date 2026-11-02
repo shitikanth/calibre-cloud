@@ -1,11 +1,12 @@
 import { createAccessTokens, type AccessTokenClient } from './access-tokens.ts';
 import type { StorageAdapter } from './adapter.ts';
+import { dropboxProvider } from './dropbox/provider.ts';
 import { googleProvider } from './google/provider.ts';
 import { megaProvider } from './mega/provider.ts';
 import type { Connection, LinkProvider, ParsedConnectInput, StorageProvider } from './provider.ts';
 import type { LibraryFinder, SignInProvider } from './sign-in.ts';
 
-export const providers: readonly StorageProvider[] = [googleProvider, megaProvider];
+export const providers: readonly StorageProvider[] = [googleProvider, dropboxProvider, megaProvider];
 
 export type ResolvedConnectInput = { provider: LinkProvider; parsed: ParsedConnectInput };
 
