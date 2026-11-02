@@ -53,6 +53,16 @@ describe('findLibraries', () => {
     expect(graph.requests).toHaveLength(3);
   });
 
+  test('still lists a library whose parent path Graph did not percent-encode', async () => {
+    graph.encodesParentPaths = false;
+    graph.add({ path: '/Done 100%/metadata.db', content: 'db' });
+
+    const found = await finder().findLibraries();
+
+    expect(found).toContainEqual({ root: '/Done 100%', path: '/Done 100%' });
+    expect(found).toHaveLength(5);
+  });
+
   test('lists a library at the top of the OneDrive', async () => {
     graph.add({ path: '/metadata.db', content: 'db' });
 

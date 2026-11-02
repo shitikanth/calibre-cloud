@@ -18,7 +18,7 @@ export type DriveItem = {
 
 type Page = { value: DriveItem[]; '@odata.nextLink'?: string };
 
-export function encodePath(path: string): string {
+function encodePath(path: string): string {
   return path.split('/').filter(Boolean).map(encodeURIComponent).join('/');
 }
 
@@ -68,8 +68,16 @@ export function pathOfReference(reference: DriveItem['parentReference']): string
     .slice(colon + 1)
     .split('/')
     .filter(Boolean)
-    .map((segment) => `/${decodeURIComponent(segment)}`)
+    .map((segment) => `/${decodeSegment(segment)}`)
     .join('');
+}
+
+function decodeSegment(segment: string): string {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
 }
 
 export class DownloadUrlExpired extends Error {

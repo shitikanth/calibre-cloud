@@ -58,6 +58,7 @@ export class FakeGraph {
   readonly requests: FakeRequest[] = [];
   readonly validTokens = new Set(['token']);
   downloadHost = 'https://fake.files.1drv.com';
+  encodesParentPaths = true;
   maxPageSize = 200;
   chunkSize = 4;
   private downloadGeneration = 1;
@@ -159,7 +160,11 @@ export class FakeGraph {
       id: `id-${entry.path}`,
       name: nameOf(entry.path),
       eTag: `etag-${entry.path}`,
-      parentReference: { driveId: 'drive-1', id: `id-${parent || '/'}`, path: `/drive/root:${parent ? `/${encodePath(parent)}` : ''}` },
+      parentReference: {
+        driveId: 'drive-1',
+        id: `id-${parent || '/'}`,
+        path: `/drive/root:${parent ? `/${this.encodesParentPaths ? encodePath(parent) : parent.slice(1)}` : ''}`,
+      },
     };
     if (entry.folder) return { ...common, folder: { childCount: 0 } };
     const bytes = new TextEncoder().encode(entry.content);

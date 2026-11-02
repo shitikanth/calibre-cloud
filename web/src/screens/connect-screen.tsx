@@ -54,9 +54,9 @@ function ChooseProvider() {
 }
 
 function DisconnectNotice() {
-  const { disconnected } = useConnection();
+  const { lastDisconnected } = useConnection();
   const { signInProvider } = useProviders();
-  const notice = disconnected && signInProvider(disconnected.provider)?.disconnectNotice;
+  const notice = lastDisconnected && signInProvider(lastDisconnected.provider)?.disconnectNotice;
   if (!notice) return null;
   return (
     <p role="status" className="mt-4 text-sm/[1.5] text-neutral-600">
