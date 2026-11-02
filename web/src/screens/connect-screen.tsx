@@ -59,7 +59,7 @@ function DisconnectNotice() {
   const notice = lastDisconnected && signInProvider(lastDisconnected.provider)?.disconnectNotice;
   if (!notice) return null;
   return (
-    <p role="status" className="mt-4 text-sm/[1.5] text-neutral-600">
+    <output className="mt-4 block text-sm/[1.5] text-neutral-600">
       {notice.message}{' '}
       {notice.links.map(({ label, href }, index) => (
         <span key={href}>
@@ -69,7 +69,7 @@ function DisconnectNotice() {
           </a>
         </span>
       ))}
-    </p>
+    </output>
   );
 }
 

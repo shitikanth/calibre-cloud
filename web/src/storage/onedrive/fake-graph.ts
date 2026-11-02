@@ -91,8 +91,12 @@ export class FakeGraph {
     this.downloadGeneration++;
   }
 
-  fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    if (init?.signal?.aborted) throw abortError();
+  fetch = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    if (init?.signal?.aborted) return Promise.reject(abortError());
+    return Promise.resolve(this.respond(input, init));
+  };
+
+  private respond(input: RequestInfo | URL, init: RequestInit | undefined): Response {
     const url = new URL(input instanceof Request ? input.url : String(input));
     const headers = new Headers(init?.headers);
     const token = headers.get('Authorization')?.replace(/^Bearer /, '');
@@ -117,7 +121,7 @@ export class FakeGraph {
     if (collection === undefined) return this.item(path);
     if (collection === 'children') return this.children(path, skip, url);
     return this.search(decodeURIComponent(query ?? '').replaceAll("''", "'"), skip, url);
-  };
+  }
 
   private item(path: string): Response {
     const entry = this.entries.get(path.toLowerCase());
@@ -131,6 +135,12 @@ export class FakeGraph {
 
   private idOf(entry: Entry): string {
     return `id-${entry.path.toLowerCase()}`;
+  }
+
+  private parentReferencePath(parent: string): string {
+    if (parent === '') return '/drive/root:';
+    const encoded = this.encodesParentPaths ? encodePath(parent) : parent.slice(1);
+    return `/drive/root:/${encoded}`;
   }
 
   private children(path: string, skip: number, url: URL): Response {
@@ -178,9 +188,7 @@ export class FakeGraph {
       parentReference: {
         driveId: 'drive-1',
         id: `id-${parent.toLowerCase() || '/'}`,
-        ...(shape === 'search-hit'
-          ? {}
-          : { path: `/drive/root:${parent ? `/${this.encodesParentPaths ? encodePath(parent) : parent.slice(1)}` : ''}` }),
+        ...(shape === 'search-hit' ? {} : { path: this.parentReferencePath(parent) }),
       },
     };
     if (entry.folder) return { ...common, folder: { childCount: 0 } };

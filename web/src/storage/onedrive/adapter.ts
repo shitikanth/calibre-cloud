@@ -1,7 +1,7 @@
 import { Network, NotFound, type FileStat, type LibraryPath, type ReadOptions, type StorageAdapter } from '../adapter.ts';
 import { readBody } from '../http.ts';
 import type { AccessTokens } from '../sign-in.ts';
-import { createGraphClient, DownloadUrlExpired, type DriveItem } from './graph.ts';
+import { createGraphClient, downloadUrlExpired, type DriveItem } from './graph.ts';
 
 export function createOneDriveAdapter(root: string, tokens: AccessTokens): StorageAdapter {
   const graph = createGraphClient(tokens);
@@ -32,16 +32,10 @@ export function createOneDriveAdapter(root: string, tokens: AccessTokens): Stora
     async read(path: LibraryPath, options: ReadOptions = {}): Promise<Blob> {
       const { signal } = options;
       const item = await file(path, signal);
-      let response: Response;
-      try {
-        response = await graph.download(downloadUrlOf(item), signal);
-      } catch (error) {
-        if (!(error instanceof DownloadUrlExpired)) throw error;
-        try {
-          response = await graph.download(downloadUrlOf(await file(path, signal)), signal);
-        } catch (again) {
-          throw again instanceof DownloadUrlExpired ? new Network(again.message) : again;
-        }
+      let response = await graph.download(downloadUrlOf(item), signal);
+      if (response === downloadUrlExpired) {
+        response = await graph.download(downloadUrlOf(await file(path, signal)), signal);
+        if (response === downloadUrlExpired) throw new Network('The download URL from Microsoft Graph expired twice');
       }
       return readBody(response, item.size ?? 0, options);
     },

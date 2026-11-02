@@ -36,14 +36,11 @@ export function createGraphClient(tokens: AccessTokens) {
   const request = createAuthorizedFetch(tokens, graphFailure);
   const get = async <T>(url: string, signal: AbortSignal | undefined): Promise<T> => readJson<T>(await request({ url }, signal), signal);
 
-  const collect = async (first: string, signal: AbortSignal | undefined): Promise<DriveItem[]> => {
-    const found: DriveItem[] = [];
-    for (let next: string | undefined = first; next !== undefined; ) {
-      const page: Page = await get<Page>(next, signal);
-      found.push(...page.value);
-      next = page['@odata.nextLink'];
-    }
-    return found;
+  const collect = async (url: string, signal: AbortSignal | undefined, found: DriveItem[] = []): Promise<DriveItem[]> => {
+    const page = await get<Page>(url, signal);
+    found.push(...page.value);
+    const next = page['@odata.nextLink'];
+    return next === undefined ? found : collect(next, signal, found);
   };
 
   return {
@@ -81,11 +78,11 @@ function decodeSegment(segment: string): string {
   }
 }
 
-export class DownloadUrlExpired extends Error {
-  override name = 'DownloadUrlExpired' as const;
-}
+export const downloadUrlExpired = Symbol('download URL expired');
 
-async function download(url: string, signal: AbortSignal | undefined): Promise<Response> {
+const expiredStatuses = new Set([401, 403, 410]);
+
+async function download(url: string, signal: AbortSignal | undefined): Promise<Response | typeof downloadUrlExpired> {
   if (signal?.aborted) throw new Aborted();
   let response: Response;
   try {
@@ -95,8 +92,7 @@ async function download(url: string, signal: AbortSignal | undefined): Promise<R
   }
   if (response.ok) return response;
   await response.body?.cancel();
+  if (expiredStatuses.has(response.status)) return downloadUrlExpired;
   const message = `The download host answered ${response.status}`;
-  if (response.status === 404) throw new NotFound(message);
-  if (response.status === 401 || response.status === 403 || response.status === 410) throw new DownloadUrlExpired(message);
-  throw new Network(message);
+  throw response.status === 404 ? new NotFound(message) : new Network(message);
 }

@@ -5,7 +5,8 @@ export async function graphFailure(response: Response): Promise<HttpFailure> {
   const { status } = response;
   const code = await codeOf(response);
   const retryAfter = retryAfterOf(response);
-  const message = `Microsoft Graph answered ${status}${code ? ` ${code}` : ''}`;
+  const detail = code === undefined ? '' : ` ${code}`;
+  const message = `Microsoft Graph answered ${status}${detail}`;
   const failure = (error: StorageError, transient = false) => ({ error, transient, retryAfter });
 
   if (status === 401) return failure(new ReconnectRequired(message));
