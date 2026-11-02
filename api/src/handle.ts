@@ -4,7 +4,7 @@ import { toBase64Url } from './base64url.ts';
 import type { Config } from './config.ts';
 import { dropboxProvider } from './dropbox.ts';
 import { googleProvider } from './google.ts';
-import type { OAuthClient, SignInProvider } from './oauth.ts';
+import type { OAuthClient, OAuthProvider } from './oauth.ts';
 import { sameOriginPath } from './return-path.ts';
 import { importCookieKey, seal, unseal } from './seal.ts';
 
@@ -47,7 +47,7 @@ function callbackUri(origin: string, provider: ProviderId): string {
 const providers = {
   google: { clientId: 'googleClientId', clientSecret: 'googleClientSecret', create: googleProvider },
   dropbox: { clientId: 'dropboxClientId', clientSecret: 'dropboxClientSecret', create: dropboxProvider },
-} as const satisfies Record<string, { clientId: keyof Config; clientSecret: keyof Config; create(client: OAuthClient): SignInProvider }>;
+} as const satisfies Record<string, { clientId: keyof Config; clientSecret: keyof Config; create(client: OAuthClient): OAuthProvider }>;
 
 type ProviderId = keyof typeof providers;
 
@@ -57,7 +57,7 @@ function isProviderId(value: unknown): value is ProviderId {
 
 const providerParam = `:provider{${Object.keys(providers).join('|')}}`;
 
-function configuredProvider(config: Config, id: ProviderId): SignInProvider | { readonly missing: string[] } {
+function configuredProvider(config: Config, id: ProviderId): OAuthProvider | { readonly missing: string[] } {
   const { clientId: idName, clientSecret: secretName, create } = providers[id];
   const clientId = config[idName];
   const clientSecret = config[secretName];
@@ -143,9 +143,11 @@ function app(config: Config) {
     })
     .post(`${authPath}/signout`, async (c) => {
       const signIn = await savedSignIn(c);
-      const provider = signIn && configuredProvider(config, signIn.provider);
-      if (provider && 'missing' in provider) console.error('Sign-out cannot revoke the grant; missing', provider.missing);
-      else if (signIn && provider) await provider.revoke(signIn.refreshToken);
+      if (signIn !== undefined) {
+        const provider = configuredProvider(config, signIn.provider);
+        if ('missing' in provider) console.error('Sign-out cannot revoke the grant; missing', provider.missing);
+        else await provider.revoke(signIn.refreshToken);
+      }
       deleteCookie(c, signInCookie, signInCookieOptions);
       return c.body(null, 204);
     });

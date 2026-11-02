@@ -9,11 +9,38 @@ export type RefreshResult =
   | { readonly kind: 'revoked' }
   | { readonly kind: 'unavailable' };
 
-export interface SignInProvider {
+export interface OAuthProvider {
   authorizationUrl(redirectUri: string, state: string): string;
   exchangeCode(code: string, redirectUri: string): Promise<string | undefined>;
   refresh(refreshToken: string): Promise<RefreshResult>;
   revoke(refreshToken: string): Promise<void>;
+}
+
+type CodeFlow = Omit<OAuthProvider, 'revoke'>;
+
+export function codeFlow(
+  client: OAuthClient,
+  { authorizationEndpoint, tokenEndpoint, authorizationParams }: {
+    authorizationEndpoint: string;
+    tokenEndpoint: string;
+    authorizationParams: Record<string, string>;
+  },
+): CodeFlow {
+  return {
+    authorizationUrl(redirectUri, state) {
+      const url = new URL(authorizationEndpoint);
+      url.search = new URLSearchParams({
+        client_id: client.clientId,
+        redirect_uri: redirectUri,
+        response_type: 'code',
+        ...authorizationParams,
+        state,
+      }).toString();
+      return url.href;
+    },
+    exchangeCode: (code, redirectUri) => exchangeCode(client, tokenEndpoint, code, redirectUri),
+    refresh: (refreshToken) => refreshAccessToken(client, tokenEndpoint, refreshToken),
+  };
 }
 
 export function postForm(client: OAuthClient, url: string, form: Record<string, string>): Promise<Response> {
@@ -24,7 +51,7 @@ export function postForm(client: OAuthClient, url: string, form: Record<string, 
   });
 }
 
-export async function exchangeCode(
+async function exchangeCode(
   client: OAuthClient,
   tokenEndpoint: string,
   code: string,
@@ -46,7 +73,7 @@ export async function exchangeCode(
   }
 }
 
-export async function refreshAccessToken(client: OAuthClient, tokenEndpoint: string, refreshToken: string): Promise<RefreshResult> {
+async function refreshAccessToken(client: OAuthClient, tokenEndpoint: string, refreshToken: string): Promise<RefreshResult> {
   try {
     const response = await postForm(client, tokenEndpoint, {
       client_id: client.clientId,
