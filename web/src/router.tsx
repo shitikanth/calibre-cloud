@@ -15,6 +15,7 @@ import { ConnectedShell } from './screens/connected-shell.tsx';
 import { LibraryPicker } from './screens/library-picker.tsx';
 import { LibraryScreen } from './screens/library-screen.tsx';
 import { ReaderScreen } from './screens/reader-screen.tsx';
+import { ShortcutsHelp } from './screens/shortcuts-help.tsx';
 import { SignInOutcomeHandler, useSignInProblem } from './screens/sign-in-outcome.tsx';
 
 const rootRoute = createRootRoute({
@@ -45,11 +46,16 @@ function Layout() {
       </div>
     );
   }
-  if (reading) return <Outlet />;
   return (
-    <ConnectedShell wide={library}>
-      <Outlet />
-    </ConnectedShell>
+    <ShortcutsHelp>
+      {reading ? (
+        <Outlet />
+      ) : (
+        <ConnectedShell wide={library}>
+          <Outlet />
+        </ConnectedShell>
+      )}
+    </ShortcutsHelp>
   );
 }
 

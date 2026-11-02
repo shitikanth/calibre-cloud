@@ -8,8 +8,9 @@ import { useRenderers } from '../reader/context.tsx';
 import { trackJumps, type Jumps, type JumpTarget } from '../reader/jumps.ts';
 import { loadPosition, trackPosition } from '../reader/positions.ts';
 import { loadReaderSettings, saveReaderSettings, type ReaderSettings } from '../reader/reader-settings.ts';
-import type { BookRenderer, ReaderTheme, Relocation } from '../reader/renderer.ts';
+import type { BookRenderer, ReaderTheme, Relocation, SearchResult } from '../reader/renderer.ts';
 import type { SwipeDirection } from '../reader/swipe.ts';
+import { adjacentEntry } from '../reader/toc.ts';
 import { useBookFile } from '../reader/use-book-file.ts';
 import { NotFound, OpenBook } from './book-screen.tsx';
 import { ConnectedShell } from './connected-shell.tsx';
@@ -18,11 +19,14 @@ import { ExternalLinkDialog } from './external-link-dialog.tsx';
 import { formatSize } from './format.ts';
 import { ProgressBar } from './progress-bar.tsx';
 import { BackToBookLink, BottomBar, JumpBack, TapZone, TopBar, zoneAt, type ControlsState } from './reader-controls.tsx';
-import { SearchTool, useBookSearch, useHighlights } from './reader-search.tsx';
+import { readerKeyAction, type ReaderKeyAction, type ReaderTool } from './reader-keys.ts';
+import type { PopoverToggle } from './reader-popover.tsx';
+import { adjacentHit, SearchTool, useBookSearch, useHighlights } from './reader-search.tsx';
 import { backLabel, whereYouAreLabel, positionLabel, SeekBar } from './reader-seek-bar.tsx';
 import { SettingsTool } from './reader-settings-tool.tsx';
 import { TocTool } from './reader-toc.tsx';
 import { ReconnectLink } from './reconnect-link.tsx';
+import { dialogOpen } from './shortcut-keys.ts';
 import { SignInProblem } from './sign-in-outcome.tsx';
 import { useWide } from './use-wide.ts';
 
@@ -193,6 +197,7 @@ function RendererUnavailable({ book, retry }: { book: BookDetail; retry: () => v
 
 type OpenStatus = 'opening' | 'open' | 'unopenable' | 'renderer-unavailable';
 
+
 function toggled(state: ControlsState): ControlsState {
   return state === 'hidden' ? 'pinned' : 'hidden';
 }
@@ -222,6 +227,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
   const [zoom, setZoom] = useState(1);
   const [attempt, setAttempt] = useState(0);
   const [controls, setControls] = useState<ControlsState>('hidden');
+  const [tool, setTool] = useState<ReaderTool | undefined>(undefined);
   const [jumps] = useState(trackJumps);
   const origin = useSyncExternalStore(jumps.subscribe, () => jumps.origin);
   const wide = useWide();
@@ -325,27 +331,90 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
     [renderer, jumps, highlights],
   );
 
-  const goBack = () => {
+  const goBack = useCallback(() => {
     highlights.clear();
     if (renderer) void jumps.back((location) => renderer.goTo(location));
-  };
+  }, [renderer, jumps, highlights]);
+
+  const reading = status === 'open' && renderer ? renderer : undefined;
+  const search = useBookSearch(reading?.search);
+  const { state: searchState, pick: pickHit } = search;
+
+  const showHit = useCallback(
+    (on: BookRenderer, result: SearchResult, results: readonly SearchResult[]) => {
+      setControls('hidden');
+      highlights.show(on, result, results, jump({ location: result.location }));
+    },
+    [highlights, jump],
+  );
+
+  const openTool = useCallback((name: ReaderTool) => {
+    setControls('pinned');
+    setTool(name);
+  }, []);
 
   useEffect(() => {
     if (!renderer) return;
+    const goToChapter = (direction: SwipeDirection) => {
+      const entry = adjacentEntry(renderer.toc, relocation?.tocEntry, direction);
+      if (entry) void jump({ location: entry.location });
+      return true;
+    };
+    const stepMatch = (direction: SwipeDirection) => {
+      const hit = adjacentHit(searchState, direction);
+      if (hit) {
+        pickHit(hit);
+        showHit(renderer, hit, searchState.results);
+      }
+      return true;
+    };
+    const actions: Record<ReaderKeyAction, () => boolean> = {
+      hideControls: () => {
+        setControls('hidden');
+        return false;
+      },
+      nextPage: () => {
+        turn('next');
+        return true;
+      },
+      previousPage: () => {
+        turn('previous');
+        return true;
+      },
+      toggleContents: () => {
+        if (tool === 'toc') setTool(undefined);
+        else openTool('toc');
+        return true;
+      },
+      openSearch: () => {
+        if (!renderer.search) return false;
+        openTool('search');
+        return true;
+      },
+      focusSearch: () => {
+        shell.current?.querySelector<HTMLInputElement>('[role="search"] input')?.focus();
+        return true;
+      },
+      nextChapter: () => goToChapter('next'),
+      previousChapter: () => goToChapter('previous'),
+      nextMatch: () => stepMatch('next'),
+      previousMatch: () => stepMatch('previous'),
+      goBack: () => {
+        if (!origin) return false;
+        goBack();
+        return true;
+      },
+    };
     const onKey = (event: KeyboardEvent) => {
-      if (shell.current?.querySelector('[aria-expanded="true"], dialog[open]')) return;
-      if (event.key === 'Escape') setControls('hidden');
-      else if (event.target instanceof HTMLInputElement) return;
-      else if (event.key === 'ArrowRight') turn('next');
-      else if (event.key === 'ArrowLeft') turn('previous');
+      if (dialogOpen()) return;
+      const action = readerKeyAction(event, tool);
+      if (action && actions[action]()) event.preventDefault();
     };
     // Capture: a popover's own Escape handler closes it first otherwise, and this would hide the controls too.
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [renderer, turn]);
+  }, [renderer, turn, tool, openTool, relocation, jump, searchState, pickHit, showHit, origin, goBack]);
 
-  const reading = status === 'open' && renderer ? renderer : undefined;
-  const search = useBookSearch(reading?.search);
   const shown = !reading || controls !== 'hidden';
   const tapMargin = (event: MouseEvent<HTMLElement>) => {
     const zone = zoneAt(event.clientX, container.current);
@@ -363,16 +432,25 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
     setControls((state) => (state === 'hidden' ? 'peek' : state));
   };
   const placement = wide ? 'below' : 'above';
+  const toggle = (name: ReaderTool): PopoverToggle => ({
+    open: tool === name,
+    setOpen: (next) =>
+      setTool((current) => {
+        const open = typeof next === 'function' ? next(current === name) : next;
+        if (open) return name;
+        return current === name ? undefined : current;
+      }),
+  });
   const tools = reading && (
     <>
-      <TocTool renderer={reading} jump={jump} current={relocation?.tocEntry} placement={placement} />
+      <TocTool renderer={reading} jump={jump} current={relocation?.tocEntry} placement={placement} toggle={toggle('toc')} />
       {reading.search && (
         <SearchTool
           control={search}
           placement={placement}
+          toggle={toggle('search')}
           onPick={(result) => {
-            setControls('hidden');
-            highlights.show(reading, result, search.state.results, jump({ location: result.location }));
+            showHit(reading, result, search.state.results);
           }}
         />
       )}
@@ -384,6 +462,7 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
           zoom={zoom}
           onZoomChange={changeZoom}
           placement={placement}
+          toggle={toggle('settings')}
         />
       )}
     </>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { BookRenderer, BookSearch, SearchResult, TocEntry } from '../reader/renderer.ts';
-import { panelClass, ReaderPopover, scrollToCurrent, type PopoverPlacement } from './reader-popover.tsx';
+import type { SwipeDirection } from '../reader/swipe.ts';
+import { panelClass, ReaderPopover, scrollToCurrent, type PopoverPlacement, type PopoverToggle } from './reader-popover.tsx';
 
 const SETTLE_MS = 250;
 
@@ -70,6 +71,12 @@ export function useBookSearch(search: BookSearch | undefined): BookSearchControl
   return { state, change, pick };
 }
 
+export function adjacentHit({ results, picked }: SearchState, direction: SwipeDirection): SearchResult | undefined {
+  const at = picked ? results.indexOf(picked) : -1;
+  if (direction === 'next') return results[at + 1];
+  return at === -1 ? results.at(-1) : results[at - 1];
+}
+
 export type Highlights = {
   show: (renderer: BookRenderer, result: SearchResult, matches: readonly SearchResult[], arrival: Promise<void>) => void;
   clear: () => void;
@@ -103,11 +110,16 @@ export function useHighlights(): Highlights {
   return highlights;
 }
 
-type SearchToolProps = Readonly<{ control: BookSearchControl; placement: PopoverPlacement; onPick: (result: SearchResult) => void }>;
+type SearchToolProps = Readonly<{
+  control: BookSearchControl;
+  placement: PopoverPlacement;
+  toggle: PopoverToggle;
+  onPick: (result: SearchResult) => void;
+}>;
 
-export function SearchTool({ control, placement, onPick }: SearchToolProps) {
+export function SearchTool({ control, placement, toggle, onPick }: SearchToolProps) {
   return (
-    <ReaderPopover label="Search" icon={searchIcon} placement={placement}>
+    <ReaderPopover label="Search" icon={searchIcon} placement={placement} toggle={toggle} shortcut="/">
       {(close) => (
         <SearchPanel
           control={control}

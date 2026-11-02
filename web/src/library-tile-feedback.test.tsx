@@ -43,21 +43,21 @@ test('hovering a tile lifts it, and leaving it puts it back', async () => {
 
 test('tabbing to a tile shows a focus ring that the grid does not clip', async () => {
   const app = await renderApp({ storage: await twoBookLibrary(), connected: true });
-  const janeEyre = tile(app.screen, 'Jane Eyre');
-  await expect.element(janeEyre).toBeVisible();
-  expect(styleOf(janeEyre.element()).outlineStyle).toBe('none');
+  const grid = app.screen.getByRole('list', { name: 'Books' });
+  const first = grid.getByRole('link').first();
+  await expect.element(first).toBeVisible();
+  expect(styleOf(first.element()).outlineStyle).toBe('none');
 
-  for (let presses = 0; presses < 10 && document.activeElement !== janeEyre.element(); presses += 1) {
+  for (let presses = 0; presses < 10 && document.activeElement !== first.element(); presses += 1) {
     await userEvent.tab();
   }
 
-  expect(document.activeElement).toBe(janeEyre.element());
-  const focused = styleOf(janeEyre.element());
+  expect(document.activeElement).toBe(first.element());
+  const focused = styleOf(first.element());
   expect(focused.outlineStyle).toBe('solid');
   expect(parseFloat(focused.outlineWidth)).toBeGreaterThanOrEqual(2);
-  const grid = app.screen.getByRole('list', { name: 'Books' }).element();
-  const item = janeEyre.element().closest('li')!;
-  expect(getComputedStyle(grid).overflow).toBe('visible');
+  const item = first.element().closest('li')!;
+  expect(getComputedStyle(grid.element()).overflow).toBe('visible');
   expect(getComputedStyle(item).overflow).toBe('visible');
 });
 
