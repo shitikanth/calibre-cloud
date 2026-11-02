@@ -162,6 +162,39 @@ test('Disconnect ends the sign-in and forgets the library on this device', async
   await expect.element(signInTile(reloaded)).toBeVisible();
 });
 
+test('a Disconnect of a sign-in the provider cannot revoke says where to remove the app’s access', async () => {
+  const storage = await library();
+  const signIn = fakeSignInProvider({
+    storage,
+    disconnectNotice: {
+      message: 'Fake Drive keeps calibre-cloud listed among your apps until you remove it there.',
+      links: [{ label: 'Manage apps', href: 'https://fake.example/apps' }],
+    },
+  });
+  const app = await renderApp({ storage, signIn, connected: signedIn });
+  await expect.element(app.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
+
+  await chooseFromMenu(app.screen, 'Disconnect');
+
+  const notice = chooseScreen(app.screen).getByRole('status');
+  await expect.element(notice).toHaveTextContent('Fake Drive keeps calibre-cloud listed among your apps until you remove it there. Manage apps');
+  await expect.element(notice.getByRole('link', { name: 'Manage apps' })).toHaveAttribute('href', 'https://fake.example/apps');
+  const reloaded = await app.reload();
+  await expect.element(signInTile(reloaded)).toBeVisible();
+  expect(chooseScreen(reloaded).getByRole('status').query()).toBeNull();
+});
+
+test('a Disconnect of a sign-in the provider revokes shows no notice', async () => {
+  const storage = await library();
+  const app = await renderApp({ storage, signIn: fakeSignInProvider({ storage }), connected: signedIn });
+  await expect.element(app.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
+
+  await chooseFromMenu(app.screen, 'Disconnect');
+
+  await expect.element(signInTile(app.screen)).toBeVisible();
+  expect(chooseScreen(app.screen).getByRole('status').query()).toBeNull();
+});
+
 test('a sign-out that fails still forgets the library on this device', async () => {
   const storage = await library();
   const app = await renderApp({ storage, signIn: fakeSignInProvider({ storage }), connected: signedIn });

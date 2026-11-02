@@ -31,6 +31,7 @@ function ChooseProvider() {
         Connect your Calibre library
       </h1>
       <SignInProblem className="mt-4" />
+      <DisconnectNotice />
       <ul className="mt-7 grid grid-cols-[repeat(auto-fill,minmax(112px,1fr))] gap-3">
         {allProviders.map((provider) => (
           <li key={provider.id}>
@@ -49,6 +50,26 @@ function ChooseProvider() {
         About calibre-cloud
       </a>
     </>
+  );
+}
+
+function DisconnectNotice() {
+  const { disconnected } = useConnection();
+  const { signInProvider } = useProviders();
+  const notice = disconnected && signInProvider(disconnected.provider)?.disconnectNotice;
+  if (!notice) return null;
+  return (
+    <p role="status" className="mt-4 text-sm/[1.5] text-neutral-600">
+      {notice.message}{' '}
+      {notice.links.map(({ label, href }, index) => (
+        <span key={href}>
+          {index > 0 && ' · '}
+          <a href={href} target="_blank" rel="noopener noreferrer" className="underline hover:text-neutral-900">
+            {label}
+          </a>
+        </span>
+      ))}
+    </p>
   );
 }
 

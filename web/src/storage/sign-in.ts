@@ -12,9 +12,12 @@ export interface LibraryFinder {
   listFolder(folder: string | undefined, signal?: AbortSignal): Promise<FolderEntry[]>;
 }
 
+export type DisconnectNotice = { readonly message: string; readonly links: readonly { label: string; href: string }[] };
+
 export interface SignInProvider extends ProviderIdentity {
   readonly kind: 'sign-in';
   readonly startPath: string;
+  readonly disconnectNotice?: DisconnectNotice;
   connectionFor(root: string): Connection;
   isConnection(value: unknown): value is Connection;
   libraryFinder(tokens: AccessTokens): LibraryFinder;

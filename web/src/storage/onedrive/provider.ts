@@ -18,6 +18,13 @@ export const onedriveProvider: SignInProvider = {
   name: 'OneDrive',
   icon,
   startPath: '/api/auth/onedrive/start',
+  disconnectNotice: {
+    message: 'Microsoft keeps calibre-cloud among the apps with access to your OneDrive until you remove it there:',
+    links: [
+      { label: 'personal account', href: 'https://account.microsoft.com/privacy/app-access' },
+      { label: 'work or school account', href: 'https://myapplications.microsoft.com/' },
+    ],
+  },
   connectionFor(root) {
     const connection: OneDriveConnection = { provider: 'onedrive', root };
     return connection;
