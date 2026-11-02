@@ -1,6 +1,7 @@
 const providers = [
   { id: 'google', name: 'Google', authorizationOrigin: 'https://accounts.google.com' },
   { id: 'dropbox', name: 'Dropbox', authorizationOrigin: 'https://www.dropbox.com' },
+  { id: 'onedrive', name: 'Microsoft', authorizationOrigin: 'https://login.microsoftonline.com' },
 ];
 
 async function checkStart(origin: string, { id, name, authorizationOrigin }: (typeof providers)[number]): Promise<string[]> {

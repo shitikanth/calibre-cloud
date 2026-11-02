@@ -5,6 +5,7 @@ import type { Config } from './config.ts';
 import { dropboxProvider } from './dropbox.ts';
 import { googleProvider } from './google.ts';
 import type { OAuthClient, OAuthProvider } from './oauth.ts';
+import { onedriveProvider } from './onedrive.ts';
 import { sameOriginPath } from './return-path.ts';
 import { importCookieKey, seal, unseal } from './seal.ts';
 
@@ -47,6 +48,7 @@ function callbackUri(origin: string, provider: ProviderId): string {
 const providers = {
   google: { clientId: 'googleClientId', clientSecret: 'googleClientSecret', create: googleProvider },
   dropbox: { clientId: 'dropboxClientId', clientSecret: 'dropboxClientSecret', create: dropboxProvider },
+  onedrive: { clientId: 'onedriveClientId', clientSecret: 'onedriveClientSecret', create: onedriveProvider },
 } as const satisfies Record<string, { clientId: keyof Config; clientSecret: keyof Config; create(client: OAuthClient): OAuthProvider }>;
 
 type ProviderId = keyof typeof providers;
@@ -138,7 +140,7 @@ function app(config: Config) {
       const result = await provider.refresh(signIn.refreshToken);
       if (result.kind === 'revoked') return c.json({ error: 'reconnect' }, 401);
       if (result.kind === 'unavailable') return c.json({ error: 'network' }, 502);
-      await keepSignIn(c, signIn);
+      await keepSignIn(c, { ...signIn, refreshToken: result.refreshToken ?? signIn.refreshToken });
       return c.json({ accessToken: result.accessToken, expiresAt: Date.now() + result.expiresInSeconds * 1000 });
     })
     .post(`${authPath}/signout`, async (c) => {

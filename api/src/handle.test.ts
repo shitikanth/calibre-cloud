@@ -10,6 +10,8 @@ const config: Config = {
   googleClientSecret: 'client-secret',
   dropboxClientId: 'dropbox-app-key',
   dropboxClientSecret: 'dropbox-app-secret',
+  onedriveClientId: 'onedrive-client-id',
+  onedriveClientSecret: 'onedrive-client-secret',
   cookieKey: btoa(String.fromCharCode(...new Uint8Array(32).fill(7))),
 };
 
@@ -59,8 +61,9 @@ function fakeProvider(reply: ProviderReply) {
 
 const tokenEndpoint = 'https://oauth2.googleapis.com/token';
 const dropboxTokenEndpoint = 'https://api.dropboxapi.com/oauth2/token';
+const microsoftTokenEndpoint = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
 
-type Provider = 'google' | 'dropbox';
+type Provider = 'google' | 'dropbox' | 'onedrive';
 
 function cookieHeader(...cookies: (SetCookie | undefined)[]): string {
   return cookies.flatMap((c) => (c ? [`${c.name}=${c.value}`] : [])).join('; ');
@@ -248,6 +251,94 @@ describe('GET /api/auth/google/callback', () => {
 
     expect(response.headers.get('location')).toBe(`${origin}/books/1#signin-error=failed`);
     expect(setCookies(response).map((c) => c.name)).toEqual(['signin_state']);
+  });
+});
+
+describe('GET /api/auth/onedrive/start', () => {
+  test('redirects to Microsoft for a read-only files grant with a refresh token, on the common tenant', async () => {
+    const response = await handle(new Request(`${origin}/api/auth/onedrive/start?return=/books/1`), config);
+
+    expect(response.status).toBe(302);
+    const location = new URL(response.headers.get('location')!);
+    expect(location.origin + location.pathname).toBe('https://login.microsoftonline.com/common/oauth2/v2.0/authorize');
+    expect(Object.fromEntries(location.searchParams)).toEqual({
+      client_id: 'onedrive-client-id',
+      redirect_uri: `${origin}/api/auth/onedrive/callback`,
+      response_type: 'code',
+      response_mode: 'query',
+      scope: 'Files.Read offline_access',
+      state: expect.stringMatching(/^[\w-]{20,}$/),
+    });
+  });
+});
+
+describe('GET /api/auth/onedrive/callback', () => {
+  test('exchanges the code at Microsoft and keeps the refresh token in the sign-in cookie', async () => {
+    const microsoft = fakeProvider(() =>
+      Response.json({ access_token: 'access-1', expires_in: 3599, token_type: 'Bearer', scope: 'Files.Read', refresh_token: 'ms-refresh-1' }),
+    );
+    const { state, stateCookie } = await startSignIn('/connect/onedrive', 'onedrive');
+
+    const response = await handle(callbackRequest(`state=${state}&code=the-code`, cookieHeader(stateCookie), 'onedrive'), microsoft.config);
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get('location')).toBe(`${origin}/connect/onedrive`);
+    expect(microsoft.requests).toEqual([
+      {
+        url: microsoftTokenEndpoint,
+        form: {
+          code: 'the-code',
+          client_id: 'onedrive-client-id',
+          client_secret: 'onedrive-client-secret',
+          redirect_uri: `${origin}/api/auth/onedrive/callback`,
+          grant_type: 'authorization_code',
+        },
+      },
+    ]);
+    const cookie = setCookies(response).find((c) => c.name === 'signin');
+    expect(cookie?.value).not.toContain('ms-refresh-1');
+  });
+});
+
+describe('POST /api/auth/refresh for a OneDrive sign-in', () => {
+  test('refreshes at Microsoft and keeps the new refresh token Microsoft hands back', async () => {
+    const microsoft = fakeProvider(({ form }) =>
+      Response.json({ access_token: `access-for-${form.refresh_token}`, expires_in: 3599, refresh_token: `${form.refresh_token}-next` }),
+    );
+
+    const first = await handle(post('/api/auth/refresh', cookieHeader(await signIn('ms-refresh-1', 'onedrive'))), microsoft.config);
+    const renewed = setCookies(first).find((c) => c.name === 'signin');
+    const second = await handle(post('/api/auth/refresh', cookieHeader(renewed)), microsoft.config);
+
+    expect(first.status).toBe(200);
+    expect(await second.json()).toMatchObject({ accessToken: 'access-for-ms-refresh-1-next' });
+    expect(microsoft.requests.map(({ url, form }) => [url, form.refresh_token])).toEqual([
+      [microsoftTokenEndpoint, 'ms-refresh-1'],
+      [microsoftTokenEndpoint, 'ms-refresh-1-next'],
+    ]);
+  });
+
+  test('asks the user to reconnect when Microsoft no longer honours the grant', async () => {
+    const microsoft = fakeProvider(() =>
+      Response.json({ error: 'invalid_grant', error_description: 'AADSTS70000: The user could not be authenticated as the grant is expired.' }, { status: 400 }),
+    );
+
+    const response = await handle(post('/api/auth/refresh', cookieHeader(await signIn('r', 'onedrive'))), microsoft.config);
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: 'reconnect' });
+  });
+});
+
+describe('POST /api/auth/signout for a OneDrive sign-in', () => {
+  test('clears the sign-in cookie without calling Microsoft, which has no way to revoke one app’s grant', async () => {
+    const microsoft = fakeProvider(() => new Response(null, { status: 200 }));
+
+    const response = await handle(post('/api/auth/signout', cookieHeader(await signIn('ms-refresh-1', 'onedrive'))), microsoft.config);
+
+    expect(response.status).toBe(204);
+    expect(microsoft.requests).toEqual([]);
+    expect(setCookies(response).find((c) => c.name === 'signin')).toMatchObject({ value: '', attributes: { 'max-age': '0' } });
   });
 });
 
@@ -539,7 +630,15 @@ describe('cross-site POSTs', () => {
 });
 
 describe('missing configuration', () => {
-  const notConfigured = { googleClientId: undefined, googleClientSecret: '', dropboxClientId: undefined, dropboxClientSecret: undefined, cookieKey: undefined };
+  const notConfigured = {
+    googleClientId: undefined,
+    googleClientSecret: '',
+    dropboxClientId: undefined,
+    dropboxClientSecret: undefined,
+    onedriveClientId: undefined,
+    onedriveClientSecret: undefined,
+    cookieKey: undefined,
+  };
 
   test.each([
     ['GET /api/auth/google/start', () => new Request(`${origin}/api/auth/google/start?return=%2Fconnect%2Fgoogle`), '/connect/google'],

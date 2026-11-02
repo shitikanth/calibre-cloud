@@ -16,6 +16,7 @@ function startRoute(authorizationUrl: string, provider: string): Route {
 const healthy: Record<string, Route> = {
   'GET /api/auth/google/start?return=%2F': startRoute('https://accounts.google.com/o/oauth2/v2/auth', 'google'),
   'GET /api/auth/dropbox/start?return=%2F': startRoute('https://www.dropbox.com/oauth2/authorize', 'dropbox'),
+  'GET /api/auth/onedrive/start?return=%2F': startRoute('https://login.microsoftonline.com/common/oauth2/v2.0/authorize', 'onedrive'),
   'POST /api/auth/refresh': (req, res, origin) => {
     if (req.headers.origin !== origin || req.headers.cookie) res.writeHead(403).end();
     else res.writeHead(401, { 'content-type': 'application/json' }).end('{"error":"reconnect"}');
@@ -40,7 +41,7 @@ afterAll(() => {
   server.close();
 });
 
-test('passes when sign-in redirects to Google and Dropbox and refresh without a sign-in asks to reconnect', async () => {
+test('passes when sign-in redirects to Google, Dropbox, and Microsoft and refresh without a sign-in asks to reconnect', async () => {
   routes = healthy;
   expect(await checkAuthRoutes(origin)).toEqual([]);
 });
@@ -50,6 +51,7 @@ test('reports a start route that the SPA fallback answers instead of the Worker'
   expect(await checkAuthRoutes(origin)).toEqual([
     'GET /api/auth/google/start: HTTP 200, expected a 302 to Google',
     'GET /api/auth/dropbox/start: HTTP 200, expected a 302 to Dropbox',
+    'GET /api/auth/onedrive/start: HTTP 200, expected a 302 to Microsoft',
   ]);
 });
 
