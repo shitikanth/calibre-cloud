@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { toBase64Url } from './base64url.ts';
+import { importCookieKey, seal } from './seal.ts';
 import { handle, type Config } from './index.ts';
 
 const origin = 'https://app.example';
@@ -345,6 +346,17 @@ describe('POST /api/auth/refresh', () => {
     expect(google.requests.map((r) => r.form.refresh_token)).toEqual(['refresh-1', 'refresh-1']);
   });
 
+  test('a sign-in cookie written before Dropbox existed still refreshes at Google', async () => {
+    const key = (await importCookieKey(config.cookieKey!))!;
+    const cookie = `signin=${await seal(key, 'signin', { provider: 'google', refreshToken: 'refresh-old' })}`;
+    const google = fakeProvider(() => Response.json({ access_token: 'access-2', expires_in: 3599 }));
+
+    const response = await handle(post('/api/auth/refresh', cookie), google.config);
+
+    expect(response.status).toBe(200);
+    expect(google.requests.map(({ url, form }) => [url, form.refresh_token])).toEqual([[tokenEndpoint, 'refresh-old']]);
+  });
+
   test.each([
     ['there is no sign-in cookie', () => Promise.resolve('')],
     ['the cookie is garbled', () => Promise.resolve('signin=garbage')],
@@ -394,6 +406,38 @@ describe('POST /api/auth/refresh', () => {
   });
 });
 
+describe('POST /api/auth/refresh for a Dropbox sign-in', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test('refreshes at Dropbox with the Dropbox app credentials', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-02T12:00:00Z'));
+    const dropbox = fakeProvider(() => Response.json({ access_token: 'dropbox-access-2', expires_in: 14400, token_type: 'bearer' }));
+
+    const response = await handle(post('/api/auth/refresh', cookieHeader(await signIn('dropbox-refresh-1', 'dropbox'))), dropbox.config);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ accessToken: 'dropbox-access-2', expiresAt: Date.parse('2026-11-02T16:00:00Z') });
+    expect(dropbox.requests).toEqual([
+      {
+        url: dropboxTokenEndpoint,
+        form: { client_id: 'dropbox-app-key', client_secret: 'dropbox-app-secret', refresh_token: 'dropbox-refresh-1', grant_type: 'refresh_token' },
+      },
+    ]);
+  });
+
+  test('asks the user to reconnect when Dropbox no longer honours the grant', async () => {
+    const dropbox = fakeProvider(() => Response.json({ error: 'invalid_grant', error_description: 'refresh token is invalid or revoked' }, { status: 400 }));
+
+    const response = await handle(post('/api/auth/refresh', cookieHeader(await signIn('r', 'dropbox'))), dropbox.config);
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: 'reconnect' });
+  });
+});
+
 describe('POST /api/auth/signout', () => {
   test('revokes the grant at Google and clears the sign-in cookie', async () => {
     const google = fakeProvider(() => new Response(null, { status: 200 }));
@@ -430,6 +474,47 @@ describe('POST /api/auth/signout', () => {
 
     expect(response.status).toBe(204);
     expect(google.requests).toEqual([]);
+  });
+});
+
+describe('POST /api/auth/signout for a Dropbox sign-in', () => {
+  const revokeEndpoint = 'https://api.dropboxapi.com/2/auth/token/revoke';
+
+  test('revokes the grant at Dropbox with a fresh access token and clears the sign-in cookie', async () => {
+    const dropbox = fakeProvider(({ url }) =>
+      url === dropboxTokenEndpoint ? Response.json({ access_token: 'dropbox-access-2', expires_in: 14400 }) : Response.json(null),
+    );
+
+    const response = await handle(post('/api/auth/signout', cookieHeader(await signIn('dropbox-refresh-1', 'dropbox'))), dropbox.config);
+
+    expect(response.status).toBe(204);
+    expect(dropbox.requests).toEqual([
+      {
+        url: dropboxTokenEndpoint,
+        form: { client_id: 'dropbox-app-key', client_secret: 'dropbox-app-secret', refresh_token: 'dropbox-refresh-1', grant_type: 'refresh_token' },
+      },
+      { url: revokeEndpoint, form: {}, authorization: 'Bearer dropbox-access-2' },
+    ]);
+    expect(setCookies(response).find((c) => c.name === 'signin')).toMatchObject({ value: '', attributes: { 'max-age': '0' } });
+  });
+
+  test.each([
+    ['the refresh is refused', () => Response.json({ error: 'invalid_grant' }, { status: 400 }), [dropboxTokenEndpoint]],
+    ['Dropbox cannot be reached', () => Promise.reject(new TypeError('fetch failed')), [dropboxTokenEndpoint]],
+    [
+      'the revoke fails',
+      ({ url }: ProviderRequest) =>
+        url === dropboxTokenEndpoint ? Response.json({ access_token: 'a', expires_in: 14400 }) : new Response('oops', { status: 500 }),
+      [dropboxTokenEndpoint, revokeEndpoint],
+    ],
+  ])('still clears the sign-in cookie when %s', async (_case, reply: ProviderReply, urls) => {
+    const dropbox = fakeProvider(reply);
+
+    const response = await handle(post('/api/auth/signout', cookieHeader(await signIn('r', 'dropbox'))), dropbox.config);
+
+    expect(response.status).toBe(204);
+    expect(dropbox.requests.map(({ url }) => url)).toEqual(urls);
+    expect(setCookies(response).find((c) => c.name === 'signin')?.attributes['max-age']).toBe('0');
   });
 });
 
@@ -471,13 +556,71 @@ describe('missing configuration', () => {
     ['POST /api/auth/signout', () => post('/api/auth/signout')],
   ] as const;
 
-  test.each(routes)('%s fails with a clear 500 naming what is missing', async (_route, request) => {
+  test.each(routes)('%s fails with a clear 500 naming the missing cookie key', async (_route, request) => {
     const response = await handle(request(), notConfigured);
 
     expect(response.status).toBe(500);
-    expect(await response.json()).toEqual({
-      error: 'not-configured',
-      missing: ['googleClientId', 'googleClientSecret', 'cookieKey'],
+    expect(await response.json()).toEqual({ error: 'not-configured', missing: ['cookieKey'] });
+  });
+
+  describe.each([
+    ['Dropbox', 'dropbox', 'google', { dropboxClientId: undefined, dropboxClientSecret: '' }, ['dropboxClientId', 'dropboxClientSecret']],
+    ['Google', 'google', 'dropbox', { googleClientId: 'client-id', googleClientSecret: undefined }, ['googleClientSecret']],
+  ] as const)('without %s credentials', (_name, missingProvider, otherProvider, credentials, missing) => {
+    const partial = (fetch?: typeof globalThis.fetch): Config => ({ ...config, ...credentials, ...(fetch ? { fetch } : {}) });
+
+    test(`GET /api/auth/${missingProvider}/start sends the browser back with a sign-in error`, async () => {
+      const response = await handle(new Request(`${origin}/api/auth/${missingProvider}/start?return=%2Fconnect`), partial());
+
+      expect(response.headers.get('location')).toBe(`${origin}/connect#signin-error=failed`);
+      expect(setCookies(response)).toEqual([]);
+    });
+
+    test(`${otherProvider} sign-in still starts, finishes, and refreshes`, async () => {
+      const other = fakeProvider(() => Response.json({ access_token: 'a', expires_in: 3599, refresh_token: 'r' }));
+      const start = await handle(new Request(`${origin}/api/auth/${otherProvider}/start`), partial());
+      const state = new URL(start.headers.get('location')!).searchParams.get('state')!;
+      const callback = await handle(
+        callbackRequest(`state=${state}&code=c`, cookieHeader(setCookies(start)[0]), otherProvider),
+        partial(other.config.fetch),
+      );
+
+      const refresh = await handle(
+        post('/api/auth/refresh', cookieHeader(setCookies(callback).find((c) => c.name === 'signin'))),
+        partial(other.config.fetch),
+      );
+
+      expect(start.status).toBe(302);
+      expect(callback.headers.get('location')).toBe(`${origin}/`);
+      expect(refresh.status).toBe(200);
+    });
+
+    test(`refreshing a ${missingProvider} sign-in fails with a 500 naming the missing credentials`, async () => {
+      const cookie = cookieHeader(await signIn('r', missingProvider));
+      const fake = fakeProvider(() => Response.json({ access_token: 'a', expires_in: 3599 }));
+
+      const response = await handle(post('/api/auth/refresh', cookie), partial(fake.config.fetch));
+
+      expect(response.status).toBe(500);
+      expect(await response.json()).toEqual({ error: 'not-configured', missing });
+      expect(fake.requests).toEqual([]);
+    });
+
+    test(`signing out of a ${missingProvider} sign-in still clears the cookie`, async () => {
+      const cookie = cookieHeader(await signIn('r', missingProvider));
+      const fake = fakeProvider(() => new Response(null, { status: 200 }));
+
+      const response = await handle(post('/api/auth/signout', cookie), partial(fake.config.fetch));
+
+      expect(response.status).toBe(204);
+      expect(setCookies(response).find((c) => c.name === 'signin')?.attributes['max-age']).toBe('0');
+      expect(fake.requests).toEqual([]);
+    });
+
+    test('refresh without a sign-in still asks the user to reconnect', async () => {
+      const response = await handle(post('/api/auth/refresh'), partial());
+
+      expect(response.status).toBe(401);
     });
   });
 

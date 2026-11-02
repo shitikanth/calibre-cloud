@@ -2,6 +2,7 @@ import { exchangeCode, refreshAccessToken, type OAuthClient, type SignInProvider
 
 const authorizationEndpoint = 'https://www.dropbox.com/oauth2/authorize';
 const tokenEndpoint = 'https://api.dropboxapi.com/oauth2/token';
+const revokeEndpoint = 'https://api.dropboxapi.com/2/auth/token/revoke';
 const readOnlyScopes = 'files.metadata.read files.content.read';
 
 export function dropboxProvider(client: OAuthClient): SignInProvider {
@@ -20,6 +21,14 @@ export function dropboxProvider(client: OAuthClient): SignInProvider {
     },
     exchangeCode: (code, redirectUri) => exchangeCode(client, tokenEndpoint, code, redirectUri),
     refresh: (refreshToken) => refreshAccessToken(client, tokenEndpoint, refreshToken),
-    async revoke() {},
+    async revoke(refreshToken) {
+      const refreshed = await refreshAccessToken(client, tokenEndpoint, refreshToken);
+      if (refreshed.kind !== 'ok') return;
+      try {
+        await client.fetch(revokeEndpoint, { method: 'POST', headers: { authorization: `Bearer ${refreshed.accessToken}` } });
+      } catch {
+        return;
+      }
+    },
   };
 }
