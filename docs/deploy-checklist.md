@@ -38,6 +38,8 @@ GitHub → Settings → Branches (or Rules → Rulesets) → `main`.
 - [ ] Open `https://calibre-cloud.<your-subdomain>.workers.dev/` and a deep link such as `/smoke/deep-link`. Both should load the app.
 - [ ] Open a test PR and check that Workers Builds comments with a preview URL.
 
+The Worker's logs, including every `console.error` from the auth routes, are kept for 3 days on the Free plan. Find them on the `calibre-cloud` Worker's Logs tab in the Cloudflare dashboard. `"observability": { "enabled": true }` in `wrangler.jsonc` turns them on, and every deploy reapplies it. Without it, the only way to see a log is a live `wrangler tail`.
+
 ## 4. Google sign-in
 
 The Worker runs the auth routes under `/api/auth/` (the only paths that reach it before the static assets; see `run_worker_first` in `wrangler.jsonc`). It reads three values, none of them committed:
