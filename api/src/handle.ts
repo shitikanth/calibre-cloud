@@ -2,7 +2,9 @@ import { Hono, type Context } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { toBase64Url } from './base64url.ts';
 import type { Config } from './config.ts';
-import { exchangeCode, googleAuthorizationUrl, refreshAccessToken, revoke, type GoogleClient } from './google.ts';
+import { dropboxProvider } from './dropbox.ts';
+import { googleProvider } from './google.ts';
+import type { OAuthClient, SignInProvider } from './oauth.ts';
 import { sameOriginPath } from './return-path.ts';
 import { importCookieKey, seal, unseal } from './seal.ts';
 
@@ -16,10 +18,11 @@ const signInCookieOptions = { path: authPath, httpOnly: true, secure: true, same
 interface SignInState {
   state: string;
   returnTo: string;
+  provider: ProviderId;
 }
 
 interface SignIn {
-  provider: 'google';
+  provider: ProviderId;
   refreshToken: string;
 }
 
@@ -30,19 +33,36 @@ function isSignIn(value: unknown): value is SignIn {
 
 function isSignInState(value: unknown): value is SignInState {
   const candidate = value as Partial<SignInState> | undefined;
-  return typeof candidate?.state === 'string' && typeof candidate.returnTo === 'string';
+  return typeof candidate?.state === 'string' && typeof candidate.returnTo === 'string' && typeof candidate.provider === 'string';
 }
 
 function requestOrigin(c: Context): string {
   return new URL(c.req.url).origin;
 }
 
-function googleCallbackUri(origin: string): string {
-  return `${origin}${authPath}/google/callback`;
+function callbackUri(origin: string, provider: ProviderId): string {
+  return `${origin}${authPath}/${provider}/callback`;
+}
+
+const providers = {
+  google: { clientId: 'googleClientId', clientSecret: 'googleClientSecret', create: googleProvider },
+  dropbox: { clientId: 'dropboxClientId', clientSecret: 'dropboxClientSecret', create: dropboxProvider },
+} as const satisfies Record<string, { clientId: keyof Config; clientSecret: keyof Config; create(client: OAuthClient): SignInProvider }>;
+
+type ProviderId = keyof typeof providers;
+
+const providerParam = `:provider{${Object.keys(providers).join('|')}}`;
+
+function configuredProvider(config: Config, id: ProviderId): SignInProvider | { readonly missing: string[] } {
+  const { clientId: idName, clientSecret: secretName, create } = providers[id];
+  const clientId = config[idName];
+  const clientSecret = config[secretName];
+  if (!clientId || !clientSecret) return { missing: [idName, secretName].filter((name) => !config[name]) };
+  return create({ clientId, clientSecret, fetch: config.fetch ?? ((input, init) => fetch(input, init)) });
 }
 
 interface ReadyConfig {
-  readonly google: GoogleClient;
+  readonly google: SignInProvider;
   readonly key: CryptoKey;
 }
 
@@ -56,11 +76,7 @@ async function ready(config: Config): Promise<ReadyConfig | { readonly missing: 
     return { missing: Object.entries(present).flatMap(([name, value]) => (value ? [] : [name])) };
   }
   return {
-    google: {
-      clientId,
-      clientSecret,
-      fetch: config.fetch ?? ((input, init) => fetch(input, init)),
-    },
+    google: googleProvider({ clientId, clientSecret, fetch: config.fetch ?? ((input, init) => fetch(input, init)) }),
     key,
   };
 }
@@ -95,36 +111,45 @@ function app(config: Config) {
       c.set('key', prepared.key);
       await next();
     })
-    .get(`${authPath}/google/start`, async (c) => {
+    .get(`${authPath}/${providerParam}/start`, async (c) => {
+      const id = c.req.param('provider') as ProviderId;
+      const provider = configuredProvider(config, id);
       const origin = requestOrigin(c);
       const returnTo = sameOriginPath(origin, c.req.query('return'));
+      if ('missing' in provider) {
+        console.error('Sign-in is not configured; missing', provider.missing);
+        return signInError(c, returnTo ?? '/');
+      }
       if (returnTo === undefined) return signInError(c, '/');
       const state = toBase64Url(crypto.getRandomValues(new Uint8Array(32)));
-      const sealed = await seal(c.var.key, stateCookie, { state, returnTo } satisfies SignInState);
+      const sealed = await seal(c.var.key, stateCookie, { state, returnTo, provider: id } satisfies SignInState);
       setCookie(c, stateCookie, sealed, { ...stateCookieOptions, maxAge: 600 });
-      return c.redirect(googleAuthorizationUrl(c.var.google.clientId, googleCallbackUri(origin), state), 302);
+      return c.redirect(provider.authorizationUrl(callbackUri(origin, id), state), 302);
     })
-    .get(`${authPath}/google/callback`, async (c) => {
+    .get(`${authPath}/${providerParam}/callback`, async (c) => {
+      const id = c.req.param('provider') as ProviderId;
       const origin = requestOrigin(c);
       const sealedState = getCookie(c, stateCookie);
       deleteCookie(c, stateCookie, stateCookieOptions);
       const saved = sealedState === undefined ? undefined : await unseal(c.var.key, stateCookie, sealedState);
       const returnTo = (isSignInState(saved) && sameOriginPath(origin, saved.returnTo)) || '/';
       const fail = (reason: 'denied' | 'failed') => signInError(c, returnTo, reason);
-      if (!isSignInState(saved) || saved.state !== c.req.query('state')) return fail('failed');
+      if (!isSignInState(saved) || saved.provider !== id || saved.state !== c.req.query('state')) return fail('failed');
       const error = c.req.query('error');
       if (error !== undefined) return fail(error === 'access_denied' ? 'denied' : 'failed');
       const code = c.req.query('code');
       if (code === undefined) return fail('failed');
-      const refreshToken = await exchangeCode(c.var.google, code, googleCallbackUri(origin));
+      const provider = configuredProvider(config, id);
+      if ('missing' in provider) return fail('failed');
+      const refreshToken = await provider.exchangeCode(code, callbackUri(origin, id));
       if (refreshToken === undefined) return fail('failed');
-      await keepSignIn(c, { provider: 'google', refreshToken });
+      await keepSignIn(c, { provider: id, refreshToken });
       return c.redirect(`${origin}${returnTo}`, 302);
     })
     .post(`${authPath}/refresh`, async (c) => {
       const signIn = await savedSignIn(c);
       if (signIn === undefined) return c.json({ error: 'reconnect' }, 401);
-      const result = await refreshAccessToken(c.var.google, signIn.refreshToken);
+      const result = await c.var.google.refresh(signIn.refreshToken);
       if (result.kind === 'revoked') return c.json({ error: 'reconnect' }, 401);
       if (result.kind === 'unavailable') return c.json({ error: 'network' }, 502);
       await keepSignIn(c, signIn);
@@ -132,7 +157,7 @@ function app(config: Config) {
     })
     .post(`${authPath}/signout`, async (c) => {
       const signIn = await savedSignIn(c);
-      if (signIn !== undefined) await revoke(c.var.google, signIn.refreshToken);
+      if (signIn !== undefined) await c.var.google.revoke(signIn.refreshToken);
       deleteCookie(c, signInCookie, signInCookieOptions);
       return c.body(null, 204);
     });
