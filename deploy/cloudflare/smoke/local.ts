@@ -7,6 +7,8 @@ const origin = `http://127.0.0.1:${port}`;
 const dummySecrets = {
   GOOGLE_CLIENT_ID: 'smoke-client-id',
   GOOGLE_CLIENT_SECRET: 'smoke-client-secret',
+  DROPBOX_APP_KEY: 'smoke-app-key',
+  DROPBOX_APP_SECRET: 'smoke-app-secret',
   AUTH_COOKIE_KEY: btoa(String.fromCharCode(...new Uint8Array(32))),
 };
 const vars = Object.entries(dummySecrets).flatMap(([name, value]) => ['--var', `${name}:${value}`]);
