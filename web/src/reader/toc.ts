@@ -1,4 +1,5 @@
 import type { TocEntry } from './renderer.ts';
+import type { SwipeDirection } from './swipe.ts';
 
 export function entryStartingAt(toc: TocEntry[], position: number): TocEntry | undefined {
   let current: { entry: TocEntry; start: number } | undefined;
@@ -17,7 +18,7 @@ function flatten(entries: TocEntry[]): TocEntry[] {
   return entries.flatMap((entry) => [entry, ...flatten(entry.children ?? [])]);
 }
 
-export function adjacentEntry(toc: TocEntry[], current: TocEntry | undefined, direction: 'next' | 'previous'): TocEntry | undefined {
+export function adjacentEntry(toc: TocEntry[], current: TocEntry | undefined, direction: SwipeDirection): TocEntry | undefined {
   const entries = flatten(toc);
   const step = direction === 'next' ? 1 : -1;
   for (let index = (current ? entries.indexOf(current) : -1) + step; index >= 0 && index < entries.length; index += step) {

@@ -161,6 +161,21 @@ test('/ with search already open moves focus back to its input', async () => {
   await expect.element(input).toHaveValue('line');
 });
 
+test('typing in the search-in-book box types every key and fires no shortcut', async () => {
+  const { fake, screen } = await openReader();
+  await userEvent.keyboard('/');
+  const input = screen.getByRole('searchbox', { name: 'Search in book' });
+  await expect.element(input).toHaveFocus();
+
+  await userEvent.keyboard('t[[] nN/?');
+  await userEvent.keyboard('{Backspace}');
+
+  await expect.element(input).toHaveValue('t[] nN/');
+  await expect.element(screen.getByRole('searchbox', { name: 'Search in book' })).toHaveFocus();
+  expect(screen.getByRole('dialog', { name: 'Keyboard shortcuts' }).query()).toBeNull();
+  expect(fake.latest.calls.filter(({ op }) => op === 'goTo' || op === 'next' || op === 'previous')).toEqual([]);
+});
+
 test('t does nothing while search is open', async () => {
   const { screen } = await openReader();
   await userEvent.keyboard('/');

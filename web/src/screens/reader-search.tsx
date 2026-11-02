@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { BookRenderer, BookSearch, SearchResult, TocEntry } from '../reader/renderer.ts';
+import type { SwipeDirection } from '../reader/swipe.ts';
 import { panelClass, ReaderPopover, scrollToCurrent, type PopoverPlacement, type PopoverToggle } from './reader-popover.tsx';
 
 const SETTLE_MS = 250;
@@ -70,7 +71,7 @@ export function useBookSearch(search: BookSearch | undefined): BookSearchControl
   return { state, change, pick };
 }
 
-export function adjacentHit({ results, picked }: SearchState, direction: 'next' | 'previous'): SearchResult | undefined {
+export function adjacentHit({ results, picked }: SearchState, direction: SwipeDirection): SearchResult | undefined {
   const at = picked ? results.indexOf(picked) : -1;
   if (direction === 'next') return results[at + 1];
   return at === -1 ? results.at(-1) : results[at - 1];

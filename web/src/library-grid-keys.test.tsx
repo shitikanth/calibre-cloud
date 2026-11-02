@@ -93,6 +93,19 @@ test('↓ steps a full row while the pointer rests on a lifted tile', async () =
   expect(document.activeElement).toBe(below);
 });
 
+test('search results move with the arrows like the grid', async () => {
+  const { screen } = await openLibrary(12);
+  await userEvent.type(screen.getByRole('searchbox', { name: 'Search books' }), 'Book 1');
+  await expect.poll(() => gridTiles(screen).length).toBe(4);
+  const tiles = gridTiles(screen);
+  expect(tiles.filter((tile) => tile.tabIndex === 0)).toEqual([tiles[0]]);
+  tiles[0]!.focus();
+
+  await userEvent.keyboard('{ArrowRight}');
+
+  expect(document.activeElement).toBe(tiles[1]);
+});
+
 test('the grid is one Tab stop that comes back to the last tile focused', async () => {
   const { screen } = await openLibrary(5);
   const tiles = gridTiles(screen);
