@@ -55,7 +55,7 @@ Until all three are set, "Sign in with Google" comes straight back to the app wi
   - `https://slice-google-drive-calibre-cloud.golu3990.workers.dev/api/auth/google/callback`
   - `http://localhost:8787/api/auth/google/callback`
 - [ ] Set the three values on production, from `deploy/cloudflare/`: `wrangler secret put GOOGLE_CLIENT_ID`, then the same for `GOOGLE_CLIENT_SECRET` and `AUTH_COOKIE_KEY`. Set the client ID as a secret too, not a plain variable: `wrangler deploy` replaces plain variables set in the dashboard with the ones in `wrangler.jsonc`, which has none.
-- [ ] Set them for Previews: `wrangler preview base-config secret put GOOGLE_CLIENT_ID`, and the same for the other two. Previews deployed afterwards get them, so push to the slice branch to redeploy its preview.
+- [ ] Set them for Previews: `wrangler preview base-config secret put GOOGLE_CLIENT_ID`, and the same for the other two. The base config only seeds Previews created afterwards. A Preview that already exists keeps its own secrets, even when it redeploys, so also set them on it: `wrangler preview secret put GOOGLE_CLIENT_ID --name <preview>`, where the name is the branch with `/` as `-`, e.g. `slice-dropbox`.
 - [ ] Check: `pnpm --filter @calibre-cloud/deploy-cloudflare run smoke:deployed <origin>` now passes its auth checks (`/api/auth/google/start` redirects to Google).
 
 For `wrangler dev`, put the same three values in `deploy/cloudflare/.dev.vars` (gitignored), one `NAME=value` per line, and open the app at `http://localhost:8787`, not `127.0.0.1`: the callback URI is built from the address in the browser.
@@ -86,7 +86,7 @@ Until both are set, "Sign in with Dropbox" comes back with "Couldn’t sign in",
   - `https://slice-dropbox-calibre-cloud.golu3990.workers.dev/api/auth/dropbox/callback`
   - `http://localhost:8787/api/auth/dropbox/callback`
 - [ ] Set the two values on production, from `deploy/cloudflare/`: `wrangler secret put DROPBOX_APP_KEY`, then `DROPBOX_APP_SECRET`.
-- [ ] Set them for Previews: `wrangler preview base-config secret put DROPBOX_APP_KEY`, then `DROPBOX_APP_SECRET`, and push to the slice branch to redeploy its preview.
+- [ ] Set them for Previews: `wrangler preview base-config secret put DROPBOX_APP_KEY`, then `DROPBOX_APP_SECRET`. For a Preview that already exists, also `wrangler preview secret put DROPBOX_APP_KEY --name <preview>`, and the same for the secret (see section 4).
 - [ ] Check: `smoke:deployed <origin>` passes its auth checks (`/api/auth/dropbox/start` redirects to Dropbox).
 
 For `wrangler dev`, add both to `deploy/cloudflare/.dev.vars`.
