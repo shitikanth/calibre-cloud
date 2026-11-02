@@ -8,7 +8,7 @@ const zoomRange = { min: 0.25, max: 4 };
 const stepButtonClass =
   'min-h-11 min-w-11 rounded border border-(--reader-line) px-3 py-1 text-sm hover:bg-(--reader-hover) disabled:opacity-50 disabled:hover:bg-transparent';
 
-export type SettingsToolProps = {
+export type SettingsToolProps = Readonly<{
   renderer: BookRenderer;
   settings: ReaderSettings;
   onSettingsChange: (settings: ReaderSettings) => void;
@@ -16,7 +16,7 @@ export type SettingsToolProps = {
   onZoomChange: (zoom: number) => void;
   placement: PopoverPlacement;
   toggle: PopoverToggle;
-};
+}>;
 
 export function SettingsTool({ renderer, settings, onSettingsChange, zoom, onZoomChange, placement, toggle }: SettingsToolProps) {
   const icon = (

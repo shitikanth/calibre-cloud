@@ -21,7 +21,7 @@ export const tileColumnsClass = 'grid-cols-[repeat(auto-fill,minmax(min(9rem,cal
 export const tileLinkClass =
   'block rounded transition-transform hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 motion-reduce:transition-none';
 
-function BookTile({ book, roving }: { book: BookSummary; roving: RovingTiles }) {
+function BookTile({ book, roving }: Readonly<{ book: BookSummary; roving: RovingTiles }>) {
   return (
     <Link to="/books/$bookId" params={{ bookId: String(book.id) }} className={tileLinkClass} {...roving.tileProps(String(book.id))}>
       <BookCover book={book} loading="lazy" />

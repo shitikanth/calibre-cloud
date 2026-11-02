@@ -37,7 +37,7 @@ export function useShowShortcuts(): (() => void) | undefined {
   return useContext(ShortcutsHelpContext);
 }
 
-export function ShortcutsHelp({ children }: { children: ReactNode }) {
+export function ShortcutsHelp({ children }: Readonly<{ children: ReactNode }>) {
   const [returnFocus, setReturnFocus] = useState<HTMLElement | undefined>(undefined);
   const [open, setOpen] = useState(false);
 
@@ -53,14 +53,19 @@ export function ShortcutsHelp({ children }: { children: ReactNode }) {
   }, [open, returnFocus]);
 
   useEffect(() => {
-    const showOnQuestionMark = (event: KeyboardEvent) => {
-      if (event.key !== '?' || event.defaultPrevented || !takesShortcut(event)) return;
-      event.preventDefault();
-      show();
+    const toggleOnQuestionMark = (event: KeyboardEvent) => {
+      if (event.key !== '?') return;
+      if (open && !withBrowserModifier(event)) {
+        event.preventDefault();
+        close();
+      } else if (!open && takesShortcut(event)) {
+        event.preventDefault();
+        show();
+      }
     };
-    window.addEventListener('keydown', showOnQuestionMark);
-    return () => window.removeEventListener('keydown', showOnQuestionMark);
-  }, [show]);
+    window.addEventListener('keydown', toggleOnQuestionMark);
+    return () => window.removeEventListener('keydown', toggleOnQuestionMark);
+  }, [open, show, close]);
 
   return (
     <ShortcutsHelpContext.Provider value={show}>
@@ -73,7 +78,7 @@ export function ShortcutsHelp({ children }: { children: ReactNode }) {
 const keyClass =
   'inline-flex h-6 min-w-6 items-center justify-center rounded border border-neutral-300 bg-neutral-50 px-1.5 font-sans text-xs font-medium text-neutral-700 shadow-[inset_0_-1px_0_var(--color-neutral-300)]';
 
-function Keys({ keys }: { keys: string[][] }) {
+function Keys({ keys }: Readonly<{ keys: string[][] }>) {
   return (
     <span className="flex shrink-0 items-center gap-2">
       {keys.map((combo) => (
@@ -90,13 +95,20 @@ function Keys({ keys }: { keys: string[][] }) {
   );
 }
 
-function ShortcutsDialog({ onClose }: { onClose: () => void }) {
+function ShortcutsDialog({ onClose }: Readonly<{ onClose: () => void }>) {
   const dialog = useRef<HTMLDialogElement>(null);
   const titleId = useId();
 
   useEffect(() => {
-    if (!dialog.current?.open) dialog.current?.showModal();
-    dialog.current?.focus();
+    const element = dialog.current;
+    if (!element) return;
+    if (!element.open) element.showModal();
+    element.focus();
+    const closeOnBackdrop = (event: MouseEvent) => {
+      if (event.target === element) element.close();
+    };
+    element.addEventListener('click', closeOnBackdrop);
+    return () => element.removeEventListener('click', closeOnBackdrop);
   }, []);
 
   const close = () => dialog.current?.close();
@@ -107,14 +119,6 @@ function ShortcutsDialog({ onClose }: { onClose: () => void }) {
       tabIndex={-1}
       aria-labelledby={titleId}
       onClose={onClose}
-      onClick={(event) => {
-        if (event.target === event.currentTarget) close();
-      }}
-      onKeyDown={(event) => {
-        if (event.key !== '?' || withBrowserModifier(event.nativeEvent)) return;
-        event.preventDefault();
-        close();
-      }}
       className="m-auto max-h-[calc(100dvh-2rem)] w-[min(46rem,calc(100vw-2rem))] overflow-y-auto rounded-lg border border-neutral-200 bg-white p-0 text-neutral-900 shadow-xl outline-none backdrop:bg-black/40"
     >
       <div className="flex items-center justify-between border-b border-neutral-200 py-2 pr-2 pl-5">

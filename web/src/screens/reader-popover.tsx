@@ -17,29 +17,23 @@ const placements: Record<PopoverPlacement, string> = { below: 'top-full mt-1', a
 
 export type PopoverToggle = { open: boolean; setOpen: Dispatch<SetStateAction<boolean>> };
 
-type ReaderPopoverProps = {
+type ReaderPopoverProps = Readonly<{
   label: string;
   icon: ReactNode;
   placement: PopoverPlacement;
   toggle: PopoverToggle;
   shortcut?: string | undefined;
   children: (close: () => void) => ReactNode;
-};
+}>;
 
 export function ReaderPopover({ label, icon, placement, toggle, shortcut, children }: ReaderPopoverProps) {
   const { open, setOpen } = toggle;
   const root = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
-  useDismiss(open, setOpen, root);
+  useDismiss(open, setOpen, root, button);
 
   return (
-    <div
-      ref={root}
-      className="relative shrink-0"
-      onKeyDown={(event) => {
-        if (event.key === 'Escape' && event.target !== button.current) button.current?.focus();
-      }}
-    >
+    <div ref={root} className="relative shrink-0">
       <button
         ref={button}
         type="button"

@@ -19,13 +19,14 @@ import { ExternalLinkDialog } from './external-link-dialog.tsx';
 import { formatSize } from './format.ts';
 import { ProgressBar } from './progress-bar.tsx';
 import { BackToBookLink, BottomBar, JumpBack, TapZone, TopBar, zoneAt, type ControlsState } from './reader-controls.tsx';
+import { readerKeyAction, type ReaderKeyAction, type ReaderTool } from './reader-keys.ts';
 import type { PopoverToggle } from './reader-popover.tsx';
 import { adjacentHit, SearchTool, useBookSearch, useHighlights } from './reader-search.tsx';
 import { backLabel, whereYouAreLabel, positionLabel, SeekBar } from './reader-seek-bar.tsx';
 import { SettingsTool } from './reader-settings-tool.tsx';
 import { TocTool } from './reader-toc.tsx';
 import { ReconnectLink } from './reconnect-link.tsx';
-import { dialogOpen, isControl, isTyping, withBrowserModifier } from './shortcut-keys.ts';
+import { dialogOpen } from './shortcut-keys.ts';
 import { SignInProblem } from './sign-in-outcome.tsx';
 import { useWide } from './use-wide.ts';
 
@@ -196,7 +197,6 @@ function RendererUnavailable({ book, retry }: { book: BookDetail; retry: () => v
 
 type OpenStatus = 'opening' | 'open' | 'unopenable' | 'renderer-unavailable';
 
-type ReaderTool = 'toc' | 'search' | 'settings';
 
 function toggled(state: ControlsState): ControlsState {
   return state === 'hidden' ? 'pinned' : 'hidden';
@@ -355,48 +355,60 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
 
   useEffect(() => {
     if (!renderer) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (dialogOpen()) return;
-      if (tool) {
-        if (withBrowserModifier(event) || isTyping(event.target)) return;
-        if (event.key === 't' && tool === 'toc') {
-          event.preventDefault();
-          setTool(undefined);
-        } else if (event.key === '/' && tool === 'search') {
-          event.preventDefault();
-          shell.current?.querySelector<HTMLInputElement>('[role="search"] input')?.focus();
-        }
-        return;
-      }
-      if (event.key === 'Escape') setControls('hidden');
-      else if (event.target instanceof HTMLInputElement) return;
-      else if (event.key === 'ArrowRight') turn('next');
-      else if (event.key === 'ArrowLeft') turn('previous');
-      else if (withBrowserModifier(event)) return;
-      else if (event.key === ' ' && !isControl(event.target)) {
-        event.preventDefault();
-        turn(event.shiftKey ? 'previous' : 'next');
-      } else if (event.key === 'PageDown' || event.key === 'PageUp') {
-        event.preventDefault();
-        turn(event.key === 'PageDown' ? 'next' : 'previous');
-      } else if (event.key === 't') {
-        event.preventDefault();
-        openTool('toc');
-      } else if (event.key === '/' && renderer.search) {
-        event.preventDefault();
-        openTool('search');
-      } else if (event.key === '[' || event.key === ']') {
-        const entry = adjacentEntry(renderer.toc, relocation?.tocEntry, event.key === ']' ? 'next' : 'previous');
-        if (entry) void jump({ location: entry.location });
-      } else if (event.key === 'n' || event.key === 'N') {
-        const hit = adjacentHit(searchState, event.key === 'n' ? 'next' : 'previous');
-        if (!hit) return;
+    const goToChapter = (direction: SwipeDirection) => {
+      const entry = adjacentEntry(renderer.toc, relocation?.tocEntry, direction);
+      if (entry) void jump({ location: entry.location });
+      return true;
+    };
+    const stepMatch = (direction: SwipeDirection) => {
+      const hit = adjacentHit(searchState, direction);
+      if (hit) {
         pickHit(hit);
         showHit(renderer, hit, searchState.results);
-      } else if (event.key === 'Backspace' && origin) {
-        event.preventDefault();
-        goBack();
       }
+      return true;
+    };
+    const actions: Record<ReaderKeyAction, () => boolean> = {
+      hideControls: () => {
+        setControls('hidden');
+        return false;
+      },
+      nextPage: () => {
+        turn('next');
+        return true;
+      },
+      previousPage: () => {
+        turn('previous');
+        return true;
+      },
+      toggleContents: () => {
+        if (tool === 'toc') setTool(undefined);
+        else openTool('toc');
+        return true;
+      },
+      openSearch: () => {
+        if (!renderer.search) return false;
+        openTool('search');
+        return true;
+      },
+      focusSearch: () => {
+        shell.current?.querySelector<HTMLInputElement>('[role="search"] input')?.focus();
+        return true;
+      },
+      nextChapter: () => goToChapter('next'),
+      previousChapter: () => goToChapter('previous'),
+      nextMatch: () => stepMatch('next'),
+      previousMatch: () => stepMatch('previous'),
+      goBack: () => {
+        if (!origin) return false;
+        goBack();
+        return true;
+      },
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (dialogOpen()) return;
+      const action = readerKeyAction(event, tool);
+      if (action && actions[action]()) event.preventDefault();
     };
     // Capture: a popover's own Escape handler closes it first otherwise, and this would hide the controls too.
     window.addEventListener('keydown', onKey, true);

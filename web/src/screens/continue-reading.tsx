@@ -41,7 +41,7 @@ function cardKey(entry: PositionEntry): string {
   return `${entry.bookId}/${entry.format}`;
 }
 
-function ContinueCard({ entry, book, roving }: { entry: PositionEntry; book: BookSummary; roving: RovingTiles }) {
+function ContinueCard({ entry, book, roving }: Readonly<{ entry: PositionEntry; book: BookSummary; roving: RovingTiles }>) {
   return (
     <Link
       to="/books/$bookId/read/$format"
