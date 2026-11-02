@@ -14,7 +14,7 @@ export function ConnectScreen({ provider }: { provider?: LinkProvider | undefine
       <div aria-hidden="true" className="fixed inset-0 -z-10 hidden bg-neutral-50 sm:block" />
       <section
         aria-labelledby="connect-title"
-        className="w-full max-w-md bg-white px-2 pt-4 pb-7 text-neutral-900 sm:rounded-xl sm:border sm:border-neutral-200 sm:px-10 sm:pt-11 sm:pb-8"
+        className="w-full max-w-md bg-white px-2 pt-4 pb-7 text-neutral-900 sm:max-w-lg sm:rounded-xl sm:border sm:border-neutral-200 sm:px-10 sm:pt-11 sm:pb-8"
       >
         {provider ? <LinkStep provider={provider} /> : <ChooseProvider />}
       </section>
@@ -32,7 +32,7 @@ function ChooseProvider() {
       </h1>
       <SignInProblem className="mt-4" />
       <DisconnectNotice />
-      <ul className="mt-7 grid grid-cols-[repeat(auto-fill,minmax(112px,1fr))] gap-3">
+      <ul className="mt-7 grid grid-cols-[repeat(auto-fill,minmax(112px,1fr))] gap-3 sm:grid-cols-4">
         {allProviders.map((provider) => (
           <li key={provider.id}>
             <ProviderTile provider={provider} />
