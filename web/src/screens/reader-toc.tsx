@@ -1,13 +1,13 @@
 import { useEffect, useRef } from 'react';
 import type { Jump } from '../reader/jumps.ts';
 import type { BookRenderer, TocEntry } from '../reader/renderer.ts';
-import { panelClass, ReaderPopover, scrollToCurrent, type PopoverPlacement } from './reader-popover.tsx';
+import { panelClass, ReaderPopover, scrollToCurrent, type PopoverPlacement, type PopoverToggle } from './reader-popover.tsx';
 
-type TocToolProps = { renderer: BookRenderer; jump: Jump; current: TocEntry | undefined; placement: PopoverPlacement };
+type TocToolProps = { renderer: BookRenderer; jump: Jump; current: TocEntry | undefined; placement: PopoverPlacement; toggle: PopoverToggle };
 
-export function TocTool({ renderer, jump, current, placement }: TocToolProps) {
+export function TocTool({ renderer, jump, current, placement, toggle }: TocToolProps) {
   return (
-    <ReaderPopover label="Table of contents" icon={<path d="M4 6h16M4 12h16M4 18h10" />} placement={placement}>
+    <ReaderPopover label="Table of contents" icon={<path d="M4 6h16M4 12h16M4 18h10" />} placement={placement} toggle={toggle} shortcut="T">
       {(close) => (
         <TocPanel
           entries={renderer.toc}
@@ -26,6 +26,10 @@ type TocProps = { entries: TocEntry[]; current: TocEntry | undefined; jump: (ent
 
 function TocPanel({ entries, current, jump }: TocProps) {
   const nav = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const entry = nav.current?.querySelector<HTMLElement>('[aria-current="true"]') ?? nav.current?.querySelector<HTMLElement>('button');
+    entry?.focus({ preventScroll: true });
+  }, []);
   useEffect(() => scrollToCurrent(nav.current), [current]);
 
   return (

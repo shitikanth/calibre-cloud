@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { BookRenderer, BookSearch, SearchResult, TocEntry } from '../reader/renderer.ts';
-import { panelClass, ReaderPopover, scrollToCurrent, type PopoverPlacement } from './reader-popover.tsx';
+import { panelClass, ReaderPopover, scrollToCurrent, type PopoverPlacement, type PopoverToggle } from './reader-popover.tsx';
 
 const SETTLE_MS = 250;
 
@@ -103,11 +103,16 @@ export function useHighlights(): Highlights {
   return highlights;
 }
 
-type SearchToolProps = Readonly<{ control: BookSearchControl; placement: PopoverPlacement; onPick: (result: SearchResult) => void }>;
+type SearchToolProps = Readonly<{
+  control: BookSearchControl;
+  placement: PopoverPlacement;
+  toggle: PopoverToggle;
+  onPick: (result: SearchResult) => void;
+}>;
 
-export function SearchTool({ control, placement, onPick }: SearchToolProps) {
+export function SearchTool({ control, placement, toggle, onPick }: SearchToolProps) {
   return (
-    <ReaderPopover label="Search" icon={searchIcon} placement={placement}>
+    <ReaderPopover label="Search" icon={searchIcon} placement={placement} toggle={toggle} shortcut="/">
       {(close) => (
         <SearchPanel
           control={control}

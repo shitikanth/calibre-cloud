@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useRef, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { useDismiss } from './use-dismiss.ts';
 
 export const panelClass =
@@ -15,10 +15,19 @@ export type PopoverPlacement = 'below' | 'above';
 
 const placements: Record<PopoverPlacement, string> = { below: 'top-full mt-1', above: 'bottom-full mb-1' };
 
-type ReaderPopoverProps = { label: string; icon: ReactNode; placement: PopoverPlacement; children: (close: () => void) => ReactNode };
+export type PopoverToggle = { open: boolean; setOpen: Dispatch<SetStateAction<boolean>> };
 
-export function ReaderPopover({ label, icon, placement, children }: ReaderPopoverProps) {
-  const [open, setOpen] = useState(false);
+type ReaderPopoverProps = {
+  label: string;
+  icon: ReactNode;
+  placement: PopoverPlacement;
+  toggle: PopoverToggle;
+  shortcut?: string | undefined;
+  children: (close: () => void) => ReactNode;
+};
+
+export function ReaderPopover({ label, icon, placement, toggle, shortcut, children }: ReaderPopoverProps) {
+  const { open, setOpen } = toggle;
   const root = useRef<HTMLDivElement>(null);
   useDismiss(open, setOpen, root);
 
@@ -28,6 +37,7 @@ export function ReaderPopover({ label, icon, placement, children }: ReaderPopove
         type="button"
         aria-label={label}
         aria-expanded={open}
+        aria-keyshortcuts={shortcut}
         onClick={() => setOpen((wasOpen) => !wasOpen)}
         className="flex min-h-11 min-w-11 items-center justify-center rounded hover:bg-(--reader-hover)"
       >

@@ -74,3 +74,74 @@ test('while the shortcuts are open, the reader keys do nothing', async () => {
   expect(fake.latest.calls.filter(({ op }) => op === 'next')).toEqual([]);
   await expectControls(screen, false);
 });
+
+test('t opens the table of contents with focus on the current chapter, and t again closes it', async () => {
+  const { fake, screen } = await openReader();
+  await fake.latest.goTo('4');
+  const button = screen.getByRole('button', { name: 'Table of contents' });
+  await expect.element(button).toHaveAttribute('aria-keyshortcuts', 'T');
+
+  await userEvent.keyboard('t');
+
+  const toc = screen.getByRole('navigation', { name: 'Table of contents' });
+  await expect.element(toc).toBeVisible();
+  await expectControls(screen, true);
+  await expect.element(toc.getByRole('button', { name: 'Chapter two' })).toHaveFocus();
+
+  await userEvent.keyboard('t');
+
+  await expect.poll(() => toc.query()).toBeNull();
+});
+
+test('Esc closes a table of contents opened with t', async () => {
+  const { screen } = await openReader();
+
+  await userEvent.keyboard('t');
+  await expect.element(screen.getByRole('navigation', { name: 'Table of contents' })).toBeVisible();
+  await userEvent.keyboard('{Escape}');
+
+  await expect.poll(() => screen.getByRole('navigation', { name: 'Table of contents' }).query()).toBeNull();
+});
+
+test('/ opens search in book with its input focused, without typing the /', async () => {
+  const { screen } = await openReader();
+  await expect.element(screen.getByRole('button', { name: 'Search' })).toHaveAttribute('aria-keyshortcuts', '/');
+
+  await userEvent.keyboard('/');
+
+  const input = screen.getByRole('searchbox', { name: 'Search in book' });
+  await expect.element(input).toHaveFocus();
+  await expect.element(input).toHaveValue('');
+  await expectControls(screen, true);
+
+  await userEvent.keyboard('a/b');
+
+  await expect.element(input).toHaveValue('a/b');
+});
+
+test('/ with search already open moves focus back to its input', async () => {
+  const { screen } = await openReader();
+  await userEvent.keyboard('/');
+  await userEvent.keyboard('line');
+  const clear = screen.getByRole('button', { name: 'Clear search' });
+  (clear.element() as HTMLElement).focus();
+
+  await userEvent.keyboard('/');
+
+  const input = screen.getByRole('searchbox', { name: 'Search in book' });
+  await expect.element(input).toHaveFocus();
+  await expect.element(input).toHaveValue('line');
+});
+
+test('t does nothing while search is open', async () => {
+  const { screen } = await openReader();
+  await userEvent.keyboard('/');
+  const input = screen.getByRole('searchbox', { name: 'Search in book' });
+  await expect.element(input).toHaveFocus();
+  (input.element() as HTMLElement).blur();
+
+  await userEvent.keyboard('t');
+
+  await expect.element(input).toBeVisible();
+  expect(screen.getByRole('navigation', { name: 'Table of contents' }).query()).toBeNull();
+});

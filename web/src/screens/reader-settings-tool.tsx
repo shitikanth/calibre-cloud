@@ -1,6 +1,6 @@
 import { fontSizeRange, readerThemes, stepFontSize, type ReaderSettings } from '../reader/reader-settings.ts';
 import type { BookRenderer, ReaderTheme } from '../reader/renderer.ts';
-import { panelClass, ReaderPopover, type PopoverPlacement } from './reader-popover.tsx';
+import { panelClass, ReaderPopover, type PopoverPlacement, type PopoverToggle } from './reader-popover.tsx';
 
 const themeLabels: Record<ReaderTheme, string> = { light: 'Light', sepia: 'Sepia', dark: 'Dark' };
 const zoomStep = 1.25;
@@ -15,9 +15,10 @@ export type SettingsToolProps = {
   zoom: number;
   onZoomChange: (zoom: number) => void;
   placement: PopoverPlacement;
+  toggle: PopoverToggle;
 };
 
-export function SettingsTool({ renderer, settings, onSettingsChange, zoom, onZoomChange, placement }: SettingsToolProps) {
+export function SettingsTool({ renderer, settings, onSettingsChange, zoom, onZoomChange, placement, toggle }: SettingsToolProps) {
   const icon = (
     <>
       <circle cx="12" cy="12" r="3" />
@@ -25,7 +26,7 @@ export function SettingsTool({ renderer, settings, onSettingsChange, zoom, onZoo
     </>
   );
   return (
-    <ReaderPopover label="Settings" icon={icon} placement={placement}>
+    <ReaderPopover label="Settings" icon={icon} placement={placement} toggle={toggle}>
       {() => (
         <section role="dialog" aria-label="Settings" className={`${panelClass} flex flex-col gap-4 p-4 text-sm`}>
           {renderer.setStyles && (
