@@ -16,6 +16,10 @@ export type DropboxMetadata = {
   content_hash?: string;
 };
 
+type SearchPage = { matches: { metadata: { '.tag': string; metadata?: DropboxMetadata } }[]; has_more: boolean; cursor?: string | null };
+
+type FolderPage = { entries: DropboxMetadata[]; has_more: boolean; cursor: string };
+
 type Call = { url: string; headers: Record<string, string>; body?: string };
 
 export function headerSafeJson(value: unknown): string {
@@ -74,6 +78,24 @@ export function createDropboxClient(tokens: AccessTokens) {
   };
 
   return {
+    async search(query: string, signal: AbortSignal | undefined): Promise<DropboxMetadata[]> {
+      const found: DropboxMetadata[] = [];
+      let page = await rpc<SearchPage>('files/search_v2', { query, options: { filename_only: true, max_results: 1000 } }, signal);
+      for (;;) {
+        found.push(...page.matches.flatMap(({ metadata }) => (metadata.metadata ? [metadata.metadata] : [])));
+        if (!page.has_more || !page.cursor) return found;
+        page = await rpc<SearchPage>('files/search/continue_v2', { cursor: page.cursor }, signal);
+      }
+    },
+    async listFolder(path: string, signal: AbortSignal | undefined): Promise<DropboxMetadata[]> {
+      const found: DropboxMetadata[] = [];
+      let page = await rpc<FolderPage>('files/list_folder', { path }, signal);
+      for (;;) {
+        found.push(...page.entries);
+        if (!page.has_more) return found;
+        page = await rpc<FolderPage>('files/list_folder/continue', { cursor: page.cursor }, signal);
+      }
+    },
     metadata: (path: string, signal: AbortSignal | undefined) => rpc<DropboxMetadata>('files/get_metadata', { path }, signal),
     download: (path: string, signal: AbortSignal | undefined) =>
       request({ url: `${content}/files/download`, headers: { 'Dropbox-API-Arg': headerSafeJson({ path }) } }, signal),
