@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useLibrarySession } from '../library/session.tsx';
 import type { Disconnect } from '../library/use-disconnect.ts';
 import type { CopyConnectLink } from './copy-connect-link.tsx';
+import { useShowShortcuts } from './shortcuts-help.tsx';
 import { useDismiss } from './use-dismiss.ts';
 
 const menuId = 'app-menu';
@@ -12,6 +13,8 @@ export function OverflowMenu({ disconnect, copyLink }: { disconnect: Disconnect;
   const { library, update } = useLibrarySession();
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
+  const more = useRef<HTMLButtonElement>(null);
+  const showShortcuts = useShowShortcuts();
   useDismiss(open, setOpen, root);
 
   const choose = (action: () => void) => {
@@ -22,6 +25,7 @@ export function OverflowMenu({ disconnect, copyLink }: { disconnect: Disconnect;
   return (
     <div ref={root} className="relative shrink-0">
       <button
+        ref={more}
         type="button"
         aria-label="More"
         aria-haspopup="menu"
@@ -50,6 +54,22 @@ export function OverflowMenu({ disconnect, copyLink }: { disconnect: Disconnect;
           {copy && (
             <button type="button" role="menuitem" className={itemClass} onClick={() => choose(() => void copy())}>
               Copy connect link
+            </button>
+          )}
+          {showShortcuts && (
+            <button
+              type="button"
+              role="menuitem"
+              aria-keyshortcuts="Shift+/"
+              className={itemClass}
+              onClick={() =>
+                choose(() => {
+                  more.current?.focus();
+                  showShortcuts();
+                })
+              }
+            >
+              Keyboard shortcuts
             </button>
           )}
           <button
