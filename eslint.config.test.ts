@@ -94,3 +94,43 @@ describe('renderer engine boundary', () => {
     expect(await platformImportErrors('web/src/reader/foliate/renderer.ts', source)).toHaveLength(1);
   });
 });
+
+describe('Dropbox provider boundary', () => {
+  async function apiCallErrors(filePath: string, source: string) {
+    const [result] = await eslint.lintText(source, { filePath });
+    return (result?.messages ?? []).filter((m) => m.ruleId === 'no-restricted-syntax');
+  }
+
+  test.each([
+    ['web/src/screens/connect-screen.tsx', '../storage/dropbox/provider.ts'],
+    ['web/src/connection/example.ts', '../storage/dropbox/finder.ts'],
+    ['web/src/example.ts', './storage/dropbox/adapter.ts'],
+  ])('rejects the Dropbox provider module in %s', async (filePath, specifier) => {
+    const source = `import * as dropbox from '${specifier}';\nconsole.log(dropbox);\n`;
+    expect(await platformImportErrors(filePath, source)).toHaveLength(1);
+  });
+
+  test('allows the Dropbox provider module inside the storage layer', async () => {
+    const source = "import * as dropbox from './dropbox/provider.ts';\nconsole.log(dropbox);\n";
+    expect(await platformImportErrors('web/src/storage/providers.ts', source)).toHaveLength(0);
+  });
+
+  test.each([
+    ['an RPC call', "await fetch('https://api.dropboxapi.com/2/files/list_folder');\n"],
+    ['a content download', 'await fetch(`https://content.dropboxapi.com/2/files/download?x=${1}`);\n'],
+  ])('rejects %s outside the Dropbox provider', async (_case, source) => {
+    expect(await apiCallErrors('web/src/storage/example.ts', source)).toHaveLength(1);
+    expect(await apiCallErrors('web/src/screens/example.tsx', source)).toHaveLength(1);
+    expect(await apiCallErrors('web/src/storage/google/drive.ts', source)).toHaveLength(1);
+  });
+
+  test('allows Dropbox calls inside the Dropbox provider', async () => {
+    const source = "await fetch('https://api.dropboxapi.com/2/files/list_folder');\n";
+    expect(await apiCallErrors('web/src/storage/dropbox/dropbox.ts', source)).toHaveLength(0);
+  });
+
+  test('still rejects Drive calls inside the Dropbox provider', async () => {
+    const source = "await fetch('https://www.googleapis.com/drive/v3/files');\n";
+    expect(await apiCallErrors('web/src/storage/dropbox/dropbox.ts', source)).toHaveLength(1);
+  });
+});
