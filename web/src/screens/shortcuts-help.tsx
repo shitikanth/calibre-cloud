@@ -11,6 +11,7 @@ const groups: { name: string; shortcuts: Shortcut[] }[] = [
     shortcuts: [
       { keys: [['/']], does: 'Focus the search box' },
       { keys: [['←'], ['→'], ['↑'], ['↓']], does: 'Move between books' },
+      { keys: [['Enter']], does: 'Open the focused book' },
       help,
     ],
   },
@@ -25,6 +26,7 @@ const groups: { name: string; shortcuts: Shortcut[] }[] = [
       { keys: [['/']], does: 'Search in book' },
       { keys: [['n'], ['Shift', 'n']], does: 'Next / previous search match' },
       { keys: [['Backspace']], does: 'Go back to where you jumped from' },
+      { keys: [['Tab']], does: 'Show the controls' },
       { keys: [['Esc']], does: 'Hide the controls' },
       help,
     ],
