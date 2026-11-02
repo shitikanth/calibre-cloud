@@ -11,28 +11,28 @@
     <main>
       <p class="wordmark"><a href="/about">calibre-cloud</a></p>
       <h1>Privacy policy</h1>
-      <p class="updated">Last updated 30 October 2026</p>
+      <p class="updated">Last updated 2 November 2026</p>
       <p class="lead">
         calibre-cloud reads your Calibre library from your own storage and shows it in your browser. Your library and
         books go straight from your storage to your browser. We never receive them, and we store nothing about you.
       </p>
 
-      <h2>What the app reads from Google Drive</h2>
+      <h2>What the app reads from Google Drive and Dropbox</h2>
       <p>
-        When you connect Google Drive, you sign in with Google and allow calibre-cloud to see and download your Drive
-        files. The app asks for read-only access and nothing else: not your name, your email address, or your profile.
-        With that access, the app reads:
+        When you connect Google Drive or Dropbox, you sign in there and allow calibre-cloud to see and download your
+        files. The app asks for read-only access to your files and never reads your name, your email address, or your
+        profile. With that access, the app reads:
       </p>
       <ul>
         <li>
-          the files named <code>metadata.db</code> anywhere in your Drive, including Shared with me, and the names of the
-          folders above them, so it can suggest where your Calibre library is;
+          the files named <code>metadata.db</code> anywhere in your storage (in Google Drive, including Shared with me),
+          and the names of the folders above them, so it can suggest where your Calibre library is;
         </li>
         <li>the names of the folders you open in its folder browser, so you can pick your library yourself;</li>
         <li>the sizes and checksums of files in the library you pick, to tell when they change;</li>
         <li>the contents of the library's <code>metadata.db</code>, its covers, and the book files you open or download.</li>
       </ul>
-      <p>It never creates, changes, or deletes anything in your Drive.</p>
+      <p>It never creates, changes, or deletes anything in your storage.</p>
 
       <h2>How it's used</h2>
       <p>
@@ -47,18 +47,19 @@
 
       <h2>Where it goes</h2>
       <p>
-        Your browser fetches everything above straight from Google. None of it passes through our server: not your book
+        Your browser fetches everything above straight from Google or Dropbox. None of it passes through our server: not your book
         files, not <code>metadata.db</code>, not covers, not the names of your files and folders.
       </p>
       <p>Besides serving the app itself, our server only helps you sign in:</p>
       <ul>
         <li>
-          When you sign in, Google sends our server a one-time code. The server swaps it with Google for a refresh token,
+          When you sign in, Google or Dropbox sends our server a one-time code. The server swaps it there for a refresh token,
           encrypts the token, and saves it in a cookie in your browser. The server keeps no copy. It has no database.
         </li>
         <li>
-          When your browser needs to reach Drive, it sends that cookie back. The server decrypts the refresh token, gets a
-          short-lived access token from Google, and hands it to your browser, which keeps it in memory only.
+          When your browser needs to reach your storage, it sends that cookie back. The server decrypts the refresh token,
+          gets a short-lived access token from Google or Dropbox, and hands it to your browser, which keeps it in memory
+          only.
         </li>
       </ul>
 
@@ -79,7 +80,7 @@
 
       <h2>Cookies</h2>
       <p>
-        calibre-cloud sets cookies only to sign in to Google Drive: one that lasts ten minutes while you sign in, and the
+        calibre-cloud sets cookies only to sign in to Google Drive or Dropbox: one that lasts ten minutes while you sign in, and the
         encrypted sign-in cookie above. Your browser sends them only to the sign-in part of our server, and page scripts
         can't read them. There are no analytics, advertising, or tracking cookies, and no analytics of any kind.
       </p>
@@ -100,11 +101,13 @@
       <ul>
         <li>
           <strong>Disconnect</strong> in the app deletes everything it keeps on this device (reader settings and the app's own copy stay),
-          asks Google to revoke calibre-cloud's access to your Google account, and deletes the sign-in cookie.
+          revokes calibre-cloud's access at Google or Dropbox, and deletes the sign-in cookie. Dropbox keeps listing
+          calibre-cloud under Connected apps, without access, until you remove it there.
         </li>
         <li>
           You can also remove calibre-cloud's access at any time from your
-          <a href="https://myaccount.google.com/connections">Google account</a>.
+          <a href="https://myaccount.google.com/connections">Google account</a> or Dropbox's
+          <a href="https://www.dropbox.com/account/connected_apps">Connected apps</a>.
         </li>
         <li>Clearing this site's data in your browser removes everything the app keeps on this device.</li>
       </ul>

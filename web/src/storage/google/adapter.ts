@@ -1,7 +1,7 @@
-import { Aborted, NotFound, type FileStat, type LibraryPath, type ReadOptions, type StorageAdapter } from '../adapter.ts';
+import { NotFound, type FileStat, type LibraryPath, type ReadOptions, type StorageAdapter } from '../adapter.ts';
+import { readBody } from '../http.ts';
 import type { AccessTokens } from '../sign-in.ts';
 import { createDriveClient, query } from './drive.ts';
-import { toStorageError } from './errors.ts';
 
 export function createGoogleAdapter(root: string, tokens: AccessTokens): StorageAdapter {
   const drive = createDriveClient(tokens);
@@ -37,23 +37,9 @@ export function createGoogleAdapter(root: string, tokens: AccessTokens): Storage
       const { size, version } = await find(path, undefined);
       return { size, version };
     },
-    async read(path: LibraryPath, { signal, onProgress }: ReadOptions = {}): Promise<Blob> {
-      const file = await find(path, signal);
-      const response = await drive.media(file.id, signal);
-      const chunks: Uint8Array<ArrayBuffer>[] = [];
-      let loaded = 0;
-      try {
-        const reader = response.body?.getReader();
-        for (let chunk = await reader?.read(); chunk && !chunk.done; chunk = await reader?.read()) {
-          if (signal?.aborted) throw new Aborted();
-          chunks.push(chunk.value);
-          loaded += chunk.value.byteLength;
-          onProgress?.(loaded, file.size);
-        }
-      } catch (error) {
-        throw toStorageError(error, signal);
-      }
-      return new Blob(chunks);
+    async read(path: LibraryPath, options: ReadOptions = {}): Promise<Blob> {
+      const file = await find(path, options.signal);
+      return readBody(await drive.media(file.id, options.signal), file.size, options);
     },
   };
 }
