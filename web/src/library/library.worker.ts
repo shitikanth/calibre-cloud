@@ -1,13 +1,12 @@
-import { IN_MEMORY_WORKER_NAME, type LibraryOperations, type LibraryRequest, type LibraryResponse, type Operation } from './protocol.ts';
+import { workerNames, type LibraryOperations, type LibraryRequest, type LibraryResponse, type Operation } from './protocol.ts';
 import { getBook } from './book-query.ts';
 import { listBookFormats, listBooks, listCoverVersions } from './books-query.ts';
 import { createDbStore, libraryDirectory } from './db-store.ts';
 import type { Database } from './sqlite.ts';
 
-const store = createDbStore(self.name === IN_MEMORY_WORKER_NAME ? async () => undefined : libraryDirectory);
+const store = createDbStore(self.name === workerNames.inMemory ? async () => undefined : libraryDirectory);
 
-let db: Database | undefined;
-let openFile: string | undefined;
+let current: { db: Database; file: string | undefined } | undefined;
 
 type Handlers = {
   [Op in Operation]: (args: LibraryOperations[Op]['args']) => Promise<LibraryOperations[Op]['result']> | LibraryOperations[Op]['result'];
@@ -16,16 +15,15 @@ type Handlers = {
 const handlers: Handlers = {
   async open({ bytes }) {
     const imported = await store.importDatabase(bytes);
-    replaceDb(imported.db, imported.file);
+    replaceDb(imported);
     await store.forgetOtherDatabases(imported.file);
     return imported.file ?? null;
   },
   async openStored({ file }) {
-    if (db && file === openFile) return 'unchanged';
-    const stored = await store.openStoredDatabase(file);
-    await store.forgetOtherDatabases(stored && file);
-    if (!stored) return 'missing';
-    replaceDb(stored, file);
+    if (current?.file === file) return 'unchanged';
+    const db = await store.openStoredDatabase(file);
+    if (!db) return 'missing';
+    replaceDb({ db, file });
     return 'opened';
   },
   async clear() {
@@ -52,15 +50,14 @@ const handlers: Handlers = {
   },
 };
 
-function replaceDb(next: Database | undefined, file?: string) {
-  db?.close();
-  db = next;
-  openFile = file;
+function replaceDb(next: typeof current) {
+  current?.db.close();
+  current = next;
 }
 
 function requireDb(): Database {
-  if (!db) throw new Error('No library is open');
-  return db;
+  if (!current) throw new Error('No library is open');
+  return current.db;
 }
 
 async function handle(request: LibraryRequest): Promise<LibraryResponse> {

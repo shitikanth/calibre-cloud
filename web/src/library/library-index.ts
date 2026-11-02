@@ -1,6 +1,6 @@
 import { LibraryIndexError } from './errors.ts';
 import {
-  IN_MEMORY_WORKER_NAME,
+  workerNames,
   type BookDetail,
   type BookFormatKey,
   type BookListQuery,
@@ -96,7 +96,7 @@ export class LibraryIndex {
     if (this.worker) return this.worker;
     const worker = new Worker(new URL('./library.worker.ts', import.meta.url), {
       type: 'module',
-      name: this.onDevice ? 'library-index' : IN_MEMORY_WORKER_NAME,
+      name: this.onDevice ? workerNames.onDevice : workerNames.inMemory,
     });
     worker.onmessage = ({ data }: MessageEvent<LibraryResponse>) => {
       const pending = this.pending.get(data.id);

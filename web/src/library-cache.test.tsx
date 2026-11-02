@@ -114,15 +114,19 @@ async function withNewBook(storage: FakeStorage, version: string) {
   storage.put('metadata.db', updated!, version);
 }
 
+async function openInTab(storage: FakeStorage) {
+  const tab = await renderApp({ storage, connected: true });
+  await expect.element(tab.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
+  return tab;
+}
+
 test('a second tab shows the same library', async () => {
   const storage = await libraryOf(brontës);
-  const first = await renderApp({ storage, connected: true });
-  await expect.element(first.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
+  const first = await openInTab(storage);
   storage.calls.length = 0;
 
-  const second = await renderApp({ storage, connected: true });
+  const second = await openInTab(storage);
 
-  await expect.element(second.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
   await expect.element(second.screen.getByRole('heading', { level: 2, name: 'Agnes Grey' })).toBeVisible();
   await expect.element(first.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
   expect(second.screen.getByRole('alert').query()).toBeNull();
@@ -131,10 +135,8 @@ test('a second tab shows the same library', async () => {
 
 test('a library updated in one tab is picked up by the other on its next refresh', async () => {
   const storage = await libraryOf(brontës);
-  const first = await renderApp({ storage, connected: true });
-  await expect.element(first.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
-  const second = await renderApp({ storage, connected: true });
-  await expect.element(second.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
+  const first = await openInTab(storage);
+  const second = await openInTab(storage);
   await withNewBook(storage, '2');
 
   await chooseFromMenu(first.screen, 'Refresh library');

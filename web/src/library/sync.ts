@@ -3,6 +3,7 @@ import { forgetPositions } from '../reader/positions.ts';
 import type { ReadOptions, StorageAdapter } from '../storage/adapter.ts';
 import { forgetStaleCovers } from './cover-cache.ts';
 import type { LibraryIndex } from './library-index.ts';
+import { withLibraryLock } from './library-lock.ts';
 import { loadStoredLibrary, saveStoredLibrary } from './stored-library.ts';
 
 const METADATA = 'metadata.db';
@@ -39,8 +40,11 @@ async function download(
   onProgress?: ReadOptions['onProgress'],
 ): Promise<void> {
   const blob = await storage.read(METADATA, onProgress ? { onProgress } : {});
-  const file = await index.open(await blob.arrayBuffer());
-  saveStoredLibrary(file === null ? undefined : { version, file });
+  const bytes = await blob.arrayBuffer();
+  await withLibraryLock('exclusive', async () => {
+    const file = await index.open(bytes);
+    saveStoredLibrary(file === null ? undefined : { version, file });
+  });
   await forgetStaleCovers(await index.listCoverVersions());
   const formats = await index.listBookFormats();
   await forgetStaleBookFiles(formats);

@@ -1,14 +1,12 @@
 import { registerFold } from './fold.ts';
+import { withLibraryLock } from './library-lock.ts';
 import { loadSqlite, type Database } from './sqlite.ts';
 
 const DIRECTORY = 'library';
 const LEGACY_POOL_DIRECTORY = '.opfs-sahpool';
-const LOCK_NAME = 'calibre-cloud:library-db';
 
 type SyncAccessHandle = { write(data: Uint8Array): number; flush(): void; close(): void };
 type WritableFileHandle = FileSystemFileHandle & { createSyncAccessHandle(): Promise<SyncAccessHandle> };
-
-export type LibraryDirectory = () => Promise<FileSystemDirectoryHandle | undefined>;
 
 export type DbStore = {
   importDatabase(bytes: ArrayBuffer): Promise<{ db: Database; file: string | undefined }>;
@@ -20,16 +18,20 @@ export type DbStore = {
 export async function libraryDirectory(): Promise<FileSystemDirectoryHandle | undefined> {
   try {
     const root = await navigator.storage.getDirectory();
-    await root.removeEntry(LEGACY_POOL_DIRECTORY, { recursive: true }).catch(() => undefined);
+    await removeLegacyPool(root);
     return await root.getDirectoryHandle(DIRECTORY, { create: true });
   } catch {
     return undefined;
   }
 }
 
-export function createDbStore(directory: LibraryDirectory): DbStore {
-  let opened: Promise<FileSystemDirectoryHandle | undefined> | undefined;
-  const dir = () => (opened ??= directory());
+async function removeLegacyPool(root: FileSystemDirectoryHandle): Promise<void> {
+  await root.removeEntry(LEGACY_POOL_DIRECTORY, { recursive: true }).catch(() => undefined);
+}
+
+export function createDbStore(openDirectory: () => Promise<FileSystemDirectoryHandle | undefined>): DbStore {
+  let directory: Promise<FileSystemDirectoryHandle | undefined> | undefined;
+  const dir = () => (directory ??= openDirectory());
 
   return {
     async importDatabase(bytes) {
@@ -39,18 +41,16 @@ export function createDbStore(directory: LibraryDirectory): DbStore {
     },
     async openStoredDatabase(file) {
       const store = await dir();
-      const bytes = store && (await readStored(store, file));
+      const bytes = store && (await withLibraryLock('shared', () => readStored(store, file)));
       return bytes && deserialize(new Uint8Array(bytes));
     },
     async forgetOtherDatabases(keep) {
       const store = await dir();
-      if (!store) return;
-      await withLock('exclusive', async () => {
-        for await (const name of store.keys()) if (name !== keep) await store.removeEntry(name).catch(() => undefined);
-      });
+      if (store) await removeAllBut(store, keep);
     },
     async wipeDatabases() {
-      await this.forgetOtherDatabases(undefined);
+      const store = await dir();
+      if (store) await withLibraryLock('exclusive', () => removeAllBut(store, undefined));
     },
   };
 }
@@ -73,19 +73,18 @@ async function persist(store: FileSystemDirectoryHandle, bytes: ArrayBuffer): Pr
   }
 }
 
-function readStored(store: FileSystemDirectoryHandle, file: string): Promise<ArrayBuffer | undefined> {
-  return withLock('shared', async () => {
-    try {
-      return await (await (await store.getFileHandle(file)).getFile()).arrayBuffer();
-    } catch {
-      return undefined;
-    }
-  });
+async function readStored(store: FileSystemDirectoryHandle, file: string): Promise<ArrayBuffer | undefined> {
+  try {
+    const handle = await store.getFileHandle(file);
+    const contents = await handle.getFile();
+    return await contents.arrayBuffer();
+  } catch {
+    return undefined;
+  }
 }
 
-function withLock<T>(mode: LockMode, run: () => Promise<T>): Promise<T> {
-  if (!('locks' in navigator)) return run();
-  return navigator.locks.request(LOCK_NAME, { mode }, run);
+async function removeAllBut(store: FileSystemDirectoryHandle, keep: string | undefined): Promise<void> {
+  for await (const name of store.keys()) if (name !== keep) await store.removeEntry(name).catch(() => undefined);
 }
 
 async function deserialize(data: Uint8Array): Promise<Database> {

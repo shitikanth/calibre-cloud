@@ -25,7 +25,7 @@ export type BookListQuery = { offset: number; limit: number; search?: string };
 
 export type OpenStoredResult = 'opened' | 'unchanged' | 'missing';
 
-export const IN_MEMORY_WORKER_NAME = 'library-index:in-memory';
+export const workerNames = { onDevice: 'library-index', inMemory: 'library-index:in-memory' } as const;
 
 export type LibraryOperations = {
   open: { args: { bytes: ArrayBuffer }; result: string | null };
