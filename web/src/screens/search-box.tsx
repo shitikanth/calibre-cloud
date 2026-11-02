@@ -1,5 +1,6 @@
 import { useLocation, useNavigate, useSearch } from '@tanstack/react-router';
 import { useEffect, useRef } from 'react';
+import { takesShortcut } from './shortcut-keys.ts';
 
 export function SearchBox() {
   const navigate = useNavigate();
@@ -15,6 +16,17 @@ export function SearchBox() {
     if (input.current && (!onLibrary || document.activeElement !== input.current)) input.current.value = term;
   }, [term, onLibrary]);
 
+  useEffect(() => {
+    if (!onLibrary) return;
+    const focusOnSlash = (event: KeyboardEvent) => {
+      if (event.key !== '/' || !takesShortcut(event)) return;
+      event.preventDefault();
+      input.current?.focus();
+    };
+    window.addEventListener('keydown', focusOnSlash);
+    return () => window.removeEventListener('keydown', focusOnSlash);
+  }, [onLibrary]);
+
   const change = (value: string) => {
     const replace = onLibrary || leftForLibrary.current;
     leftForLibrary.current = true;
@@ -27,6 +39,7 @@ export function SearchBox() {
         ref={input}
         type="search"
         aria-label="Search books"
+        aria-keyshortcuts={onLibrary ? '/' : undefined}
         placeholder="Search title, author, series, or tag"
         defaultValue={term}
         onChange={(event) => change(event.target.value)}
