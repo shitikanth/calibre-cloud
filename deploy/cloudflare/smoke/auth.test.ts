@@ -5,12 +5,17 @@ import { checkAuthRoutes } from './auth.ts';
 
 type Route = (req: IncomingMessage, res: ServerResponse, origin: string) => void;
 
-const healthy: Record<string, Route> = {
-  'GET /api/auth/google/start?return=%2F': (_req, res, origin) => {
-    const location = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-    location.searchParams.set('redirect_uri', `${origin}/api/auth/google/callback`);
+function startRoute(authorizationUrl: string, provider: string): Route {
+  return (_req, res, origin) => {
+    const location = new URL(authorizationUrl);
+    location.searchParams.set('redirect_uri', `${origin}/api/auth/${provider}/callback`);
     res.writeHead(302, { location: location.href, 'set-cookie': 'signin_state=sealed; Path=/api/auth' }).end();
-  },
+  };
+}
+
+const healthy: Record<string, Route> = {
+  'GET /api/auth/google/start?return=%2F': startRoute('https://accounts.google.com/o/oauth2/v2/auth', 'google'),
+  'GET /api/auth/dropbox/start?return=%2F': startRoute('https://www.dropbox.com/oauth2/authorize', 'dropbox'),
   'POST /api/auth/refresh': (req, res, origin) => {
     if (req.headers.origin !== origin || req.headers.cookie) res.writeHead(403).end();
     else res.writeHead(401, { 'content-type': 'application/json' }).end('{"error":"reconnect"}');
@@ -35,14 +40,17 @@ afterAll(() => {
   server.close();
 });
 
-test('passes when sign-in redirects to Google and refresh without a sign-in asks to reconnect', async () => {
+test('passes when sign-in redirects to Google and Dropbox and refresh without a sign-in asks to reconnect', async () => {
   routes = healthy;
   expect(await checkAuthRoutes(origin)).toEqual([]);
 });
 
 test('reports a start route that the SPA fallback answers instead of the Worker', async () => {
   routes = Object.fromEntries(Object.entries(healthy).filter(([route]) => !route.startsWith('GET ')));
-  expect(await checkAuthRoutes(origin)).toEqual(['GET /api/auth/google/start: HTTP 200, expected a 302 to Google']);
+  expect(await checkAuthRoutes(origin)).toEqual([
+    'GET /api/auth/google/start: HTTP 200, expected a 302 to Google',
+    'GET /api/auth/dropbox/start: HTTP 200, expected a 302 to Dropbox',
+  ]);
 });
 
 test('reports a start route that fails for want of configuration', async () => {
@@ -66,6 +74,19 @@ test('reports a redirect elsewhere, with the wrong callback, or without a state 
     'GET /api/auth/google/start: redirects to https://example.com, expected https://accounts.google.com',
     `GET /api/auth/google/start: redirect_uri is https://other.example/cb, expected ${origin}/api/auth/google/callback`,
     'GET /api/auth/google/start: sets no signin_state cookie',
+  ]);
+});
+
+test('reports a Dropbox start that sends the browser back to the app', async () => {
+  routes = {
+    ...healthy,
+    'GET /api/auth/dropbox/start?return=%2F': (_req, res, origin) =>
+      res.writeHead(302, { location: `${origin}/#signin-error=failed` }).end(),
+  };
+  expect(await checkAuthRoutes(origin)).toEqual([
+    `GET /api/auth/dropbox/start: redirects to ${origin}, expected https://www.dropbox.com`,
+    `GET /api/auth/dropbox/start: redirect_uri is null, expected ${origin}/api/auth/dropbox/callback`,
+    'GET /api/auth/dropbox/start: sets no signin_state cookie',
   ]);
 });
 
