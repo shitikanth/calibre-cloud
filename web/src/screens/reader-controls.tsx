@@ -126,6 +126,7 @@ export function TapZone({ direction, onTurn }: { direction: SwipeDirection; onTu
     <button
       type="button"
       aria-label={previous ? 'Previous page' : 'Next page'}
+      aria-keyshortcuts={previous ? 'ArrowLeft Shift+Space PageUp' : 'ArrowRight Space PageDown'}
       className={`group/zone pointer-events-none absolute inset-y-0 z-10 flex items-center focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--reader-muted) ${
         previous ? 'left-0 justify-start pl-2' : 'right-0 justify-end pr-2'
       }`}

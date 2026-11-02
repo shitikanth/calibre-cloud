@@ -21,6 +21,7 @@ import { BackToBookLink, BottomBar, JumpBack, TapZone, TopBar, zoneAt, type Cont
 import { SearchTool, useBookSearch, useHighlights } from './reader-search.tsx';
 import { backLabel, whereYouAreLabel, positionLabel, SeekBar } from './reader-seek-bar.tsx';
 import { SettingsTool } from './reader-settings-tool.tsx';
+import { dialogOpen, isControl, withBrowserModifier } from './shortcut-keys.ts';
 import { TocTool } from './reader-toc.tsx';
 import { ReconnectLink } from './reconnect-link.tsx';
 import { SignInProblem } from './sign-in-outcome.tsx';
@@ -333,11 +334,19 @@ function OpenedBook({ book, format, blob, settings, onSettingsChange }: OpenedBo
   useEffect(() => {
     if (!renderer) return;
     const onKey = (event: KeyboardEvent) => {
-      if (shell.current?.querySelector('[aria-expanded="true"], dialog[open]')) return;
+      if (dialogOpen() || shell.current?.querySelector('[aria-expanded="true"]')) return;
       if (event.key === 'Escape') setControls('hidden');
       else if (event.target instanceof HTMLInputElement) return;
       else if (event.key === 'ArrowRight') turn('next');
       else if (event.key === 'ArrowLeft') turn('previous');
+      else if (withBrowserModifier(event)) return;
+      else if (event.key === ' ' && !isControl(event.target)) {
+        event.preventDefault();
+        turn(event.shiftKey ? 'previous' : 'next');
+      } else if (event.key === 'PageDown' || event.key === 'PageUp') {
+        event.preventDefault();
+        turn(event.key === 'PageDown' ? 'next' : 'previous');
+      }
     };
     // Capture: a popover's own Escape handler closes it first otherwise, and this would hide the controls too.
     window.addEventListener('keydown', onKey, true);
