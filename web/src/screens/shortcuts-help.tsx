@@ -111,7 +111,7 @@ function ShortcutsDialog({ onClose }: { onClose: () => void }) {
       }}
       className="m-auto max-h-[calc(100dvh-2rem)] w-[min(46rem,calc(100vw-2rem))] overflow-y-auto rounded-lg border border-neutral-200 bg-white p-0 text-neutral-900 shadow-xl outline-none backdrop:bg-black/40"
     >
-      <header className="flex items-center justify-between border-b border-neutral-200 py-2 pr-2 pl-5">
+      <div className="flex items-center justify-between border-b border-neutral-200 py-2 pr-2 pl-5">
         <h2 id={titleId} className="font-semibold">
           Keyboard shortcuts
         </h2>
@@ -125,7 +125,7 @@ function ShortcutsDialog({ onClose }: { onClose: () => void }) {
             <path d="M6 6l12 12M18 6L6 18" />
           </svg>
         </button>
-      </header>
+      </div>
       <div className="grid gap-x-10 gap-y-6 px-5 py-4 sm:grid-cols-2">
         {groups.map((group) => (
           <section key={group.name}>

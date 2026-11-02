@@ -121,7 +121,7 @@ test('Home and End focus the first and last book', async () => {
 
 test('Page Down and Page Up move focus a screen down and up the same column, and the page scrolls with it', async () => {
   await page.viewport(1280, 800);
-  const { screen } = await openLibrary(80);
+  const { screen } = await openLibrary(60);
   const tiles = gridTiles(screen);
   const second = tiles[1]!;
   second.focus();
@@ -144,7 +144,7 @@ test('Page Down and Page Up move focus a screen down and up the same column, and
 
 test('Page Down near the end stops on the last book, and Page Up near the start on the first', async () => {
   await page.viewport(1280, 800);
-  const { screen } = await openLibrary(80);
+  const { screen } = await openLibrary(60);
   const tiles = gridTiles(screen);
   tiles.at(-2)!.focus();
 
