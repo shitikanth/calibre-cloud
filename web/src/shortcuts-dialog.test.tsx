@@ -52,6 +52,20 @@ test('? on the library opens the shortcuts, grouped as Library and Reader, and E
   await expect.element(tile).toHaveFocus();
 });
 
+test('? again closes the shortcuts and gives focus back', async () => {
+  const screen = await openApp('/');
+  const tile = screen.getByRole('link', { name: /Jane Eyre/ });
+  await expect.element(tile).toBeVisible();
+  (tile.element() as HTMLElement).focus();
+
+  await userEvent.keyboard('?');
+  await expect.element(shortcutsDialog(screen)).toBeVisible();
+  await userEvent.keyboard('?');
+
+  await expectClosed(screen);
+  await expect.element(tile).toHaveFocus();
+});
+
 test('while the shortcuts are open, no other shortcut fires', async () => {
   const screen = await openApp('/');
   await expect.element(screen.getByRole('link', { name: /Jane Eyre/ })).toBeVisible();

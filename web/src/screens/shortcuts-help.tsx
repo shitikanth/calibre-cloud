@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type ReactNode } from 'react';
-import { takesShortcut } from './shortcut-keys.ts';
+import { takesShortcut, withBrowserModifier } from './shortcut-keys.ts';
 
 type Shortcut = { keys: string[][]; does: string };
 
@@ -46,20 +46,26 @@ export function ShortcutsHelp({ children }: { children: ReactNode }) {
     setOpen(true);
   }, []);
 
-  useEffect(() => {
-    const showOnQuestionMark = (event: KeyboardEvent) => {
-      if (event.key !== '?' || !takesShortcut(event)) return;
-      event.preventDefault();
-      show();
-    };
-    window.addEventListener('keydown', showOnQuestionMark);
-    return () => window.removeEventListener('keydown', showOnQuestionMark);
-  }, [show]);
+  const close = useCallback(() => setOpen(false), []);
 
-  const close = () => {
-    setOpen(false);
-    returnFocus?.focus();
-  };
+  useEffect(() => {
+    if (!open) returnFocus?.focus();
+  }, [open, returnFocus]);
+
+  useEffect(() => {
+    const toggleOnQuestionMark = (event: KeyboardEvent) => {
+      if (event.key !== '?') return;
+      if (open && !withBrowserModifier(event)) {
+        event.preventDefault();
+        close();
+      } else if (!open && takesShortcut(event)) {
+        event.preventDefault();
+        show();
+      }
+    };
+    window.addEventListener('keydown', toggleOnQuestionMark);
+    return () => window.removeEventListener('keydown', toggleOnQuestionMark);
+  }, [open, show, close]);
 
   return (
     <ShortcutsHelpContext.Provider value={show}>
@@ -144,7 +150,7 @@ function ShortcutsDialog({ onClose }: { onClose: () => void }) {
         ))}
       </div>
       <p className="border-t border-neutral-200 px-5 py-3 text-xs text-neutral-500">
-        Press <kbd className={keyClass}>?</kbd> to open this list again.
+        Press <kbd className={keyClass}>?</kbd> to show or hide this list.
       </p>
     </dialog>
   );
