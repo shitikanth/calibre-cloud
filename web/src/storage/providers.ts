@@ -3,10 +3,11 @@ import type { StorageAdapter } from './adapter.ts';
 import { dropboxProvider } from './dropbox/provider.ts';
 import { googleProvider } from './google/provider.ts';
 import { megaProvider } from './mega/provider.ts';
+import { onedriveProvider } from './onedrive/provider.ts';
 import type { Connection, LinkProvider, ParsedConnectInput, StorageProvider } from './provider.ts';
 import type { LibraryFinder, SignInProvider } from './sign-in.ts';
 
-export const providers: readonly StorageProvider[] = [googleProvider, dropboxProvider, megaProvider];
+export const providers: readonly StorageProvider[] = [googleProvider, onedriveProvider, dropboxProvider, megaProvider];
 
 export type ResolvedConnectInput = { provider: LinkProvider; parsed: ParsedConnectInput };
 

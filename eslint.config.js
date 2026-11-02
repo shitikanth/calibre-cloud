@@ -29,6 +29,16 @@ const dropboxProvider = {
   message: 'Only web/src/storage/ may import the Dropbox provider. Everything above the storage boundary uses storage/providers.ts.',
 };
 
+const onedriveProvider = {
+  group: ['**/storage/onedrive', '**/storage/onedrive/*'],
+  message: 'Only web/src/storage/ may import the OneDrive provider. Everything above the storage boundary uses storage/providers.ts.',
+};
+
+const graphApi = {
+  selector: 'Literal[value=/graph\\.microsoft\\.com\\/v1\\.0/], TemplateElement[value.raw=/graph\\.microsoft\\.com\\/v1\\.0/]',
+  message: 'Only the OneDrive provider (web/src/storage/onedrive/) may call Microsoft Graph.',
+};
+
 const driveApi = {
   selector: 'Literal[value=/googleapis\\.com\\/drive/], TemplateElement[value.raw=/googleapis\\.com\\/drive/]',
   message: 'Only the Google Drive provider (web/src/storage/google/) may call the Drive API.',
@@ -64,11 +74,16 @@ export default defineConfig([
   },
   {
     ignores: ['deploy/**'],
-    rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, megaSdk, megaProvider, googleProvider, dropboxProvider, foliate, pdfjs] }] },
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { patterns: [platformModules, megaSdk, megaProvider, googleProvider, dropboxProvider, onedriveProvider, foliate, pdfjs] },
+      ],
+    },
   },
   {
     files: ['web/vite.config.ts'],
-    rules: { 'no-restricted-imports': ['error', { patterns: [megaSdk, megaProvider, googleProvider, dropboxProvider, foliate, pdfjs] }] },
+    rules: { 'no-restricted-imports': ['error', { patterns: [megaSdk, megaProvider, googleProvider, dropboxProvider, onedriveProvider, foliate, pdfjs] }] },
   },
   {
     files: ['web/src/storage/**'],
@@ -79,20 +94,32 @@ export default defineConfig([
     rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, foliate, pdfjs] }] },
   },
   {
-    ignores: ['web/src/storage/google/**', 'eslint.config.test.ts'],
-    rules: { 'no-restricted-syntax': ['error', driveApi] },
+    ignores: ['web/src/storage/google/**', 'web/src/storage/onedrive/**', 'eslint.config.test.ts'],
+    rules: { 'no-restricted-syntax': ['error', driveApi, graphApi] },
   },
   {
     files: ['web/src/**'],
-    ignores: ['web/src/storage/google/**', 'web/src/storage/dropbox/**'],
+    ignores: ['web/src/storage/google/**', 'web/src/storage/dropbox/**', 'web/src/storage/onedrive/**'],
+    rules: { 'no-restricted-syntax': ['error', driveApi, dropboxApi, graphApi] },
+  },
+  {
+    files: ['web/src/storage/google/**'],
+    rules: { 'no-restricted-syntax': ['error', dropboxApi, graphApi] },
+  },
+  {
+    files: ['web/src/storage/onedrive/**'],
     rules: { 'no-restricted-syntax': ['error', driveApi, dropboxApi] },
   },
   {
     files: ['web/src/reader/foliate/**'],
-    rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, megaSdk, megaProvider, googleProvider, dropboxProvider, pdfjs] }] },
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [platformModules, megaSdk, megaProvider, googleProvider, dropboxProvider, onedriveProvider, pdfjs] }],
+    },
   },
   {
     files: ['web/src/reader/pdf/**'],
-    rules: { 'no-restricted-imports': ['error', { patterns: [platformModules, megaSdk, megaProvider, googleProvider, dropboxProvider, foliate] }] },
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [platformModules, megaSdk, megaProvider, googleProvider, dropboxProvider, onedriveProvider, foliate] }],
+    },
   },
 ]);

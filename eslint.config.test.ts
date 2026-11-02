@@ -134,3 +134,38 @@ describe('Dropbox provider boundary', () => {
     expect(await apiCallErrors('web/src/storage/dropbox/dropbox.ts', source)).toHaveLength(1);
   });
 });
+
+describe('OneDrive provider boundary', () => {
+  test.each([
+    ['web/src/screens/connect-screen.tsx', '../storage/onedrive/provider.ts'],
+    ['web/src/connection/example.ts', '../storage/onedrive/finder.ts'],
+    ['web/src/example.ts', './storage/onedrive/adapter.ts'],
+  ])('rejects the OneDrive provider module in %s', async (filePath, specifier) => {
+    const source = `import * as onedrive from '${specifier}';\nconsole.log(onedrive);\n`;
+    expect(await platformImportErrors(filePath, source)).toHaveLength(1);
+  });
+
+  test('allows the OneDrive provider module inside the storage layer', async () => {
+    const source = "import * as onedrive from './onedrive/provider.ts';\nconsole.log(onedrive);\n";
+    expect(await platformImportErrors('web/src/storage/providers.ts', source)).toHaveLength(0);
+  });
+
+  test.each([
+    ['a Graph call', "await fetch('https://graph.microsoft.com/v1.0/me/drive/root/children');\n"],
+    ['a Graph call built from a template', 'await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${path}`);\n'],
+  ])('rejects %s outside the OneDrive provider', async (_case, source) => {
+    expect(await apiCallErrors('web/src/storage/example.ts', source)).toHaveLength(1);
+    expect(await apiCallErrors('web/src/screens/example.tsx', source)).toHaveLength(1);
+    expect(await apiCallErrors('api/src/example.ts', source)).toHaveLength(1);
+  });
+
+  test('allows Graph calls inside the OneDrive provider', async () => {
+    const source = "await fetch('https://graph.microsoft.com/v1.0/me/drive/root/children');\n";
+    expect(await apiCallErrors('web/src/storage/onedrive/graph.ts', source)).toHaveLength(0);
+  });
+
+  test('still rejects Dropbox calls inside the OneDrive provider', async () => {
+    const source = "await fetch('https://api.dropboxapi.com/2/files/list_folder');\n";
+    expect(await apiCallErrors('web/src/storage/onedrive/graph.ts', source)).toHaveLength(1);
+  });
+});
