@@ -53,19 +53,14 @@ export function ShortcutsHelp({ children }: { children: ReactNode }) {
   }, [open, returnFocus]);
 
   useEffect(() => {
-    const toggleOnQuestionMark = (event: KeyboardEvent) => {
-      if (event.key !== '?') return;
-      if (open && !withBrowserModifier(event)) {
-        event.preventDefault();
-        close();
-      } else if (!open && takesShortcut(event)) {
-        event.preventDefault();
-        show();
-      }
+    const showOnQuestionMark = (event: KeyboardEvent) => {
+      if (event.key !== '?' || event.defaultPrevented || !takesShortcut(event)) return;
+      event.preventDefault();
+      show();
     };
-    window.addEventListener('keydown', toggleOnQuestionMark);
-    return () => window.removeEventListener('keydown', toggleOnQuestionMark);
-  }, [open, show, close]);
+    window.addEventListener('keydown', showOnQuestionMark);
+    return () => window.removeEventListener('keydown', showOnQuestionMark);
+  }, [show]);
 
   return (
     <ShortcutsHelpContext.Provider value={show}>
@@ -114,6 +109,11 @@ function ShortcutsDialog({ onClose }: { onClose: () => void }) {
       onClose={onClose}
       onClick={(event) => {
         if (event.target === event.currentTarget) close();
+      }}
+      onKeyDown={(event) => {
+        if (event.key !== '?' || withBrowserModifier(event.nativeEvent)) return;
+        event.preventDefault();
+        close();
       }}
       className="m-auto max-h-[calc(100dvh-2rem)] w-[min(46rem,calc(100vw-2rem))] overflow-y-auto rounded-lg border border-neutral-200 bg-white p-0 text-neutral-900 shadow-xl outline-none backdrop:bg-black/40"
     >
