@@ -47,15 +47,16 @@ test('tabbing to a tile shows a focus ring that the grid does not clip', async (
   await expect.element(janeEyre).toBeVisible();
   expect(styleOf(janeEyre.element()).outlineStyle).toBe('none');
 
-  for (let presses = 0; presses < 10 && document.activeElement !== janeEyre.element(); presses += 1) {
+  const grid = app.screen.getByRole('list', { name: 'Books' }).element();
+  for (let presses = 0; presses < 10 && !grid.contains(document.activeElement); presses += 1) {
     await userEvent.tab();
   }
+  if (document.activeElement !== janeEyre.element()) await userEvent.keyboard('{ArrowRight}');
 
   expect(document.activeElement).toBe(janeEyre.element());
   const focused = styleOf(janeEyre.element());
   expect(focused.outlineStyle).toBe('solid');
   expect(parseFloat(focused.outlineWidth)).toBeGreaterThanOrEqual(2);
-  const grid = app.screen.getByRole('list', { name: 'Books' }).element();
   const item = janeEyre.element().closest('li')!;
   expect(getComputedStyle(grid).overflow).toBe('visible');
   expect(getComputedStyle(item).overflow).toBe('visible');
