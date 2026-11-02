@@ -3,10 +3,15 @@ import { describe, expect, test } from 'vitest';
 
 const eslint = new ESLint();
 
-async function platformImportErrors(filePath: string, source: string) {
-  const [result] = await eslint.lintText(source, { filePath });
-  return (result?.messages ?? []).filter((m) => m.ruleId === 'no-restricted-imports');
+function lintErrors(ruleId: string) {
+  return async (filePath: string, source: string) => {
+    const [result] = await eslint.lintText(source, { filePath });
+    return (result?.messages ?? []).filter((m) => m.ruleId === ruleId);
+  };
 }
+
+const platformImportErrors = lintErrors('no-restricted-imports');
+const apiCallErrors = lintErrors('no-restricted-syntax');
 
 describe('platform import ban', () => {
   test.each([
@@ -96,11 +101,6 @@ describe('renderer engine boundary', () => {
 });
 
 describe('Dropbox provider boundary', () => {
-  async function apiCallErrors(filePath: string, source: string) {
-    const [result] = await eslint.lintText(source, { filePath });
-    return (result?.messages ?? []).filter((m) => m.ruleId === 'no-restricted-syntax');
-  }
-
   test.each([
     ['web/src/screens/connect-screen.tsx', '../storage/dropbox/provider.ts'],
     ['web/src/connection/example.ts', '../storage/dropbox/finder.ts'],
