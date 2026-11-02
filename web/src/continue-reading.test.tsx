@@ -1,5 +1,5 @@
-import { userEvent } from 'vitest/browser';
-import { expect, test } from 'vitest';
+import { page, userEvent } from 'vitest/browser';
+import { afterEach, expect, test } from 'vitest';
 import { savePosition } from './reader/positions.ts';
 import { buildCalibreLibrary, type BookSpec } from './test/calibre-library.ts';
 import { chooseScreen, connectMega } from './test/connect.ts';
@@ -9,6 +9,10 @@ import { chooseFromMenu } from './test/app-bar.ts';
 import { renderApp, testLink } from './test/render-app.tsx';
 import type { Screen } from './test/screen.ts';
 import { showControls, tapZone } from './test/reader.ts';
+
+afterEach(async () => {
+  await page.viewport(414, 896);
+});
 
 const epub = ['# One', 'line 2', 'line 3', 'line 4', 'line 5'].join('\n');
 const pdf = ['Page one', 'Page two', 'Page three'].join('\n');
@@ -177,4 +181,40 @@ test('Disconnect forgets every position but keeps the reader settings', async ()
   await expect.element(app.screen.getByText('# One')).toBeVisible();
   expect(fake.latest.opened?.location).toBeUndefined();
   expect(fake.latest.calls.find((call) => call.op === 'setStyles')).toEqual({ op: 'setStyles', styles: { fontSize: 110, theme: 'light' } });
+});
+
+function scrollingAncestor(element: Element): Element {
+  let node = element.parentElement;
+  while (node) {
+    const { overflowX, overflowY } = getComputedStyle(node);
+    if (overflowX !== 'visible' || overflowY !== 'visible') return node;
+    node = node.parentElement;
+  }
+  throw new Error('no scrolling ancestor');
+}
+
+test('a focused card shows its whole focus ring inside the sideways-scrolling row', async () => {
+  await page.viewport(390, 844);
+  const started = await startApp(await bronteLibrary());
+  const { app } = started;
+  for (const bookId of [1, 2, 3, 4, 5, 6, 7]) await read(started, bookId, 'EPUB');
+  app.navigate('/');
+  await expect.poll(() => cardTitles(app.screen).length).toBe(6);
+
+  const card = continueReading(app.screen).getByRole('link', { name: /The Tenant of Wildfell Hall/ }).element();
+  for (let presses = 0; document.activeElement !== card && presses < 30; presses += 1) await userEvent.tab();
+  expect(document.activeElement).toBe(card);
+
+  const style = getComputedStyle(card);
+  expect(style.outlineStyle).toBe('solid');
+  const ring = parseFloat(style.outlineWidth) + parseFloat(style.outlineOffset);
+  expect(ring).toBeGreaterThan(0);
+  const row = scrollingAncestor(card);
+  const cardRect = card.getBoundingClientRect();
+  const rowRect = row.getBoundingClientRect();
+  expect(cardRect.top - ring).toBeGreaterThanOrEqual(rowRect.top);
+  expect(cardRect.bottom + ring).toBeLessThanOrEqual(rowRect.bottom);
+  expect(cardRect.left - ring).toBeGreaterThanOrEqual(rowRect.left);
+  expect(cardRect.right + ring).toBeLessThanOrEqual(rowRect.right);
+  expect(row.scrollWidth).toBeGreaterThan(row.clientWidth);
 });
