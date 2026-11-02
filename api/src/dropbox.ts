@@ -12,11 +12,15 @@ export function dropboxProvider(client: OAuthClient): OAuthProvider {
     ...flow,
     async revoke(refreshToken) {
       const refreshed = await flow.refresh(refreshToken);
-      if (refreshed.kind !== 'ok') return;
-      try {
-        await client.fetch(revokeEndpoint, { method: 'POST', headers: { authorization: `Bearer ${refreshed.accessToken}` } });
-      } catch {
+      if (refreshed.kind !== 'ok') {
+        console.error('Dropbox sign-out could not refresh before revoking:', refreshed.kind);
         return;
+      }
+      try {
+        const response = await client.fetch(revokeEndpoint, { method: 'POST', headers: { authorization: `Bearer ${refreshed.accessToken}` } });
+        if (!response.ok) console.error('Dropbox refused to revoke the grant:', response.status, await response.text());
+      } catch (error) {
+        console.error('Dropbox revoke failed:', error);
       }
     },
   };
