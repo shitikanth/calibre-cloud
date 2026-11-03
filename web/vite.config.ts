@@ -4,6 +4,7 @@ import { join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadEnv, type Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
+import { tanstackRouter } from '@tanstack/router-plugin/vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { playwright } from '@vitest/browser-playwright';
@@ -58,7 +59,7 @@ function appShellServiceWorker(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), pdfjsWasm(), appShellServiceWorker()],
+  plugins: [tanstackRouter({ target: 'react', autoCodeSplitting: false }), react(), tailwindcss(), pdfjsWasm(), appShellServiceWorker()],
   worker: { format: 'es' },
   optimizeDeps: {
     include: [
