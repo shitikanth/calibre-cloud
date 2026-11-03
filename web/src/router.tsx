@@ -4,9 +4,10 @@ import {
   createRoute,
   createRouter,
   Navigate,
-  useMatch,
+  useMatches,
   type RouterHistory,
 } from '@tanstack/react-router';
+import type { ReactNode } from 'react';
 import { useConnection, useProviders } from './connection/context.tsx';
 import { BookScreen } from './screens/book-screen.tsx';
 import { ConnectLinkHandler } from './screens/connect-link.tsx';
@@ -14,7 +15,7 @@ import { ConnectScreen } from './screens/connect-screen.tsx';
 import { ConnectedShell } from './screens/connected-shell.tsx';
 import { LibraryPicker } from './screens/library-picker.tsx';
 import { LibraryScreen } from './screens/library-screen.tsx';
-import { ReaderScreen } from './screens/reader-screen.tsx';
+import { ReaderScreen, useReadable } from './screens/reader-screen.tsx';
 import { ShortcutsHelp } from './screens/shortcuts-help.tsx';
 import { SignInOutcomeHandler, useSignInProblem } from './screens/sign-in-outcome.tsx';
 
@@ -27,77 +28,97 @@ function RootLayout() {
   return (
     <SignInOutcomeHandler>
       <ConnectLinkHandler>
-        <Layout />
+        <Outlet />
       </ConnectLinkHandler>
     </SignInOutcomeHandler>
   );
 }
 
-function Layout() {
+function DisconnectedPage({ children }: { children: ReactNode }) {
+  return (
+    <div className="safe-area-padding">
+      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">{children}</main>
+    </div>
+  );
+}
+
+const connectedRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  id: '_connected',
+  component: ConnectedGate,
+});
+
+function ConnectedGate() {
   const { connection } = useConnection();
-  const reading = useMatch({ from: '/books/$bookId/read/$format', shouldThrow: false }) !== undefined;
-  const library = useMatch({ from: '/', shouldThrow: false }) !== undefined;
   if (!connection) {
     return (
-      <div className="safe-area-padding">
-        <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-          <Outlet />
-        </main>
-      </div>
+      <DisconnectedPage>
+        <ConnectScreen />
+      </DisconnectedPage>
     );
   }
   return (
     <ShortcutsHelp>
-      {reading ? (
-        <Outlet />
-      ) : (
-        <ConnectedShell wide={library}>
-          <Outlet />
-        </ConnectedShell>
-      )}
+      <Outlet />
     </ShortcutsHelp>
+  );
+}
+
+const shellRoute = createRoute({
+  getParentRoute: () => connectedRoute,
+  id: '_shell',
+  component: ShellLayout,
+});
+
+function ShellLayout() {
+  const wide = useMatches({ select: (matches) => matches.some((match) => match.staticData.wide === true) });
+  return (
+    <ConnectedShell wide={wide}>
+      <Outlet />
+    </ConnectedShell>
   );
 }
 
 type LibrarySearch = { q?: string };
 
 const homeRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => shellRoute,
   path: '/',
+  staticData: { wide: true },
   validateSearch: (search: Record<string, unknown>): LibrarySearch => {
     const q = search['q'];
     return typeof q === 'string' || typeof q === 'number' ? { q: String(q) } : {};
   },
-  component: HomeScreen,
+  component: HomeRouteScreen,
 });
 
-function HomeScreen() {
-  const { connection } = useConnection();
-  return connection ? <LibraryScreen /> : <ConnectScreen />;
+function HomeRouteScreen() {
+  const { q = '' } = homeRoute.useSearch();
+  return <LibraryScreen search={q} />;
 }
 
 const bookRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => shellRoute,
   path: '/books/$bookId',
   component: BookRouteScreen,
 });
 
 function BookRouteScreen() {
-  const { connection } = useConnection();
   const { bookId } = bookRoute.useParams();
-  return connection ? <BookScreen bookId={bookId} /> : <ConnectScreen />;
+  return <BookScreen bookId={bookId} />;
 }
 
 const readerRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => connectedRoute,
   path: '/books/$bookId/read/$format',
   component: ReaderRouteScreen,
 });
 
 function ReaderRouteScreen() {
-  const { connection } = useConnection();
   const { bookId, format } = readerRoute.useParams();
-  return connection ? <ReaderScreen bookId={bookId} format={format} /> : <ConnectScreen />;
+  const readable = useReadable(bookId, format);
+  if (!readable.ready) return <ConnectedShell>{readable.fallback}</ConnectedShell>;
+  return <ReaderScreen key={`${readable.book.id}/${readable.format.format}`} book={readable.book} format={readable.format} />;
 }
 
 const connectRoute = createRoute({
@@ -113,11 +134,17 @@ function ConnectRouteScreen() {
   const id = connectRoute.useParams().provider;
   if (connection) return <Navigate to="/" replace />;
   const signIn = signInProvider(id);
-  if (signIn && !problem) return <LibraryPicker provider={signIn} />;
-  return <ConnectScreen provider={linkProvider(id)} />;
+  return (
+    <DisconnectedPage>
+      {signIn && !problem ? <LibraryPicker provider={signIn} /> : <ConnectScreen provider={linkProvider(id)} />}
+    </DisconnectedPage>
+  );
 }
 
-const routeTree = rootRoute.addChildren([homeRoute, bookRoute, readerRoute, connectRoute]);
+const routeTree = rootRoute.addChildren([
+  connectedRoute.addChildren([shellRoute.addChildren([homeRoute, bookRoute]), readerRoute]),
+  connectRoute,
+]);
 
 export function createAppRouter(options: { history?: RouterHistory } = {}) {
   return createRouter({ routeTree, ...options });
@@ -128,5 +155,8 @@ export type AppRouter = ReturnType<typeof createAppRouter>;
 declare module '@tanstack/react-router' {
   interface Register {
     router: AppRouter;
+  }
+  interface StaticDataRouteOption {
+    wide?: boolean;
   }
 }

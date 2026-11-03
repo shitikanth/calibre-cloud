@@ -12,8 +12,7 @@ import type { BookRenderer, ReaderTheme, Relocation, SearchResult } from '../rea
 import type { SwipeDirection } from '../reader/swipe.ts';
 import { adjacentEntry } from '../reader/toc.ts';
 import { useBookFile } from '../reader/use-book-file.ts';
-import { NotFound, OpenBook } from './book-screen.tsx';
-import { ConnectedShell } from './connected-shell.tsx';
+import { NotFound, useOpenBook } from './book-screen.tsx';
 import { describeError } from './describe-error.ts';
 import { ExternalLinkDialog } from './external-link-dialog.tsx';
 import { formatSize } from './format.ts';
@@ -30,27 +29,19 @@ import { dialogOpen } from './shortcut-keys.ts';
 import { SignInProblem } from './sign-in-outcome.tsx';
 import { useWide } from './use-wide.ts';
 
-export function ReaderScreen({ bookId, format }: { bookId: string; format: string }) {
-  return (
-    <OpenBook bookId={bookId} frame={inShell}>
-      {(book) => <ReaderForFormat book={book} formatName={format} />}
-    </OpenBook>
-  );
-}
+export type Readable = { ready: true; book: BookDetail; format: BookFormat } | { ready: false; fallback: ReactNode };
 
-function inShell(fallback: ReactNode) {
-  return <ConnectedShell>{fallback}</ConnectedShell>;
-}
-
-function ReaderForFormat({ book, formatName }: { book: BookDetail; formatName: string }) {
+export function useReadable(bookId: string, formatName: string): Readable {
+  const opened = useOpenBook(bookId);
   const renderers = useRenderers();
-  const format = book.formats.find((candidate) => candidate.format === formatName);
+  if (!opened.ready) return opened;
+  const format = opened.book.formats.find((candidate) => candidate.format === formatName);
   if (!format || !renderers[format.format])
-    return inShell(<NotFound title="Format not found" detail="This book has no such format to read." />);
-  return <Reader key={`${book.id}/${format.format}`} book={book} format={format} />;
+    return { ready: false, fallback: <NotFound title="Format not found" detail="This book has no such format to read." /> };
+  return { ready: true, book: opened.book, format };
 }
 
-function Reader({ book, format }: { book: BookDetail; format: BookFormat }) {
+export function ReaderScreen({ book, format }: { book: BookDetail; format: BookFormat }) {
   const file = useBookFile({ bookId: book.id, format: format.format, path: format.path });
   const navigate = useNavigate();
   const [settings, setSettings] = useState(loadReaderSettings);

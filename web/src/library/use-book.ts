@@ -13,10 +13,10 @@ function bookQuery(index: LibraryIndex, connection: Connection | undefined, book
   });
 }
 
-export function useBook(bookId: number) {
+export function useBook(bookId: number, { enabled = true }: { enabled?: boolean } = {}) {
   const index = useLibraryIndex();
   const { connection } = useConnection();
-  return useQuery(bookQuery(index, connection, bookId));
+  return useQuery({ ...bookQuery(index, connection, bookId), enabled });
 }
 
 export function useBooksById(bookIds: number[]): Map<number, BookDetail> {

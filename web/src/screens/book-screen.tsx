@@ -20,32 +20,29 @@ export function BookScreen({ bookId }: { bookId: string }) {
   );
 }
 
-type OpenBookProps = {
-  bookId: string;
-  frame?: (fallback: ReactNode) => ReactNode;
-  children: (book: BookDetail) => ReactNode;
-};
+export type OpenedBook = { ready: true; book: BookDetail } | { ready: false; fallback: ReactNode };
 
-export function OpenBook({ bookId, frame = (fallback) => fallback, children }: OpenBookProps) {
-  const { library } = useLibrarySession();
-
-  if (library.isError) return frame(<StorageErrorScreen error={library.error} retry={() => void library.refetch()} />);
-  if (!library.isSuccess) return frame(<LoadingLibrary progress={library.progress} />);
-  if (!/^\d+$/.test(bookId)) return frame(<BookNotFound />);
-  return (
-    <LoadedBook id={Number(bookId)} frame={frame}>
-      {children}
-    </LoadedBook>
-  );
+function pending(fallback: ReactNode): OpenedBook {
+  return { ready: false, fallback };
 }
 
-function LoadedBook({ id, frame, children }: { id: number } & Required<Omit<OpenBookProps, 'bookId'>>) {
-  const book = useBook(id);
+export function useOpenBook(bookId: string): OpenedBook {
+  const { library } = useLibrarySession();
+  const id = /^\d+$/.test(bookId) ? Number(bookId) : undefined;
+  const book = useBook(id ?? 0, { enabled: library.isSuccess && id !== undefined });
 
-  if (book.isError) return frame(<StorageErrorScreen error={book.error} retry={() => void book.refetch()} />);
-  if (book.data === null) return frame(<BookNotFound />);
-  if (!book.data) return null;
-  return children(book.data);
+  if (library.isError) return pending(<StorageErrorScreen error={library.error} retry={() => void library.refetch()} />);
+  if (!library.isSuccess) return pending(<LoadingLibrary progress={library.progress} />);
+  if (id === undefined) return pending(<BookNotFound />);
+  if (book.isError) return pending(<StorageErrorScreen error={book.error} retry={() => void book.refetch()} />);
+  if (book.data === null) return pending(<BookNotFound />);
+  if (!book.data) return pending(null);
+  return { ready: true, book: book.data };
+}
+
+export function OpenBook({ bookId, children }: { bookId: string; children: (book: BookDetail) => ReactNode }) {
+  const opened = useOpenBook(bookId);
+  return opened.ready ? children(opened.book) : opened.fallback;
 }
 
 function BookNotFound() {
