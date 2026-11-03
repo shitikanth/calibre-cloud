@@ -14,7 +14,7 @@ export function ConnectScreen({ provider }: { provider?: LinkProvider | undefine
       <div aria-hidden="true" className="fixed inset-0 -z-10 hidden bg-neutral-50 sm:block" />
       <section
         aria-labelledby="connect-title"
-        className="w-full max-w-md bg-white px-2 pt-4 pb-7 text-neutral-900 sm:rounded-xl sm:border sm:border-neutral-200 sm:px-10 sm:pt-11 sm:pb-8"
+        className="w-full max-w-md bg-white px-2 pt-4 pb-7 text-neutral-900 sm:max-w-xl sm:rounded-xl sm:border sm:border-neutral-200 sm:px-10 sm:pt-11 sm:pb-8"
       >
         {provider ? <LinkStep provider={provider} /> : <ChooseProvider />}
       </section>
@@ -31,7 +31,8 @@ function ChooseProvider() {
         Connect your Calibre library
       </h1>
       <SignInProblem className="mt-4" />
-      <ul className="mt-7 grid grid-cols-[repeat(auto-fill,minmax(112px,1fr))] gap-3">
+      <DisconnectNotice />
+      <ul className="mt-7 grid grid-cols-[repeat(auto-fill,minmax(112px,1fr))] gap-3 sm:grid-cols-4">
         {allProviders.map((provider) => (
           <li key={provider.id}>
             <ProviderTile provider={provider} />
@@ -52,15 +53,35 @@ function ChooseProvider() {
   );
 }
 
+function DisconnectNotice() {
+  const { lastDisconnected } = useConnection();
+  const { signInProvider } = useProviders();
+  const notice = lastDisconnected && signInProvider(lastDisconnected.provider)?.disconnectNotice;
+  if (!notice) return null;
+  return (
+    <output className="mt-4 block text-sm/[1.5] text-neutral-600">
+      {notice.message}{' '}
+      {notice.links.map(({ label, href }, index) => (
+        <span key={href}>
+          {index > 0 && ' · '}
+          <a href={href} target="_blank" rel="noopener noreferrer" className="underline hover:text-neutral-900">
+            {label}
+          </a>
+        </span>
+      ))}
+    </output>
+  );
+}
+
 const tileClass =
-  'flex min-h-30 flex-col items-center justify-center gap-2.5 rounded-xl border border-neutral-200 px-2 py-4 hover:border-neutral-300 hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900';
+  'flex min-h-30 flex-col items-center justify-center gap-2.5 rounded-xl border border-neutral-200 px-1 py-4 hover:border-neutral-300 hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900';
 
 function ProviderTile({ provider }: { provider: StorageProvider }) {
   const { signInHref } = useProviders();
   const content = (
     <>
       <img src={provider.icon} alt="" className="size-12" />
-      <span className="text-[15px] font-semibold">{provider.name}</span>
+      <span className="text-[15px] font-semibold whitespace-nowrap">{provider.name}</span>
     </>
   );
   if (provider.kind === 'sign-in') {

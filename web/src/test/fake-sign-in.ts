@@ -1,6 +1,6 @@
 import { Aborted, type StorageAdapter, type StorageError } from '../storage/adapter.ts';
 import type { Connection } from '../storage/provider.ts';
-import type { AccessTokens, FolderEntry, LibraryCandidate, LibraryFinder, SignInProvider } from '../storage/sign-in.ts';
+import type { AccessTokens, DisconnectNotice, FolderEntry, LibraryCandidate, LibraryFinder, SignInProvider } from '../storage/sign-in.ts';
 
 export type FakeFolder = { id: string; name: string; folders?: FakeFolder[] };
 
@@ -8,6 +8,7 @@ export type FakeSignInOptions = {
   storage: StorageAdapter;
   libraries?: LibraryCandidate[];
   folders?: FakeFolder[];
+  disconnectNotice?: DisconnectNotice;
 };
 
 export type FakeSignInProvider = SignInProvider & {
@@ -23,7 +24,7 @@ const name = 'Fake Drive';
 const icon =
   'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="48" height="48"%3E%3Crect width="48" height="48" rx="8" fill="%23737373"/%3E%3C/svg%3E';
 
-export function fakeSignInProvider({ storage, libraries = [], folders = [] }: FakeSignInOptions): FakeSignInProvider {
+export function fakeSignInProvider({ storage, libraries = [], folders = [], disconnectNotice }: FakeSignInOptions): FakeSignInProvider {
   let failure: StorageError | undefined;
   let hold: { started: () => void; released: Promise<void> } | undefined;
   const finderCalls: string[] = [];
@@ -50,6 +51,7 @@ export function fakeSignInProvider({ storage, libraries = [], folders = [] }: Fa
     name,
     icon,
     startPath: `/api/auth/${id}/start`,
+    ...(disconnectNotice ? { disconnectNotice } : {}),
     libraries,
     folders,
     finderCalls,

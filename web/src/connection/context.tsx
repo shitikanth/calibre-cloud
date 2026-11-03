@@ -5,29 +5,38 @@ import { clearConnection, loadConnection, saveConnection, type Connection } from
 
 type ConnectionState = {
   connection: Connection | undefined;
+  lastDisconnected: Connection | undefined;
   storage: StorageAdapter | undefined;
   connect(connection: Connection): void;
   disconnect(): void;
 };
 
+type CurrentAndLast = { connection: Connection | undefined; lastDisconnected: Connection | undefined };
+
 const ConnectionContext = createContext<ConnectionState | undefined>(undefined);
 const ProvidersContext = createContext<Providers | undefined>(undefined);
 
 export function ConnectionProvider({ providers, children }: { providers: Providers; children: ReactNode }) {
-  const [connection, setConnection] = useState(() => loadConnection(providers.readConnection));
+  const [{ connection, lastDisconnected }, setCurrentAndLast] = useState<CurrentAndLast>(() => ({
+    connection: loadConnection(providers.readConnection),
+    lastDisconnected: undefined,
+  }));
   const storage = useMemo(() => connection && providers.openStorage(connection), [connection, providers]);
 
   const connect = useCallback((next: Connection) => {
     saveConnection(next);
-    setConnection(next);
+    setCurrentAndLast({ connection: next, lastDisconnected: undefined });
     void navigator.storage?.persist?.().catch(() => false);
   }, []);
   const disconnect = useCallback(() => {
     clearConnection();
-    setConnection(undefined);
+    setCurrentAndLast((current) => ({ connection: undefined, lastDisconnected: current.connection }));
   }, []);
 
-  const value = useMemo(() => ({ connection, storage, connect, disconnect }), [connection, storage, connect, disconnect]);
+  const value = useMemo(
+    () => ({ connection, lastDisconnected, storage, connect, disconnect }),
+    [connection, lastDisconnected, storage, connect, disconnect],
+  );
   return (
     <ProvidersContext value={providers}>
       <ConnectionContext value={value}>{children}</ConnectionContext>

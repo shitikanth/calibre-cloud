@@ -150,7 +150,7 @@ test('on a desktop screen the choice sits in one bordered card, centred on a gre
   await expect.element(card.getByRole('link', { name: 'MEGA' })).toBeVisible();
 
   const rect = card.element().getBoundingClientRect();
-  expect(rect.width).toBe(448);
+  expect(rect.width).toBe(576);
   expect(Math.abs(rect.left - (1280 - rect.right))).toBeLessThanOrEqual(2);
   expect(getComputedStyle(card.element()).borderTopWidth).toBe('1px');
   expect(pageColourAt(40, 400)).toBe('oklch(0.985 0 none)');

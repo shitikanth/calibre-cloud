@@ -25,7 +25,7 @@ One file of a book in a particular file type, such as EPUB or PDF. EPUB, KEPUB, 
 _Avoid_: edition, copy, version
 
 **Storage provider**:
-A cloud storage service a library can live in: Dropbox, Google Drive, or MEGA.
+A cloud storage service a library can live in: Dropbox, Google Drive, MEGA, or OneDrive.
 _Avoid_: backend, cloud, drive
 
 **Connection**:

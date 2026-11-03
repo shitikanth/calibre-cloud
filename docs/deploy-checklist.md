@@ -50,7 +50,7 @@ The Worker runs the auth routes under `/api/auth/` (the only paths that reach it
 | `GOOGLE_CLIENT_SECRET` | The OAuth client's secret. |
 | `AUTH_COOKIE_KEY` | 32 random bytes in base64, from `openssl rand -base64 32`. It encrypts the sign-in cookie, so changing it signs everyone out. |
 
-Until all three are set, "Sign in with Google" comes straight back to the app with "Couldn’t sign in", and the Worker log names the missing values. `POST /api/auth/refresh` for a Google sign-in answers `500 {"error":"not-configured","missing":[...]}`, and sign-out clears the cookie without revoking. Without `AUTH_COOKIE_KEY`, every auth route fails this way, Dropbox's included. The rest of the app is unaffected.
+Until all three are set, "Sign in with Google" comes straight back to the app with "Couldn’t sign in", and the Worker log names the missing values. `POST /api/auth/refresh` for a Google sign-in answers `500 {"error":"not-configured","missing":[...]}`, and sign-out clears the cookie without revoking. Without `AUTH_COOKIE_KEY`, every auth route fails this way, Dropbox's and OneDrive's included. The rest of the app is unaffected.
 
 - [ ] In Google Cloud → APIs & Services → Credentials, make the OAuth client a *Web application* with exactly these authorized redirect URIs:
   - `https://calibre-cloud.golu3990.workers.dev/api/auth/google/callback`
@@ -93,7 +93,34 @@ Until both are set, "Sign in with Dropbox" comes back with "Couldn’t sign in",
 
 For `wrangler dev`, add both to `deploy/cloudflare/.dev.vars`.
 
-## 6. SonarCloud
+## 6. OneDrive sign-in
+
+OneDrive uses the same auth routes and sign-in cookie as Google, so it needs `AUTH_COOKIE_KEY` from section 4 plus two values of its own:
+
+| Worker variable | Value |
+|---|---|
+| `ONEDRIVE_CLIENT_ID` | The Entra app registration's *Application (client) ID*. |
+| `ONEDRIVE_CLIENT_SECRET` | A client secret's *Value* (not its ID), copied when it is created. Secrets expire; the longest term offered is 24 months, so note the date. |
+
+Until both are set, "Sign in with OneDrive" comes back with "Couldn’t sign in", and refreshing a OneDrive sign-in answers `500 {"error":"not-configured",...}`. The other providers are unaffected.
+
+- [ ] In the Microsoft Entra admin center → App registrations → New registration: supported account types *Accounts in any organizational directory and personal Microsoft accounts*. That is the `common` tenant the auth function uses; any other choice turns personal or work accounts away.
+- [ ] Authentication → Add a platform → *Web*, with these redirect URIs (not *Single-page application*, since the server redeems the code with the secret):
+  - `https://calibre-cloud.golu3990.workers.dev/api/auth/onedrive/callback`
+  - `https://feat-onedrive-calibre-cloud.golu3990.workers.dev/api/auth/onedrive/callback`
+  - `http://localhost:8787/api/auth/onedrive/callback`
+- [ ] API permissions: Microsoft Graph → Delegated → `Files.Read` and `offline_access` only. Neither needs admin consent. Remove the `User.Read` permission the registration adds by default: the app never reads the profile, and the sign-in asks for exactly the two scopes.
+- [ ] Certificates & secrets → New client secret.
+- [ ] Set the two values on production, from `deploy/cloudflare/`: `wrangler secret put ONEDRIVE_CLIENT_ID`, then `ONEDRIVE_CLIENT_SECRET`.
+- [ ] Set them for Previews: `wrangler preview base-config secret put ONEDRIVE_CLIENT_ID`, then `ONEDRIVE_CLIENT_SECRET`. For a Preview that already exists, also `wrangler preview secret put ONEDRIVE_CLIENT_ID --name <preview>`, and the same for the secret (see section 4).
+- [ ] Check: `smoke:deployed <origin>` passes its auth checks (`/api/auth/onedrive/start` redirects to `login.microsoftonline.com`).
+- [ ] Live, with a personal account and a work or school account: sign in, open a library, and download a book. If the download fails at once with a network error, open the browser console: a CSP report names the download host, which then goes into `connect-src` in `deploy/cloudflare/_headers` and `deploy/cloudflare/smoke/csp.ts`. The hosts there now (`*.files.1drv.com`, `*.microsoftpersonalcontent.com`, `*.sharepoint.com`) are from Microsoft's documentation and were not confirmed against a live download.
+
+For `wrangler dev`, add both to `deploy/cloudflare/.dev.vars`.
+
+Publisher verification is deferred (see `docs/hld.md`). Until then, a work or school organisation that turns on risk-based step-up consent refuses the app; personal accounts are unaffected.
+
+## 7. SonarCloud
 
 CI scans the code with SonarCloud after `pnpm test:coverage` and uploads the three `lcov.info` reports. The scope and exclusions are in `sonar-project.properties`. The project is `shitikanth_calibre-cloud` in the `shitikanth` organization.
 
@@ -107,7 +134,7 @@ The quality gate is reported on each PR but is not a required check.
 
 - `pnpm lint`, `pnpm typecheck`, `pnpm test`: what CI runs.
 - `pnpm build`: builds the SPA into `deploy/cloudflare/dist` with `_headers`.
-- `pnpm --filter @calibre-cloud/deploy-cloudflare run smoke:local`: serves `dist` with `wrangler dev` and runs the smoke check against it: the CSP directive by directive, the pdf.js worker and wasm files, the smoked routes including the reader's not-connected state, the auth routes (Google's and Dropbox's start redirect to their sign-in pages; refresh without a sign-in asks to reconnect), and the public pages `/about`, `/privacy`, and `/terms` (served as pages, not the app, with their content shown with JavaScript off). It passes dummy values for the five Worker variables, so it needs no `.dev.vars`.
+- `pnpm --filter @calibre-cloud/deploy-cloudflare run smoke:local`: serves `dist` with `wrangler dev` and runs the smoke check against it: the CSP directive by directive, the pdf.js worker and wasm files, the smoked routes including the reader's not-connected state, the auth routes (Google's, Dropbox's, and OneDrive's start redirect to their sign-in pages; refresh without a sign-in asks to reconnect), and the public pages `/about`, `/privacy`, and `/terms` (served as pages, not the app, with their content shown with JavaScript off). It passes dummy values for the seven Worker variables, so it needs no `.dev.vars`.
 - MEGA adapter smoke test: put `MEGA_SMOKE_LINK="<shared folder link to a test library>"` in `.env.local` at the repo root (gitignored). Keep the quotes: unquoted, everything from `#` on is read as a comment and the key is lost. `pnpm test` then also runs `web/src/storage/mega/adapter.smoke.test.ts` against real MEGA. It's skipped when the variable is missing and always skipped when `CI` is set. Never commit or paste the link anywhere else.
-- `pnpm --filter @calibre-cloud/deploy-cloudflare run smoke:deployed <origin>`: runs the smoke check by hand against a deployed preview or production URL. Its auth checks fail until that deployment has the section 4 and 5 values. Run `pnpm build` first on the commit that is deployed there: the check reads the names of the pdf.js worker and wasm files from `dist`, and a build of another commit can name the worker differently.
+- `pnpm --filter @calibre-cloud/deploy-cloudflare run smoke:deployed <origin>`: runs the smoke check by hand against a deployed preview or production URL. Its auth checks fail until that deployment has the section 4, 5, and 6 values. Run `pnpm build` first on the commit that is deployed there: the check reads the names of the pdf.js worker and wasm files from `dist`, and a build of another commit can name the worker differently.
 - `wrangler login` is needed only to deploy from a laptop with `pnpm --filter @calibre-cloud/deploy-cloudflare run release`. Workers Builds doesn't need it.

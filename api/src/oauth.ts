@@ -5,7 +5,7 @@ export interface OAuthClient {
 }
 
 export type RefreshResult =
-  | { readonly kind: 'ok'; readonly accessToken: string; readonly expiresInSeconds: number }
+  | { readonly kind: 'ok'; readonly accessToken: string; readonly expiresInSeconds: number; readonly refreshToken: string | undefined }
   | { readonly kind: 'revoked' }
   | { readonly kind: 'unavailable' };
 
@@ -81,10 +81,11 @@ async function refreshAccessToken(client: OAuthClient, tokenEndpoint: string, re
       refresh_token: refreshToken,
       grant_type: 'refresh_token',
     });
-    const body: { access_token?: unknown; expires_in?: unknown; error?: unknown } = await response.json();
+    const body: { access_token?: unknown; expires_in?: unknown; refresh_token?: unknown; error?: unknown } = await response.json();
     if (response.status === 400 && body.error === 'invalid_grant') return { kind: 'revoked' };
     if (!response.ok || typeof body.access_token !== 'string' || typeof body.expires_in !== 'number') return { kind: 'unavailable' };
-    return { kind: 'ok', accessToken: body.access_token, expiresInSeconds: body.expires_in };
+    const rotated = typeof body.refresh_token === 'string' ? body.refresh_token : undefined;
+    return { kind: 'ok', accessToken: body.access_token, expiresInSeconds: body.expires_in, refreshToken: rotated };
   } catch {
     return { kind: 'unavailable' };
   }

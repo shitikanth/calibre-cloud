@@ -16,8 +16,8 @@ function setup() {
   return { auth, storage, drive, registry };
 }
 
-test('the app offers Google Drive, Dropbox, and MEGA', () => {
-  expect(providers.map(({ id }) => id)).toEqual(['google', 'dropbox', 'mega']);
+test('the app offers Google Drive, OneDrive, Dropbox, and MEGA, in order of how many people use them', () => {
+  expect(providers.map(({ id }) => id)).toEqual(['google', 'onedrive', 'dropbox', 'mega']);
 });
 
 test('lists every provider in the order given, whatever its kind', () => {

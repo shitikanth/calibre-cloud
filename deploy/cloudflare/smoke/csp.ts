@@ -6,7 +6,7 @@ export const expectedCsp: Record<string, string[]> = {
   'font-src': ["'self'", 'blob:', 'data:'],
   'media-src': ["'self'", 'blob:'],
   'frame-src': ['blob:'],
-  'connect-src': ["'self'", 'https://g.api.mega.co.nz', 'https://*.userstorage.mega.co.nz', 'https://www.googleapis.com', 'https://api.dropboxapi.com', 'https://content.dropboxapi.com'],
+  'connect-src': ["'self'", 'https://g.api.mega.co.nz', 'https://*.userstorage.mega.co.nz', 'https://www.googleapis.com', 'https://api.dropboxapi.com', 'https://content.dropboxapi.com', 'https://graph.microsoft.com', 'https://*.files.1drv.com', 'https://*.microsoftpersonalcontent.com', 'https://*.sharepoint.com'],
   'worker-src': ["'self'"],
   'object-src': ["'none'"],
   'base-uri': ["'none'"],

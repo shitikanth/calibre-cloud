@@ -28,6 +28,8 @@ test.each([
   ['MEGA storage', 'https://gfs270n123.userstorage.mega.co.nz/dl/abc', 'cors'],
   ['Google APIs', 'https://www.googleapis.com/upload/files/abc', 'cors'],
   ['Dropbox', 'https://content.dropboxapi.com/', 'cors'],
+  ['Microsoft Graph', 'https://graph.microsoft.com/', 'cors'],
+  ['a OneDrive download', 'https://public.dm.files.1drv.com/y4m?tempauth=x', 'cors'],
   ['a same-origin file outside the shell', `${origin}/smoke/missing-file.js`, 'no-cors'],
   ['a precached path with a query', `${origin}/assets/index-abc123.js?v=2`, 'cors'],
 ])('%s goes to the network', (_, url, mode) => {
