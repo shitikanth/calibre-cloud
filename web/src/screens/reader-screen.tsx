@@ -13,6 +13,7 @@ import type { SwipeDirection } from '../reader/swipe.ts';
 import { adjacentEntry } from '../reader/toc.ts';
 import { useBookFile } from '../reader/use-book-file.ts';
 import { fallback, NotFound, useOpenBook, type Fallback } from './book-screen.tsx';
+import { ConnectedShell } from './connected-shell.tsx';
 import { describeError } from './describe-error.ts';
 import { ExternalLinkDialog } from './external-link-dialog.tsx';
 import { formatSize } from './format.ts';
@@ -29,9 +30,15 @@ import { dialogOpen } from './shortcut-keys.ts';
 import { SignInProblem } from './sign-in-outcome.tsx';
 import { useWide } from './use-wide.ts';
 
-export type ReaderTarget = { ready: true; book: BookDetail; format: BookFormat } | Fallback;
+export function ReaderScreen({ bookId, format }: { bookId: string; format: string }) {
+  const target = useReaderTarget(bookId, format);
+  if (!target.ready) return <ConnectedShell>{target.fallback}</ConnectedShell>;
+  return <Reader key={`${target.book.id}/${target.format.format}`} book={target.book} format={target.format} />;
+}
 
-export function useReaderTarget(bookId: string, formatName: string): ReaderTarget {
+type ReaderTarget = { ready: true; book: BookDetail; format: BookFormat } | Fallback;
+
+function useReaderTarget(bookId: string, formatName: string): ReaderTarget {
   const opened = useOpenBook(bookId);
   const renderers = useRenderers();
   if (!opened.ready) return opened;
@@ -41,7 +48,7 @@ export function useReaderTarget(bookId: string, formatName: string): ReaderTarge
   return { ready: true, book: opened.book, format };
 }
 
-export function ReaderScreen({ book, format }: { book: BookDetail; format: BookFormat }) {
+function Reader({ book, format }: { book: BookDetail; format: BookFormat }) {
   const file = useBookFile({ bookId: book.id, format: format.format, path: format.path });
   const navigate = useNavigate();
   const [settings, setSettings] = useState(loadReaderSettings);
