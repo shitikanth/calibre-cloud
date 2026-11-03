@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
-import type { Jump } from '../reader/jumps.ts';
-import type { BookRenderer, Relocation } from '../reader/renderer.ts';
+import type { Jump } from '../../../reader/jumps.ts';
+import type { BookRenderer, Relocation } from '../../../reader/renderer.ts';
 
 const thumb = 16;
 

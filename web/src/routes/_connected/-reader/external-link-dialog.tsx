@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef } from 'react';
-import { canOpenExternally } from '../reader/external-link.ts';
+import { canOpenExternally } from '../../../reader/external-link.ts';
 
 const buttonClass = 'min-h-11 rounded border border-(--reader-line) px-3 py-1 text-sm hover:bg-(--reader-hover)';
 

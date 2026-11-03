@@ -1,5 +1,5 @@
 import { useState, type FocusEvent, type KeyboardEvent } from 'react';
-import { withBrowserModifier } from './shortcut-keys.ts';
+import { withBrowserModifier } from '../../-connected/shortcut-keys.ts';
 
 type Step = 'previous' | 'next' | 'up' | 'down' | 'first' | 'last' | 'pageUp' | 'pageDown';
 

@@ -1,5 +1,5 @@
-import { fontSizeRange, readerThemes, stepFontSize, type ReaderSettings } from '../reader/reader-settings.ts';
-import type { BookRenderer, ReaderTheme } from '../reader/renderer.ts';
+import { fontSizeRange, readerThemes, stepFontSize, type ReaderSettings } from '../../../reader/reader-settings.ts';
+import type { BookRenderer, ReaderTheme } from '../../../reader/renderer.ts';
 import { panelClass, ReaderPopover, type PopoverPlacement, type PopoverToggle } from './reader-popover.tsx';
 
 const themeLabels: Record<ReaderTheme, string> = { light: 'Light', sepia: 'Sepia', dark: 'Dark' };

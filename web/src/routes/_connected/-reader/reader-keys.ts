@@ -1,4 +1,4 @@
-import { isControl, isTyping, withBrowserModifier } from './shortcut-keys.ts';
+import { isControl, isTyping, withBrowserModifier } from '../-connected/shortcut-keys.ts';
 
 export type ReaderTool = 'toc' | 'search' | 'settings';
 

@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router';
-import type { BookSummary } from '../library/protocol.ts';
-import { BookCover } from './book-cover.tsx';
+import type { BookSummary } from '../../../../library/protocol.ts';
+import { BookCover } from '../-shell/book-cover.tsx';
 import { useRovingTiles, type RovingTiles } from './roving-tiles.ts';
 
 export function BookGrid({ books }: { books: BookSummary[] }) {

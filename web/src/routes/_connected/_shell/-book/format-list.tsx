@@ -1,12 +1,12 @@
 import { Link } from '@tanstack/react-router';
-import { bookFilename } from '../download/save-blob.ts';
-import { useDownload, type DownloadState } from '../download/use-download.ts';
-import type { BookDetail, BookFormat } from '../library/protocol.ts';
-import { useRenderers } from '../reader/context.tsx';
-import { describeError } from './describe-error.ts';
-import { formatSize } from './format.ts';
-import { ProgressBar } from './progress-bar.tsx';
-import { ReconnectLink } from './reconnect-link.tsx';
+import { bookFilename } from '../../../../download/save-blob.ts';
+import { useDownload, type DownloadState } from '../../../../download/use-download.ts';
+import type { BookDetail, BookFormat } from '../../../../library/protocol.ts';
+import { useRenderers } from '../../../../reader/context.tsx';
+import { describeError } from '../../../../components/describe-error.ts';
+import { formatSize } from '../../-connected/format.ts';
+import { ProgressBar } from '../../-connected/progress-bar.tsx';
+import { ReconnectLink } from '../../-connected/reconnect-link.tsx';
 
 export function FormatList({ book }: { book: BookDetail }) {
   if (book.formats.length === 0) return <p className="text-sm text-neutral-600">No files for this book.</p>;

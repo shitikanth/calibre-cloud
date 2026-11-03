@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-import type { BookDetail } from '../library/protocol.ts';
-import { useLibrarySession } from '../library/session.tsx';
-import { useBook } from '../library/use-book.ts';
+import type { BookDetail } from '../../../library/protocol.ts';
+import { useLibrarySession } from '../../../library/session.tsx';
+import { useBook } from '../../../library/use-book.ts';
 import { LoadingLibrary } from './loading-library.tsx';
 import { StorageErrorScreen } from './storage-error-screen.tsx';
 

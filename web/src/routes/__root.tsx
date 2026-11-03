@@ -1,6 +1,6 @@
 import { Outlet, createRootRoute } from '@tanstack/react-router';
-import { ConnectLinkHandler } from '../screens/connect-link.tsx';
-import { SignInOutcomeHandler } from '../screens/sign-in-outcome.tsx';
+import { ConnectLinkHandler } from '../components/connect-link.tsx';
+import { SignInOutcomeHandler } from '../components/sign-in-outcome.tsx';
 
 export const Route = createRootRoute({
   component: RootLayout,

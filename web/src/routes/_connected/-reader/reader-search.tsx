@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { BookRenderer, BookSearch, SearchResult, TocEntry } from '../reader/renderer.ts';
-import type { SwipeDirection } from '../reader/swipe.ts';
+import type { BookRenderer, BookSearch, SearchResult, TocEntry } from '../../../reader/renderer.ts';
+import type { SwipeDirection } from '../../../reader/swipe.ts';
 import { panelClass, ReaderPopover, scrollToCurrent, type PopoverPlacement, type PopoverToggle } from './reader-popover.tsx';
 
 const SETTLE_MS = 250;

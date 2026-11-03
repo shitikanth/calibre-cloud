@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
-import { useLibrarySession } from '../library/session.tsx';
-import type { Disconnect } from '../library/use-disconnect.ts';
+import { useLibrarySession } from '../../../library/session.tsx';
+import type { Disconnect } from '../../../library/use-disconnect.ts';
 import type { CopyConnectLink } from './copy-connect-link.tsx';
 import { useShowShortcuts } from './shortcuts-help.tsx';
 import { useDismiss } from './use-dismiss.ts';

@@ -1,11 +1,11 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { useMemo, useState, type ReactNode } from 'react';
-import { useConnection, useProviders } from '../connection/context.tsx';
-import { NotFound } from '../storage/adapter.ts';
-import type { FolderEntry, LibraryFinder, SignInProvider } from '../storage/sign-in.ts';
-import { connectPath } from './connect-path.ts';
-import { describeError } from './describe-error.ts';
+import { useConnection, useProviders } from '../../connection/context.tsx';
+import { NotFound } from '../../storage/adapter.ts';
+import type { FolderEntry, LibraryFinder, SignInProvider } from '../../storage/sign-in.ts';
+import { connectPath } from '../../components/connect-path.ts';
+import { describeError } from '../../components/describe-error.ts';
 
 const rowClass =
   'flex min-h-11 w-full items-center rounded border border-neutral-300 px-3 py-2 text-left hover:bg-neutral-100 disabled:opacity-60';

@@ -1,4 +1,4 @@
-import type { LoadProgress } from '../library/use-library.ts';
+import type { LoadProgress } from '../../../library/use-library.ts';
 import { ProgressBar } from './progress-bar.tsx';
 
 export function LoadingLibrary({ progress }: { progress: LoadProgress | undefined }) {

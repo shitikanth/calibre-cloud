@@ -1,5 +1,5 @@
-import type { BookDetail } from '../library/protocol.ts';
-import { formatDate, formatLanguage, formatSeriesIndex } from './format.ts';
+import type { BookDetail } from '../../../../library/protocol.ts';
+import { formatDate, formatLanguage, formatSeriesIndex } from '../../-connected/format.ts';
 
 export function BookFields({ book }: { book: BookDetail }) {
   const fields: [string, string | null][] = [

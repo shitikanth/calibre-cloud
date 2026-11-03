@@ -1,7 +1,7 @@
-import { describeError } from './describe-error.ts';
-import { DisconnectButton } from './disconnect-button.tsx';
+import { describeError } from '../../../components/describe-error.ts';
+import { DisconnectButton } from '../../../components/disconnect-button.tsx';
 import { ReconnectLink } from './reconnect-link.tsx';
-import { SignInProblem } from './sign-in-outcome.tsx';
+import { SignInProblem } from '../../../components/sign-in-outcome.tsx';
 
 export function StorageErrorScreen({ error, retry }: { error: Error; retry: () => void }) {
   const { title, detail, canRetry, canSwitchLibrary, canReconnect } = describeError(error, 'library');

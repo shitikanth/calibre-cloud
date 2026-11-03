@@ -1,10 +1,10 @@
 import { useRouter } from '@tanstack/react-router';
 import { useEffect } from 'react';
-import { useLibrarySession } from '../library/session.tsx';
-import { useDismissLibraryUpdate } from '../library/use-library-update.ts';
-import { describeError } from './describe-error.ts';
-import { ReconnectLink } from './reconnect-link.tsx';
-import { SignInProblem } from './sign-in-outcome.tsx';
+import { useLibrarySession } from '../../../../library/session.tsx';
+import { useDismissLibraryUpdate } from '../../../../library/use-library-update.ts';
+import { describeError } from '../../../../components/describe-error.ts';
+import { ReconnectLink } from '../../-connected/reconnect-link.tsx';
+import { SignInProblem } from '../../../../components/sign-in-outcome.tsx';
 
 export function LibraryNotices({ showChecking = false }: { showChecking?: boolean }) {
   const { update } = useLibrarySession();

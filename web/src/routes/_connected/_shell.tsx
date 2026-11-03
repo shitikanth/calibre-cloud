@@ -1,5 +1,5 @@
 import { Outlet, createFileRoute } from '@tanstack/react-router';
-import { ConnectedShell } from '../../screens/connected-shell.tsx';
+import { ConnectedShell } from './-connected/connected-shell.tsx';
 
 export const Route = createFileRoute('/_connected/_shell')({
   component: ShellLayout,

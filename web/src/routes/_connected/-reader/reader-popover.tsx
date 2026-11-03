@@ -1,5 +1,5 @@
 import { useRef, type Dispatch, type ReactNode, type SetStateAction } from 'react';
-import { useDismiss } from './use-dismiss.ts';
+import { useDismiss } from '../-connected/use-dismiss.ts';
 
 export const panelClass =
   'max-h-[70dvh] w-72 overflow-y-auto rounded border border-(--reader-line) bg-(--reader-bg) text-(--reader-fg) shadow-lg';

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { connectLinkHref } from '../connection/connect-link.ts';
-import { useConnection, useProviders } from '../connection/context.tsx';
+import { connectLinkHref } from '../../../connection/connect-link.ts';
+import { useConnection, useProviders } from '../../../connection/context.tsx';
 
 const copiedMessageMs = 3000;
 

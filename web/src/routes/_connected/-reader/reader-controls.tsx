@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
-import type { BookDetail } from '../library/protocol.ts';
-import type { SwipeDirection } from '../reader/swipe.ts';
+import type { BookDetail } from '../../../library/protocol.ts';
+import type { SwipeDirection } from '../../../reader/swipe.ts';
 
 export type ControlsState = 'hidden' | 'peek' | 'pinned';
 

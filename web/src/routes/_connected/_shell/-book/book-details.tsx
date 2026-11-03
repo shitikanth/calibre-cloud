@@ -1,5 +1,5 @@
-import type { BookDetail } from '../library/protocol.ts';
-import { BookCover } from './book-cover.tsx';
+import type { BookDetail } from '../../../../library/protocol.ts';
+import { BookCover } from '../-shell/book-cover.tsx';
 import { BookDescription } from './book-description.tsx';
 import { BookFields } from './book-fields.tsx';
 import { BookTags } from './book-tags.tsx';

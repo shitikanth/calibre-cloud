@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import type { Jump } from '../reader/jumps.ts';
-import type { BookRenderer, TocEntry } from '../reader/renderer.ts';
+import type { Jump } from '../../../reader/jumps.ts';
+import type { BookRenderer, TocEntry } from '../../../reader/renderer.ts';
 import { panelClass, ReaderPopover, scrollToCurrent, type PopoverPlacement, type PopoverToggle } from './reader-popover.tsx';
 
 type TocToolProps = { renderer: BookRenderer; jump: Jump; current: TocEntry | undefined; placement: PopoverPlacement; toggle: PopoverToggle };

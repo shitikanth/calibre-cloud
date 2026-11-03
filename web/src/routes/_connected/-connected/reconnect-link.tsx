@@ -1,5 +1,5 @@
 import { useLocation } from '@tanstack/react-router';
-import { useConnection, useProviders } from '../connection/context.tsx';
+import { useConnection, useProviders } from '../../../connection/context.tsx';
 
 export function ReconnectLink({ className }: { className: string }) {
   const { connection } = useConnection();
