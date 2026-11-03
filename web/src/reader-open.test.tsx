@@ -5,7 +5,7 @@ import { buildCalibreLibrary } from './test/calibre-library.ts';
 import { chooseScreen } from './test/connect.ts';
 import { fakeRenderers } from './test/fake-renderer.ts';
 import { FakeStorage } from './test/fake-storage.ts';
-import { renderApp } from './test/render-app.tsx';
+import { renderApp, testLink } from './test/render-app.tsx';
 import { showControls, tapZone } from './test/reader.ts';
 
 afterEach(() => {
@@ -191,6 +191,14 @@ test('the reader route asks to connect first when there is no connection', async
   const app = await renderApp({ storage: await janeEyreLibrary(), path: '/books/1/read/EPUB' });
 
   await expect.element(chooseScreen(app.screen)).toBeVisible();
+  expect(app.url).toBe('/books/1/read/EPUB');
+});
+
+test('a connect link at a reader URL connects there and opens the book', async () => {
+  const fake = fakeRenderers(['EPUB', 'PDF']);
+  const app = await renderApp({ storage: await janeEyreLibrary(), path: `/books/1/read/EPUB#connect=${testLink}`, renderers: fake.renderers });
+
+  await expect.element(app.screen.getByText('# Chapter 1')).toBeVisible();
   expect(app.url).toBe('/books/1/read/EPUB');
 });
 

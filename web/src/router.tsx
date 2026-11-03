@@ -1,123 +1,72 @@
-import {
-  Outlet,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  Navigate,
-  useMatch,
-  type RouterHistory,
-} from '@tanstack/react-router';
-import { useConnection, useProviders } from './connection/context.tsx';
+import { Outlet, createRootRoute, createRoute, createRouter, type RouterHistory } from '@tanstack/react-router';
 import { BookScreen } from './screens/book-screen.tsx';
 import { ConnectLinkHandler } from './screens/connect-link.tsx';
-import { ConnectScreen } from './screens/connect-screen.tsx';
+import { ConnectProviderScreen } from './screens/connect-screen.tsx';
+import { ConnectedGate } from './screens/connected-gate.tsx';
 import { ConnectedShell } from './screens/connected-shell.tsx';
-import { LibraryPicker } from './screens/library-picker.tsx';
 import { LibraryScreen } from './screens/library-screen.tsx';
 import { ReaderScreen } from './screens/reader-screen.tsx';
-import { ShortcutsHelp } from './screens/shortcuts-help.tsx';
-import { SignInOutcomeHandler, useSignInProblem } from './screens/sign-in-outcome.tsx';
+import { SignInOutcomeHandler } from './screens/sign-in-outcome.tsx';
 
 const rootRoute = createRootRoute({
-  component: RootLayout,
+  component: () => (
+    <SignInOutcomeHandler>
+      <ConnectLinkHandler>
+        <Outlet />
+      </ConnectLinkHandler>
+    </SignInOutcomeHandler>
+  ),
   notFoundComponent: () => <p>Page not found.</p>,
 });
 
-function RootLayout() {
-  return (
-    <SignInOutcomeHandler>
-      <ConnectLinkHandler>
-        <Layout />
-      </ConnectLinkHandler>
-    </SignInOutcomeHandler>
-  );
-}
+const connectedRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  id: '_connected',
+  component: ConnectedGate,
+});
 
-function Layout() {
-  const { connection } = useConnection();
-  const reading = useMatch({ from: '/books/$bookId/read/$format', shouldThrow: false }) !== undefined;
-  const library = useMatch({ from: '/', shouldThrow: false }) !== undefined;
-  if (!connection) {
-    return (
-      <div className="safe-area-padding">
-        <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-          <Outlet />
-        </main>
-      </div>
-    );
-  }
-  return (
-    <ShortcutsHelp>
-      {reading ? (
-        <Outlet />
-      ) : (
-        <ConnectedShell wide={library}>
-          <Outlet />
-        </ConnectedShell>
-      )}
-    </ShortcutsHelp>
-  );
-}
-
-type LibrarySearch = { q?: string };
+const shellRoute = createRoute({
+  getParentRoute: () => connectedRoute,
+  id: '_shell',
+  component: () => (
+    <ConnectedShell>
+      <Outlet />
+    </ConnectedShell>
+  ),
+});
 
 const homeRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => shellRoute,
   path: '/',
-  validateSearch: (search: Record<string, unknown>): LibrarySearch => {
+  validateSearch: (search: Record<string, unknown>): { q?: string } => {
     const q = search['q'];
     return typeof q === 'string' || typeof q === 'number' ? { q: String(q) } : {};
   },
-  component: HomeScreen,
+  component: LibraryScreen,
 });
-
-function HomeScreen() {
-  const { connection } = useConnection();
-  return connection ? <LibraryScreen /> : <ConnectScreen />;
-}
 
 const bookRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => shellRoute,
   path: '/books/$bookId',
-  component: BookRouteScreen,
+  component: () => <BookScreen bookId={bookRoute.useParams().bookId} />,
 });
-
-function BookRouteScreen() {
-  const { connection } = useConnection();
-  const { bookId } = bookRoute.useParams();
-  return connection ? <BookScreen bookId={bookId} /> : <ConnectScreen />;
-}
 
 const readerRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => connectedRoute,
   path: '/books/$bookId/read/$format',
-  component: ReaderRouteScreen,
+  component: () => <ReaderScreen {...readerRoute.useParams()} />,
 });
-
-function ReaderRouteScreen() {
-  const { connection } = useConnection();
-  const { bookId, format } = readerRoute.useParams();
-  return connection ? <ReaderScreen bookId={bookId} format={format} /> : <ConnectScreen />;
-}
 
 const connectRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/connect/$provider',
-  component: ConnectRouteScreen,
+  component: () => <ConnectProviderScreen provider={connectRoute.useParams().provider} />,
 });
 
-function ConnectRouteScreen() {
-  const { connection } = useConnection();
-  const { signInProvider, linkProvider } = useProviders();
-  const problem = useSignInProblem();
-  const id = connectRoute.useParams().provider;
-  if (connection) return <Navigate to="/" replace />;
-  const signIn = signInProvider(id);
-  if (signIn && !problem) return <LibraryPicker provider={signIn} />;
-  return <ConnectScreen provider={linkProvider(id)} />;
-}
-
-const routeTree = rootRoute.addChildren([homeRoute, bookRoute, readerRoute, connectRoute]);
+const routeTree = rootRoute.addChildren([
+  connectedRoute.addChildren([shellRoute.addChildren([homeRoute, bookRoute]), readerRoute]),
+  connectRoute,
+]);
 
 export function createAppRouter(options: { history?: RouterHistory } = {}) {
   return createRouter({ routeTree, ...options });

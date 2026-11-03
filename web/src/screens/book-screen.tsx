@@ -8,44 +8,34 @@ import { LoadingLibrary } from './library-screen.tsx';
 import { StorageErrorScreen } from './storage-error-screen.tsx';
 
 export function BookScreen({ bookId }: { bookId: string }) {
+  const opened = useOpenBook(bookId);
+  if (!opened.ready) return opened.fallback;
   return (
-    <OpenBook bookId={bookId}>
-      {(book) => (
-        <>
-          <LibraryNotices />
-          <BookDetails book={book} />
-        </>
-      )}
-    </OpenBook>
+    <div className="mx-auto max-w-6xl">
+      <LibraryNotices />
+      <BookDetails book={opened.book} />
+    </div>
   );
 }
 
-type OpenBookProps = {
-  bookId: string;
-  frame?: (fallback: ReactNode) => ReactNode;
-  children: (book: BookDetail) => ReactNode;
-};
+export type Fallback = { ready: false; fallback: ReactNode };
 
-export function OpenBook({ bookId, frame = (fallback) => fallback, children }: OpenBookProps) {
+export function fallback(node: ReactNode): Fallback {
+  return { ready: false, fallback: node };
+}
+
+export function useOpenBook(bookId: string): { ready: true; book: BookDetail } | Fallback {
   const { library } = useLibrarySession();
+  const id = /^\d+$/.test(bookId) ? Number(bookId) : undefined;
+  const book = useBook(library.isSuccess ? id : undefined);
 
-  if (library.isError) return frame(<StorageErrorScreen error={library.error} retry={() => void library.refetch()} />);
-  if (!library.isSuccess) return frame(<LoadingLibrary progress={library.progress} />);
-  if (!/^\d+$/.test(bookId)) return frame(<BookNotFound />);
-  return (
-    <LoadedBook id={Number(bookId)} frame={frame}>
-      {children}
-    </LoadedBook>
-  );
-}
-
-function LoadedBook({ id, frame, children }: { id: number } & Required<Omit<OpenBookProps, 'bookId'>>) {
-  const book = useBook(id);
-
-  if (book.isError) return frame(<StorageErrorScreen error={book.error} retry={() => void book.refetch()} />);
-  if (book.data === null) return frame(<BookNotFound />);
-  if (!book.data) return null;
-  return children(book.data);
+  if (library.isError) return fallback(<StorageErrorScreen error={library.error} retry={() => void library.refetch()} />);
+  if (!library.isSuccess) return fallback(<LoadingLibrary progress={library.progress} />);
+  if (id === undefined) return fallback(<BookNotFound />);
+  if (book.isError) return fallback(<StorageErrorScreen error={book.error} retry={() => void book.refetch()} />);
+  if (book.data === null) return fallback(<BookNotFound />);
+  if (!book.data) return fallback(null);
+  return { ready: true, book: book.data };
 }
 
 function BookNotFound() {

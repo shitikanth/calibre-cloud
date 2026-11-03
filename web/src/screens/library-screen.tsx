@@ -10,7 +10,7 @@ import { StorageErrorScreen } from './storage-error-screen.tsx';
 
 export function LibraryScreen() {
   const { library } = useLibrarySession();
-  const { q: search = '' } = useSearch({ from: '/' });
+  const { q: search = '' } = useSearch({ strict: false });
   const books = useBooks(library.isSuccess, search);
 
   if (library.isError) return <StorageErrorScreen error={library.error} retry={() => void library.refetch()} />;

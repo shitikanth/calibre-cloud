@@ -12,7 +12,7 @@ import type { BookRenderer, ReaderTheme, Relocation, SearchResult } from '../rea
 import type { SwipeDirection } from '../reader/swipe.ts';
 import { adjacentEntry } from '../reader/toc.ts';
 import { useBookFile } from '../reader/use-book-file.ts';
-import { NotFound, OpenBook } from './book-screen.tsx';
+import { fallback, NotFound, useOpenBook, type Fallback } from './book-screen.tsx';
 import { ConnectedShell } from './connected-shell.tsx';
 import { describeError } from './describe-error.ts';
 import { ExternalLinkDialog } from './external-link-dialog.tsx';
@@ -31,23 +31,21 @@ import { SignInProblem } from './sign-in-outcome.tsx';
 import { useWide } from './use-wide.ts';
 
 export function ReaderScreen({ bookId, format }: { bookId: string; format: string }) {
-  return (
-    <OpenBook bookId={bookId} frame={inShell}>
-      {(book) => <ReaderForFormat book={book} formatName={format} />}
-    </OpenBook>
-  );
+  const target = useReaderTarget(bookId, format);
+  if (!target.ready) return <ConnectedShell>{target.fallback}</ConnectedShell>;
+  return <Reader key={`${target.book.id}/${target.format.format}`} book={target.book} format={target.format} />;
 }
 
-function inShell(fallback: ReactNode) {
-  return <ConnectedShell>{fallback}</ConnectedShell>;
-}
+type ReaderTarget = { ready: true; book: BookDetail; format: BookFormat } | Fallback;
 
-function ReaderForFormat({ book, formatName }: { book: BookDetail; formatName: string }) {
+function useReaderTarget(bookId: string, formatName: string): ReaderTarget {
+  const opened = useOpenBook(bookId);
   const renderers = useRenderers();
-  const format = book.formats.find((candidate) => candidate.format === formatName);
+  if (!opened.ready) return opened;
+  const format = opened.book.formats.find((candidate) => candidate.format === formatName);
   if (!format || !renderers[format.format])
-    return inShell(<NotFound title="Format not found" detail="This book has no such format to read." />);
-  return <Reader key={`${book.id}/${format.format}`} book={book} format={format} />;
+    return fallback(<NotFound title="Format not found" detail="This book has no such format to read." />);
+  return { ready: true, book: opened.book, format };
 }
 
 function Reader({ book, format }: { book: BookDetail; format: BookFormat }) {
