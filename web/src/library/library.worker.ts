@@ -4,7 +4,7 @@ import { listBookFormats, listBooks, listCoverVersions } from './books-query.ts'
 import { createDbStore, libraryDirectory } from './db-store.ts';
 import type { Database } from './sqlite.ts';
 
-const store = createDbStore(self.name === workerNames.inMemory ? async () => undefined : libraryDirectory);
+const store = createDbStore(self.name === workerNames.inMemory ? () => Promise.resolve(undefined) : libraryDirectory);
 
 let current: { db: Database; file: string | undefined } | undefined;
 
