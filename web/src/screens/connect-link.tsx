@@ -39,6 +39,7 @@ export function ConnectLinkHandler({ children }: { children: ReactNode }) {
   }, [pending, connect]);
 
   if ((pending?.kind === 'fill' || pending?.kind === 'connect') && connection) setPending(undefined);
+  if (pending?.kind === 'switch' && connection && sameConnection(pending.connection, connection)) setPending(undefined);
 
   return (
     <ConnectLinkInput value={pending?.kind === 'fill' ? pending.input : undefined}>
@@ -74,7 +75,6 @@ function SwitchLibraryDialog({ connection, onClose }: { connection: Connection; 
       return;
     }
     connect(connection);
-    close();
   };
 
   return (

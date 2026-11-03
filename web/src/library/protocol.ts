@@ -23,9 +23,13 @@ export type BookDetail = BookSummary & {
 
 export type BookListQuery = { offset: number; limit: number; search?: string };
 
+export type OpenStoredResult = 'opened' | 'unchanged' | 'missing';
+
+export const workerNames = { onDevice: 'library-index', inMemory: 'library-index:in-memory' } as const;
+
 export type LibraryOperations = {
   open: { args: { bytes: ArrayBuffer }; result: string | null };
-  openStored: { args: { file: string }; result: boolean };
+  openStored: { args: { file: string }; result: OpenStoredResult };
   clear: { args: Record<string, never>; result: void };
   close: { args: Record<string, never>; result: void };
   countBooks: { args: Record<string, never>; result: number };
@@ -43,4 +47,4 @@ export type LibraryRequest = {
 
 export type LibraryResponse =
   | { id: number; ok: true; result: unknown }
-  | { id: number; ok: false; error: { name: string; message: string } };
+  | { id: number; ok: false; error: { message: string } };

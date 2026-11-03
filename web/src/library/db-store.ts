@@ -1,82 +1,90 @@
-import { LibraryInUse } from './errors.ts';
 import { registerFold } from './fold.ts';
-import { loadSqlite, type Database, type Sqlite3 } from './sqlite.ts';
+import { withLibraryLock } from './library-lock.ts';
+import { loadSqlite, type Database } from './sqlite.ts';
 
-type Pool = Awaited<ReturnType<Sqlite3['installOpfsSAHPoolVfs']>>;
+const DIRECTORY = 'library';
+const LEGACY_POOL_DIRECTORY = '.opfs-sahpool';
 
-const LOCK_NAME = 'calibre-cloud:library-db';
-const LOCK_WAIT_MS = 2_000;
+type SyncAccessHandle = { write(data: Uint8Array): number; flush(): void; close(): void };
+type WritableFileHandle = FileSystemFileHandle & { createSyncAccessHandle(): Promise<SyncAccessHandle> };
 
-let pool: Promise<Pool | undefined> | undefined;
-let releaseLock: (() => void) | undefined;
+export type DbStore = {
+  importDatabase(bytes: ArrayBuffer): Promise<{ db: Database; file: string | undefined }>;
+  openStoredDatabase(file: string): Promise<Database | undefined>;
+  forgetOtherDatabases(keep: string | undefined): Promise<void>;
+  wipeDatabases(): Promise<void>;
+};
 
-export function openPool(): Promise<Pool | undefined> {
-  pool ??= acquirePool().catch((error: unknown) => {
-    pool = undefined;
-    throw error;
-  });
-  return pool;
-}
-
-async function acquirePool(): Promise<Pool | undefined> {
-  await acquireLock();
-  const sqlite3 = await loadSqlite();
+export async function libraryDirectory(): Promise<FileSystemDirectoryHandle | undefined> {
   try {
-    return await sqlite3.installOpfsSAHPoolVfs({ preserveOnInitFailure: true });
+    const root = await navigator.storage.getDirectory();
+    await removeLegacyPool(root);
+    return await root.getDirectoryHandle(DIRECTORY, { create: true });
   } catch {
     return undefined;
   }
 }
 
-function acquireLock(): Promise<void> {
-  return new Promise((acquired, failed) => {
-    navigator.locks
-      .request(LOCK_NAME, { signal: AbortSignal.timeout(LOCK_WAIT_MS) }, () => {
-        acquired();
-        return new Promise<void>((release) => (releaseLock = release));
-      })
-      .catch(() => failed(new LibraryInUse('Library is open in another tab')));
-  });
+async function removeLegacyPool(root: FileSystemDirectoryHandle): Promise<void> {
+  await root.removeEntry(LEGACY_POOL_DIRECTORY, { recursive: true }).catch(() => undefined);
 }
 
-export async function releasePool(): Promise<void> {
-  const held = await pool?.catch(() => undefined);
-  if (held && !held.isPaused()) await held.pauseVfs();
-  pool = undefined;
-  releaseLock?.();
-  releaseLock = undefined;
+export function createDbStore(openDirectory: () => Promise<FileSystemDirectoryHandle | undefined>): DbStore {
+  let directory: Promise<FileSystemDirectoryHandle | undefined> | undefined;
+  const dir = () => (directory ??= openDirectory());
+
+  return {
+    async importDatabase(bytes) {
+      const db = await deserialize(new Uint8Array(bytes));
+      const store = await dir();
+      return { db, file: store && (await persist(store, bytes)) };
+    },
+    async openStoredDatabase(file) {
+      const store = await dir();
+      const bytes = store && (await withLibraryLock('shared', () => readStored(store, file)));
+      return bytes && deserialize(new Uint8Array(bytes));
+    },
+    async forgetOtherDatabases(keep) {
+      const store = await dir();
+      if (store) await removeAllBut(store, keep);
+    },
+    async wipeDatabases() {
+      const store = await dir();
+      if (store) await withLibraryLock('exclusive', () => removeAllBut(store, undefined));
+    },
+  };
 }
 
-export async function importDatabase(bytes: ArrayBuffer): Promise<{ db: Database; file: string | undefined }> {
-  const store = await openPool();
-  if (!store) return { db: await deserialize(new Uint8Array(bytes)), file: undefined };
-  const file = `/metadata-${crypto.randomUUID()}.db`;
-  store.importDb(file, bytes);
+async function persist(store: FileSystemDirectoryHandle, bytes: ArrayBuffer): Promise<string | undefined> {
+  const file = `metadata-${crypto.randomUUID()}.db`;
   try {
-    return { db: openReadOnly(store, file), file };
-  } catch (error) {
-    store.unlink(file);
-    throw error;
+    const handle = (await store.getFileHandle(file, { create: true })) as WritableFileHandle;
+    const access = await handle.createSyncAccessHandle();
+    try {
+      if (access.write(new Uint8Array(bytes)) !== bytes.byteLength) throw new Error('Short write');
+      access.flush();
+    } finally {
+      access.close();
+    }
+    return file;
+  } catch {
+    await store.removeEntry(file).catch(() => undefined);
+    return undefined;
   }
 }
 
-export async function openStoredDatabase(file: string): Promise<Database | undefined> {
-  const store = await openPool();
-  if (!store?.getFileNames().includes(file)) return undefined;
-  return openReadOnly(store, file);
+async function readStored(store: FileSystemDirectoryHandle, file: string): Promise<ArrayBuffer | undefined> {
+  try {
+    const handle = await store.getFileHandle(file);
+    const contents = await handle.getFile();
+    return await contents.arrayBuffer();
+  } catch {
+    return undefined;
+  }
 }
 
-export async function forgetOtherDatabases(keep: string | undefined): Promise<void> {
-  const store = await openPool();
-  for (const name of store?.getFileNames() ?? []) if (name !== keep) store?.unlink(name);
-}
-
-export async function wipeDatabases(): Promise<void> {
-  await (await openPool())?.wipeFiles();
-}
-
-function openReadOnly(store: Pool, file: string): Database {
-  return verified(new store.OpfsSAHPoolDb(file));
+async function removeAllBut(store: FileSystemDirectoryHandle, keep: string | undefined): Promise<void> {
+  for await (const name of store.keys()) if (name !== keep) await store.removeEntry(name).catch(() => undefined);
 }
 
 async function deserialize(data: Uint8Array): Promise<Database> {
@@ -88,15 +96,6 @@ async function deserialize(data: Uint8Array): Promise<Database> {
   const rc = capi.sqlite3_deserialize(db, 'main', pointer, data.byteLength, data.byteLength, flags);
   try {
     db.checkRc(rc);
-  } catch (error) {
-    db.close();
-    throw error;
-  }
-  return verified(db);
-}
-
-function verified(db: Database): Database {
-  try {
     db.exec('PRAGMA query_only = ON');
     registerFold(db);
     db.selectValue('SELECT count(*) FROM sqlite_schema');
