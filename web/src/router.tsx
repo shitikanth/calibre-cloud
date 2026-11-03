@@ -15,7 +15,7 @@ import { ConnectScreen } from './screens/connect-screen.tsx';
 import { ConnectedShell } from './screens/connected-shell.tsx';
 import { LibraryPicker } from './screens/library-picker.tsx';
 import { LibraryScreen } from './screens/library-screen.tsx';
-import { ReaderScreen, useReadable } from './screens/reader-screen.tsx';
+import { ReaderScreen, useReaderTarget } from './screens/reader-screen.tsx';
 import { ShortcutsHelp } from './screens/shortcuts-help.tsx';
 import { SignInOutcomeHandler, useSignInProblem } from './screens/sign-in-outcome.tsx';
 
@@ -116,9 +116,9 @@ const readerRoute = createRoute({
 
 function ReaderRouteScreen() {
   const { bookId, format } = readerRoute.useParams();
-  const readable = useReadable(bookId, format);
-  if (!readable.ready) return <ConnectedShell>{readable.fallback}</ConnectedShell>;
-  return <ReaderScreen key={`${readable.book.id}/${readable.format.format}`} book={readable.book} format={readable.format} />;
+  const target = useReaderTarget(bookId, format);
+  if (!target.ready) return <ConnectedShell>{target.fallback}</ConnectedShell>;
+  return <ReaderScreen key={`${target.book.id}/${target.format.format}`} book={target.book} format={target.format} />;
 }
 
 const connectRoute = createRoute({

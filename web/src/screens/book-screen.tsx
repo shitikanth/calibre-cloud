@@ -8,41 +8,34 @@ import { LoadingLibrary } from './library-screen.tsx';
 import { StorageErrorScreen } from './storage-error-screen.tsx';
 
 export function BookScreen({ bookId }: { bookId: string }) {
+  const opened = useOpenBook(bookId);
+  if (!opened.ready) return opened.fallback;
   return (
-    <OpenBook bookId={bookId}>
-      {(book) => (
-        <>
-          <LibraryNotices />
-          <BookDetails book={book} />
-        </>
-      )}
-    </OpenBook>
+    <>
+      <LibraryNotices />
+      <BookDetails book={opened.book} />
+    </>
   );
 }
 
-export type OpenedBook = { ready: true; book: BookDetail } | { ready: false; fallback: ReactNode };
+export type Fallback = { ready: false; fallback: ReactNode };
 
-function pending(fallback: ReactNode): OpenedBook {
-  return { ready: false, fallback };
+export function fallback(node: ReactNode): Fallback {
+  return { ready: false, fallback: node };
 }
 
-export function useOpenBook(bookId: string): OpenedBook {
+export function useOpenBook(bookId: string): { ready: true; book: BookDetail } | Fallback {
   const { library } = useLibrarySession();
   const id = /^\d+$/.test(bookId) ? Number(bookId) : undefined;
-  const book = useBook(id ?? 0, { enabled: library.isSuccess && id !== undefined });
+  const book = useBook(library.isSuccess ? id : undefined);
 
-  if (library.isError) return pending(<StorageErrorScreen error={library.error} retry={() => void library.refetch()} />);
-  if (!library.isSuccess) return pending(<LoadingLibrary progress={library.progress} />);
-  if (id === undefined) return pending(<BookNotFound />);
-  if (book.isError) return pending(<StorageErrorScreen error={book.error} retry={() => void book.refetch()} />);
-  if (book.data === null) return pending(<BookNotFound />);
-  if (!book.data) return pending(null);
+  if (library.isError) return fallback(<StorageErrorScreen error={library.error} retry={() => void library.refetch()} />);
+  if (!library.isSuccess) return fallback(<LoadingLibrary progress={library.progress} />);
+  if (id === undefined) return fallback(<BookNotFound />);
+  if (book.isError) return fallback(<StorageErrorScreen error={book.error} retry={() => void book.refetch()} />);
+  if (book.data === null) return fallback(<BookNotFound />);
+  if (!book.data) return fallback(null);
   return { ready: true, book: book.data };
-}
-
-export function OpenBook({ bookId, children }: { bookId: string; children: (book: BookDetail) => ReactNode }) {
-  const opened = useOpenBook(bookId);
-  return opened.ready ? children(opened.book) : opened.fallback;
 }
 
 function BookNotFound() {

@@ -12,7 +12,7 @@ import type { BookRenderer, ReaderTheme, Relocation, SearchResult } from '../rea
 import type { SwipeDirection } from '../reader/swipe.ts';
 import { adjacentEntry } from '../reader/toc.ts';
 import { useBookFile } from '../reader/use-book-file.ts';
-import { NotFound, useOpenBook } from './book-screen.tsx';
+import { fallback, NotFound, useOpenBook, type Fallback } from './book-screen.tsx';
 import { describeError } from './describe-error.ts';
 import { ExternalLinkDialog } from './external-link-dialog.tsx';
 import { formatSize } from './format.ts';
@@ -29,15 +29,15 @@ import { dialogOpen } from './shortcut-keys.ts';
 import { SignInProblem } from './sign-in-outcome.tsx';
 import { useWide } from './use-wide.ts';
 
-export type Readable = { ready: true; book: BookDetail; format: BookFormat } | { ready: false; fallback: ReactNode };
+export type ReaderTarget = { ready: true; book: BookDetail; format: BookFormat } | Fallback;
 
-export function useReadable(bookId: string, formatName: string): Readable {
+export function useReaderTarget(bookId: string, formatName: string): ReaderTarget {
   const opened = useOpenBook(bookId);
   const renderers = useRenderers();
   if (!opened.ready) return opened;
   const format = opened.book.formats.find((candidate) => candidate.format === formatName);
   if (!format || !renderers[format.format])
-    return { ready: false, fallback: <NotFound title="Format not found" detail="This book has no such format to read." /> };
+    return fallback(<NotFound title="Format not found" detail="This book has no such format to read." />);
   return { ready: true, book: opened.book, format };
 }
 
