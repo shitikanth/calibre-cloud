@@ -1,11 +1,11 @@
 import { useLibrarySession } from '../library/session.tsx';
-import { useBooks, type LoadProgress } from '../library/use-library.ts';
+import { useBooks } from '../library/use-library.ts';
 import { useSearch } from '@tanstack/react-router';
 import { BookGrid } from './book-grid.tsx';
 import { ContinueReading } from './continue-reading.tsx';
 import { LibraryNotices } from './library-notices.tsx';
 import { LoadMore } from './load-more.tsx';
-import { ProgressBar } from './progress-bar.tsx';
+import { LoadingLibrary } from './loading-library.tsx';
 import { StorageErrorScreen } from './storage-error-screen.tsx';
 
 export function LibraryScreen() {
@@ -34,20 +34,6 @@ export function LibraryScreen() {
           loadMore={books.fetchNextPage}
         />
       )}
-    </section>
-  );
-}
-
-export function LoadingLibrary({ progress }: { progress: LoadProgress | undefined }) {
-  return (
-    <section>
-      <h1 className="text-xl font-semibold">Loading your library…</h1>
-      <ProgressBar
-        label="Downloading library"
-        loaded={progress?.loaded ?? 0}
-        total={progress?.total ?? 0}
-        className="mt-4 w-full"
-      />
     </section>
   );
 }

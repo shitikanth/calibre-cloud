@@ -12,7 +12,7 @@ import type { BookRenderer, ReaderTheme, Relocation, SearchResult } from '../rea
 import type { SwipeDirection } from '../reader/swipe.ts';
 import { adjacentEntry } from '../reader/toc.ts';
 import { useBookFile } from '../reader/use-book-file.ts';
-import { fallback, NotFound, useOpenBook, type Fallback } from './book-screen.tsx';
+import { fallback, NotFound, useOpenBook, type Fallback } from './open-book.tsx';
 import { ConnectedShell } from './connected-shell.tsx';
 import { describeError } from './describe-error.ts';
 import { ExternalLinkDialog } from './external-link-dialog.tsx';

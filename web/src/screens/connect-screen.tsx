@@ -1,11 +1,10 @@
-import { Link, Navigate } from '@tanstack/react-router';
+import { Link } from '@tanstack/react-router';
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { useConnection, useProviders } from '../connection/context.tsx';
 import type { LinkProvider, StorageProvider } from '../storage/provider.ts';
 import { useConnectLinkInput } from './connect-link.tsx';
 import { connectPath } from './connect-path.ts';
-import { LibraryPicker } from './library-picker.tsx';
-import { SignInProblem, useSignInProblem } from './sign-in-outcome.tsx';
+import { SignInProblem } from './sign-in-outcome.tsx';
 
 const headingClass = 'font-serif text-[34px] leading-[1.12] font-medium tracking-[-0.01em]';
 
@@ -14,19 +13,6 @@ export function DisconnectedPage({ children }: { children: ReactNode }) {
     <div className="safe-area-padding">
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">{children}</main>
     </div>
-  );
-}
-
-export function ConnectProviderScreen({ provider: id }: { provider: string }) {
-  const { connection } = useConnection();
-  const { signInProvider, linkProvider } = useProviders();
-  const problem = useSignInProblem();
-  if (connection) return <Navigate to="/" replace />;
-  const signIn = signInProvider(id);
-  return (
-    <DisconnectedPage>
-      {signIn && !problem ? <LibraryPicker provider={signIn} /> : <ConnectScreen provider={linkProvider(id)} />}
-    </DisconnectedPage>
   );
 }
 
