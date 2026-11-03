@@ -5,6 +5,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'json-summary'],
+      reportOnFailure: true,
       // Globs resolve from the repo root for browser-mode projects but from the project root for node-mode ones,
       // so deploy/cloudflare's are written as smoke/** and scripts/**, and api's as src/**.
       include: ['web/src/**', 'smoke/**', 'scripts/**', 'src/**'],
