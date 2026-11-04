@@ -5,8 +5,8 @@ import { sameConnection, type Connection } from '../connection/connection.ts';
 import { useConnection, useProviders } from '../connection/context.tsx';
 import { useDisconnect } from '../library/use-disconnect.ts';
 import type { Providers } from '../storage/providers.ts';
-import { connectPath } from './connect-path.ts';
-import { DisconnectFailure } from './disconnect-button.tsx';
+import { connectPath } from './-connect-path.ts';
+import { DisconnectFailure } from './-disconnect-button.tsx';
 
 type Pending = { kind: 'fill'; input: string; providerId: string } | { kind: 'connect' | 'switch'; connection: Connection };
 

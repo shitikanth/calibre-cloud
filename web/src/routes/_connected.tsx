@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, useRouter } from '@tanstack/react-router';
 import { useEffect } from 'react';
 import { useConnection } from '../connection/context.tsx';
-import { ShortcutsHelp } from './_connected/-connected/shortcuts-help.tsx';
+import { ShortcutsHelp } from './_connected/-shared/shortcuts-help.tsx';
 
 export const Route = createFileRoute('/_connected')({
   component: ConnectedGate,

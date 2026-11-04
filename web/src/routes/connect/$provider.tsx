@@ -1,8 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useProviders } from '../../connection/context.tsx';
-import { useSignInProblem } from '../../components/sign-in-outcome.tsx';
-import { ChooseProvider, ConnectCard, LinkStep } from './-connect/connect-screen.tsx';
-import { LibraryPicker } from './-connect/library-picker.tsx';
+import { useSignInProblem } from '../-sign-in-outcome.tsx';
+import { ChooseProvider, ConnectCard, LinkStep } from './-connect-screen.tsx';
+import { LibraryPicker } from './-library-picker.tsx';
 
 export const Route = createFileRoute('/connect/$provider')({
   component: ConnectProviderRoute,

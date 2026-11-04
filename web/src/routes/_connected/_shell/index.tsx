@@ -1,12 +1,12 @@
 import { createFileRoute, useSearch } from '@tanstack/react-router';
 import { useLibrarySession } from '../../../library/session.tsx';
 import { useBooks } from '../../../library/use-library.ts';
-import { BookGrid } from './-library/book-grid.tsx';
-import { ContinueReading } from './-library/continue-reading.tsx';
-import { LibraryNotices } from './-shell/library-notices.tsx';
-import { LoadMore } from './-library/load-more.tsx';
-import { LoadingLibrary } from '../-connected/loading-library.tsx';
-import { StorageErrorScreen } from '../-connected/storage-error-screen.tsx';
+import { BookGrid } from './-book-grid.tsx';
+import { ContinueReading } from './-continue-reading.tsx';
+import { LibraryNotices } from './-library-notices.tsx';
+import { LoadMore } from './-load-more.tsx';
+import { LoadingLibrary } from '../-shared/loading-library.tsx';
+import { StorageErrorScreen } from '../-shared/storage-error-screen.tsx';
 
 export const Route = createFileRoute('/_connected/_shell/')({
   validateSearch: (search: Record<string, unknown>): { q?: string } => {

@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { BookDetails } from './-book/book-details.tsx';
-import { LibraryNotices } from './-shell/library-notices.tsx';
-import { useOpenBook } from '../-connected/open-book.tsx';
+import { BookDetails } from './-book-details.tsx';
+import { LibraryNotices } from './-library-notices.tsx';
+import { useOpenBook } from '../-shared/open-book.tsx';
 
 export const Route = createFileRoute('/_connected/_shell/books/$bookId')({
   component: BookRoute,

@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import { useDisconnect } from '../../../library/use-disconnect.ts';
 import { CopyConnectLinkOutcome, useCopyConnectLink } from './copy-connect-link.tsx';
-import { DisconnectFailure } from '../../../components/disconnect-button.tsx';
+import { DisconnectFailure } from '../../-disconnect-button.tsx';
 import { OverflowMenu } from './overflow-menu.tsx';
 import { SearchBox } from './search-box.tsx';
 

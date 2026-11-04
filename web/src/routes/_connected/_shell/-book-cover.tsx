@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
-import type { BookSummary } from '../../../../library/protocol.ts';
-import { useCover } from '../../../../library/use-cover.ts';
-import { useInView } from './use-in-view.ts';
+import type { BookSummary } from '../../../library/protocol.ts';
+import { useCover } from '../../../library/use-cover.ts';
+import { useInView } from './-use-in-view.ts';
 
 export function BookCover({ book, loading }: { book: BookSummary; loading: 'eager' | 'lazy' }) {
   const frame = useRef<HTMLDivElement>(null);

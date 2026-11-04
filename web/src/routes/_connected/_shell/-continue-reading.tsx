@@ -1,11 +1,11 @@
 import { Link } from '@tanstack/react-router';
 import { useSyncExternalStore } from 'react';
-import type { BookSummary } from '../../../../library/protocol.ts';
-import { useBooksById } from '../../../../library/use-book.ts';
-import { listPositions, subscribePositions, type PositionEntry } from '../../../../reader/positions.ts';
-import { BookCover } from '../-shell/book-cover.tsx';
-import { tileColumnsClass, tileLinkClass } from './book-grid.tsx';
-import { useRovingTiles, type RovingTiles } from './roving-tiles.ts';
+import type { BookSummary } from '../../../library/protocol.ts';
+import { useBooksById } from '../../../library/use-book.ts';
+import { listPositions, subscribePositions, type PositionEntry } from '../../../reader/positions.ts';
+import { BookCover } from './-book-cover.tsx';
+import { tileColumnsClass, tileLinkClass } from './-book-grid.tsx';
+import { useRovingTiles, type RovingTiles } from './-roving-tiles.ts';
 
 const ROW_LENGTH = 6;
 

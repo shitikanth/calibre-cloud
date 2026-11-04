@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useInView } from '../-shell/use-in-view.ts';
+import { useInView } from './-use-in-view.ts';
 
 type LoadMoreProps = { loaded: number; loading: boolean; loadMore: () => Promise<unknown> };
 

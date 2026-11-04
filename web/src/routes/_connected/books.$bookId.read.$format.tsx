@@ -12,12 +12,12 @@ import type { BookRenderer, ReaderTheme, Relocation, SearchResult } from '../../
 import type { SwipeDirection } from '../../reader/swipe.ts';
 import { adjacentEntry } from '../../reader/toc.ts';
 import { useBookFile } from '../../reader/use-book-file.ts';
-import { fallback, NotFound, useOpenBook, type Fallback } from './-connected/open-book.tsx';
-import { ConnectedShell } from './-connected/connected-shell.tsx';
-import { describeError } from '../../components/describe-error.ts';
+import { fallback, NotFound, useOpenBook, type Fallback } from './-shared/open-book.tsx';
+import { ConnectedShell } from './-shared/connected-shell.tsx';
+import { describeError } from '../-describe-error.ts';
 import { ExternalLinkDialog } from './-reader/external-link-dialog.tsx';
-import { formatSize } from './-connected/format.ts';
-import { ProgressBar } from './-connected/progress-bar.tsx';
+import { formatSize } from './-shared/format.ts';
+import { ProgressBar } from './-shared/progress-bar.tsx';
 import { BackToBookLink, BottomBar, JumpBack, TapZone, TopBar, zoneAt, type ControlsState } from './-reader/reader-controls.tsx';
 import { readerKeyAction, type ReaderKeyAction, type ReaderTool } from './-reader/reader-keys.ts';
 import type { PopoverToggle } from './-reader/reader-popover.tsx';
@@ -25,9 +25,9 @@ import { adjacentHit, SearchTool, useBookSearch, useHighlights } from './-reader
 import { backLabel, whereYouAreLabel, positionLabel, SeekBar } from './-reader/reader-seek-bar.tsx';
 import { SettingsTool } from './-reader/reader-settings-tool.tsx';
 import { TocTool } from './-reader/reader-toc.tsx';
-import { ReconnectLink } from './-connected/reconnect-link.tsx';
-import { dialogOpen } from './-connected/shortcut-keys.ts';
-import { SignInProblem } from '../../components/sign-in-outcome.tsx';
+import { ReconnectLink } from './-shared/reconnect-link.tsx';
+import { dialogOpen } from './-shared/shortcut-keys.ts';
+import { SignInProblem } from '../-sign-in-outcome.tsx';
 import { useWide } from './-reader/use-wide.ts';
 
 export const Route = createFileRoute('/_connected/books/$bookId/read/$format')({
