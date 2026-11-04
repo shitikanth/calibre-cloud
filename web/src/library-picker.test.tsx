@@ -144,7 +144,7 @@ test('Cancel goes back to the connect screen', async () => {
   await userEvent.click(picker(app).getByRole('link', { name: 'Cancel' }));
 
   await expect.element(chooseScreen(app.screen)).toBeVisible();
-  expect(app.url).toBe('/');
+  expect(app.url).toBe('/connect');
   expect(app.opened).toEqual([]);
 });
 

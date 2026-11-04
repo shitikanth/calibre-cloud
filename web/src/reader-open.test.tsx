@@ -191,7 +191,7 @@ test('the reader route asks to connect first when there is no connection', async
   const app = await renderApp({ storage: await janeEyreLibrary(), path: '/books/1/read/EPUB' });
 
   await expect.element(chooseScreen(app.screen)).toBeVisible();
-  expect(app.url).toBe('/books/1/read/EPUB');
+  expect(app.url).toBe('/connect?redirect=%2Fbooks%2F1%2Fread%2FEPUB');
 });
 
 test('a connect link at a reader URL connects there and opens the book', async () => {
