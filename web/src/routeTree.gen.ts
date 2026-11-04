@@ -10,8 +10,10 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ConnectedRouteImport } from './routes/_connected'
+import { Route as ConnectRouteImport } from './routes/connect'
 import { Route as ConnectedShellRouteImport } from './routes/_connected/_shell'
-import { Route as ConnectProviderRouteImport } from './routes/connect.$provider'
+import { Route as ConnectIndexRouteImport } from './routes/connect/index'
+import { Route as ConnectProviderRouteImport } from './routes/connect/$provider'
 import { Route as ConnectedShellIndexRouteImport } from './routes/_connected/_shell/index'
 import { Route as ConnectedShellBooksBookIdRouteImport } from './routes/_connected/_shell/books.$bookId'
 import { Route as ConnectedBooksBookIdReadFormatRouteImport } from './routes/_connected/books.$bookId.read.$format'
@@ -20,14 +22,24 @@ const ConnectedRoute = ConnectedRouteImport.update({
   id: '/_connected',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConnectRoute = ConnectRouteImport.update({
+  id: '/connect',
+  path: '/connect',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ConnectedShellRoute = ConnectedShellRouteImport.update({
   id: '/_shell',
   getParentRoute: () => ConnectedRoute,
 } as any)
+const ConnectIndexRoute = ConnectIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ConnectRoute,
+} as any)
 const ConnectProviderRoute = ConnectProviderRouteImport.update({
-  id: '/connect/$provider',
-  path: '/connect/$provider',
-  getParentRoute: () => rootRouteImport,
+  id: '/$provider',
+  path: '/$provider',
+  getParentRoute: () => ConnectRoute,
 } as any)
 const ConnectedShellIndexRoute = ConnectedShellIndexRouteImport.update({
   id: '/',
@@ -49,21 +61,26 @@ const ConnectedBooksBookIdReadFormatRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof ConnectedShellIndexRoute
+  '/connect': typeof ConnectRouteWithChildren
   '/connect/$provider': typeof ConnectProviderRoute
+  '/connect/': typeof ConnectIndexRoute
   '/books/$bookId': typeof ConnectedShellBooksBookIdRoute
   '/books/$bookId/read/$format': typeof ConnectedBooksBookIdReadFormatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof ConnectedShellIndexRoute
   '/connect/$provider': typeof ConnectProviderRoute
+  '/connect': typeof ConnectIndexRoute
   '/books/$bookId': typeof ConnectedShellBooksBookIdRoute
   '/books/$bookId/read/$format': typeof ConnectedBooksBookIdReadFormatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_connected': typeof ConnectedRouteWithChildren
+  '/connect': typeof ConnectRouteWithChildren
   '/_connected/_shell': typeof ConnectedShellRouteWithChildren
   '/connect/$provider': typeof ConnectProviderRoute
+  '/connect/': typeof ConnectIndexRoute
   '/_connected/_shell/': typeof ConnectedShellIndexRoute
   '/_connected/_shell/books/$bookId': typeof ConnectedShellBooksBookIdRoute
   '/_connected/books/$bookId/read/$format': typeof ConnectedBooksBookIdReadFormatRoute
@@ -72,20 +89,25 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/connect'
     | '/connect/$provider'
+    | '/connect/'
     | '/books/$bookId'
     | '/books/$bookId/read/$format'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/connect/$provider'
+    | '/connect'
     | '/books/$bookId'
     | '/books/$bookId/read/$format'
   id:
     | '__root__'
     | '/_connected'
+    | '/connect'
     | '/_connected/_shell'
     | '/connect/$provider'
+    | '/connect/'
     | '/_connected/_shell/'
     | '/_connected/_shell/books/$bookId'
     | '/_connected/books/$bookId/read/$format'
@@ -93,7 +115,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   ConnectedRoute: typeof ConnectedRouteWithChildren
-  ConnectProviderRoute: typeof ConnectProviderRoute
+  ConnectRoute: typeof ConnectRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -105,6 +127,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConnectedRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/connect': {
+      id: '/connect'
+      path: '/connect'
+      fullPath: '/connect'
+      preLoaderRoute: typeof ConnectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_connected/_shell': {
       id: '/_connected/_shell'
       path: ''
@@ -112,12 +141,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConnectedShellRouteImport
       parentRoute: typeof ConnectedRoute
     }
+    '/connect/': {
+      id: '/connect/'
+      path: '/'
+      fullPath: '/connect/'
+      preLoaderRoute: typeof ConnectIndexRouteImport
+      parentRoute: typeof ConnectRoute
+    }
     '/connect/$provider': {
       id: '/connect/$provider'
-      path: '/connect/$provider'
+      path: '/$provider'
       fullPath: '/connect/$provider'
       preLoaderRoute: typeof ConnectProviderRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ConnectRoute
     }
     '/_connected/_shell/': {
       id: '/_connected/_shell/'
@@ -171,9 +207,22 @@ const ConnectedRouteWithChildren = ConnectedRoute._addFileChildren(
   ConnectedRouteChildren,
 )
 
+interface ConnectRouteChildren {
+  ConnectProviderRoute: typeof ConnectProviderRoute
+  ConnectIndexRoute: typeof ConnectIndexRoute
+}
+
+const ConnectRouteChildren: ConnectRouteChildren = {
+  ConnectProviderRoute: ConnectProviderRoute,
+  ConnectIndexRoute: ConnectIndexRoute,
+}
+
+const ConnectRouteWithChildren =
+  ConnectRoute._addFileChildren(ConnectRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   ConnectedRoute: ConnectedRouteWithChildren,
-  ConnectProviderRoute: ConnectProviderRoute,
+  ConnectRoute: ConnectRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -5,6 +5,7 @@ import { useConnection, useProviders } from '../../connection/context.tsx';
 import { NotFound } from '../../storage/adapter.ts';
 import type { FolderEntry, LibraryFinder, SignInProvider } from '../../storage/sign-in.ts';
 import { connectPath } from '../../components/connect-path.ts';
+import { useConnectRedirect } from './connect-screen.tsx';
 import { describeError } from '../../components/describe-error.ts';
 
 const rowClass =
@@ -59,7 +60,7 @@ export function LibraryPicker({ provider }: { provider: SignInProvider }) {
           )}
           <PickOutcome provider={provider} pick={pick} />
         </div>
-        <Link to="/" className={`${secondaryClass} mt-6`}>
+        <Link to="/connect" search={(previous) => previous} className={`${secondaryClass} mt-6`}>
           Cancel
         </Link>
       </section>
@@ -194,13 +195,14 @@ function PickOutcome({ provider, pick }: { provider: SignInProvider; pick: Pick 
 
 function PickerError({ provider, error, retry }: { provider: SignInProvider; error: Error; retry?: () => void }) {
   const { signInHref } = useProviders();
+  const redirect = useConnectRedirect();
   const { title, detail, canRetry, canReconnect } = describeError(error, 'library');
   return (
     <div role="alert" className="flex flex-col gap-2">
       <p className="font-medium text-red-700">{title}</p>
       <p className="text-neutral-700">{detail}</p>
       {canReconnect ? (
-        <a href={signInHref(provider, connectPath(provider.id))} className={`${secondaryClass} self-start`}>
+        <a href={signInHref(provider, connectPath(provider.id, redirect))} className={`${secondaryClass} self-start`}>
           Sign in again
         </a>
       ) : (

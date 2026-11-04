@@ -104,7 +104,7 @@ test('the MEGA tile opens MEGA’s step, and All storage goes back to the choice
   await userEvent.click(back);
 
   await expect.element(chooseScreen(app.screen).getByRole('link', { name: 'MEGA' })).toBeVisible();
-  expect(app.url).toBe('/');
+  expect(app.url).toBe('/connect');
 });
 
 test('the browser’s Back and Forward move between the choice and MEGA’s step', async () => {
@@ -118,13 +118,14 @@ test('the browser’s Back and Forward move between the choice and MEGA’s step
   await expect.element(megaStep(app.screen).getByRole('textbox', { name: 'MEGA folder link' })).toBeVisible();
 });
 
-test('connecting from a book page lands on the library', async () => {
+test('connecting from a book page returns to the book', async () => {
   const app = await renderApp({ storage: await threeBookLibrary(), path: '/books/1' });
+  expect(app.url).toBe('/connect?redirect=%2Fbooks%2F1');
 
   await connectMega(app.screen, link);
 
-  await expect.element(app.screen.getByRole('heading', { level: 2, name: 'Jane Eyre' })).toBeVisible();
-  expect(app.url).toBe('/');
+  await expect.element(app.screen.getByRole('heading', { level: 1, name: 'Jane Eyre' })).toBeVisible();
+  expect(app.url).toBe('/books/1');
 });
 
 test.each([

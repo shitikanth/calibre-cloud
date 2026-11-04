@@ -1,10 +1,10 @@
-import { Link } from '@tanstack/react-router';
+import { Link, useSearch } from '@tanstack/react-router';
 import { useState, type FormEvent, type ReactNode } from 'react';
-import { useConnection, useProviders } from '../connection/context.tsx';
-import type { LinkProvider, StorageProvider } from '../storage/provider.ts';
-import { useConnectLinkInput } from './connect-link.tsx';
-import { connectPath } from './connect-path.ts';
-import { SignInProblem } from './sign-in-outcome.tsx';
+import { useConnection, useProviders } from '../../connection/context.tsx';
+import type { LinkProvider, StorageProvider } from '../../storage/provider.ts';
+import { useConnectLinkInput } from '../../components/connect-link.tsx';
+import { connectPath } from '../../components/connect-path.ts';
+import { SignInProblem } from '../../components/sign-in-outcome.tsx';
 
 const headingClass = 'font-serif text-[34px] leading-[1.12] font-medium tracking-[-0.01em]';
 
@@ -16,7 +16,7 @@ export function DisconnectedPage({ children }: { children: ReactNode }) {
   );
 }
 
-export function ConnectScreen({ provider }: { provider?: LinkProvider | undefined }) {
+export function ConnectCard({ children }: { children: ReactNode }) {
   return (
     <div className="flex justify-center sm:py-12">
       <div aria-hidden="true" className="fixed inset-0 -z-10 hidden bg-neutral-50 sm:block" />
@@ -24,13 +24,17 @@ export function ConnectScreen({ provider }: { provider?: LinkProvider | undefine
         aria-labelledby="connect-title"
         className="w-full max-w-md bg-white px-2 pt-4 pb-7 text-neutral-900 sm:rounded-xl sm:border sm:border-neutral-200 sm:px-10 sm:pt-11 sm:pb-8"
       >
-        {provider ? <LinkStep provider={provider} /> : <ChooseProvider />}
+        {children}
       </section>
     </div>
   );
 }
 
-function ChooseProvider() {
+export function useConnectRedirect(): string | undefined {
+  return useSearch({ strict: false }).redirect;
+}
+
+export function ChooseProvider() {
   const { allProviders } = useProviders();
   return (
     <>
@@ -65,6 +69,7 @@ const tileClass =
 
 function ProviderTile({ provider }: { provider: StorageProvider }) {
   const { signInHref } = useProviders();
+  const redirect = useConnectRedirect();
   const content = (
     <>
       <img src={provider.icon} alt="" className="size-12" />
@@ -73,24 +78,25 @@ function ProviderTile({ provider }: { provider: StorageProvider }) {
   );
   if (provider.kind === 'sign-in') {
     return (
-      <a href={signInHref(provider, connectPath(provider.id))} className={tileClass}>
+      <a href={signInHref(provider, connectPath(provider.id, redirect))} className={tileClass}>
         {content}
       </a>
     );
   }
   return (
-    <Link to="/connect/$provider" params={{ provider: provider.id }} className={tileClass}>
+    <Link to="/connect/$provider" params={{ provider: provider.id }} search={(previous) => previous} className={tileClass}>
       {content}
     </Link>
   );
 }
 
-function LinkStep({ provider }: { provider: LinkProvider }) {
+export function LinkStep({ provider }: { provider: LinkProvider }) {
   const linked = useLinkedInput();
   return (
     <>
       <Link
-        to="/"
+        to="/connect"
+        search={(previous) => previous}
         className="-mt-2.5 -ml-1 inline-flex min-h-11 items-center gap-1.5 px-1 text-[15px] text-neutral-600 hover:text-neutral-900"
       >
         <span aria-hidden="true">‹</span> All storage

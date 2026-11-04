@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from '@tanstack/react-router';
 import { useConnection, useProviders } from '../connection/context.tsx';
 import { forgetBookFiles } from '../reader/book-cache.ts';
 import { forgetAllPositions } from '../reader/positions.ts';
@@ -11,6 +12,7 @@ export function useDisconnect() {
   const { endSignIn } = useProviders();
   const index = useLibraryIndex();
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   return useMutation({
     mutationFn: async () => {
@@ -20,6 +22,7 @@ export function useDisconnect() {
       if (connection) await endSignIn(connection);
     },
     onSuccess: () => {
+      void router.navigate({ to: '/connect', replace: true });
       disconnect();
       saveStoredLibrary(undefined);
       forgetAllPositions();

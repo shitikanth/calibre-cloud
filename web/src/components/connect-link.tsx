@@ -29,10 +29,13 @@ export function ConnectLinkHandler({ children }: { children: ReactNode }) {
   const { history } = useRouter();
   const [pending, setPending] = useState(() => pendingFor(providers, readConnectLink(hash), connection));
 
+  const linkInHash = readConnectLink(hash) !== undefined;
+
   useEffect(() => {
-    if (readConnectLink(hash) === undefined) return;
-    history.replace(pending?.kind === 'fill' ? connectPath(pending.providerId) : `${pathname}${searchStr}`);
-  }, [hash, pathname, searchStr, history, pending]);
+    if (!linkInHash) return;
+    const here = `${pathname}${searchStr}`;
+    history.replace(pending?.kind === 'fill' ? connectPath(pending.providerId, here === '/' ? undefined : here) : here);
+  }, [linkInHash, pathname, searchStr, history, pending]);
 
   useLayoutEffect(() => {
     if (pending?.kind === 'connect') connect(pending.connection);
@@ -43,7 +46,7 @@ export function ConnectLinkHandler({ children }: { children: ReactNode }) {
 
   return (
     <ConnectLinkInput value={pending?.kind === 'fill' ? pending.input : undefined}>
-      {children}
+      {linkInHash && pending && pending.kind !== 'switch' ? null : children}
       {pending?.kind === 'switch' && (
         <SwitchLibraryDialog connection={pending.connection} onClose={() => setPending(undefined)} />
       )}
