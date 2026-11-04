@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, useRouter } from '@tanstack/react-router';
 import { useEffect } from 'react';
 import { useConnection } from '../connection/context.tsx';
-import { DisconnectedPage } from './-connect/connect-screen.tsx';
+import { DisconnectedPage } from './connect/-connect/connect-screen.tsx';
 
 export const Route = createFileRoute('/connect')({
   validateSearch: (search: Record<string, unknown>): { redirect?: string } => {

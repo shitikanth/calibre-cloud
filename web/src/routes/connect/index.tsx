@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { ChooseProvider, ConnectCard } from '../-connect/connect-screen.tsx';
+import { ChooseProvider, ConnectCard } from './-connect/connect-screen.tsx';
 
 export const Route = createFileRoute('/connect/')({
   component: () => (

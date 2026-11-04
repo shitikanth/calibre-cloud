@@ -1,10 +1,10 @@
 import { Link, useSearch } from '@tanstack/react-router';
 import { useState, type FormEvent, type ReactNode } from 'react';
-import { useConnection, useProviders } from '../../connection/context.tsx';
-import type { LinkProvider, StorageProvider } from '../../storage/provider.ts';
-import { useConnectLinkInput } from '../../components/connect-link.tsx';
-import { connectPath } from '../../components/connect-path.ts';
-import { SignInProblem } from '../../components/sign-in-outcome.tsx';
+import { useConnection, useProviders } from '../../../connection/context.tsx';
+import type { LinkProvider, StorageProvider } from '../../../storage/provider.ts';
+import { useConnectLinkInput } from '../../../components/connect-link.tsx';
+import { connectPath } from '../../../components/connect-path.ts';
+import { SignInProblem } from '../../../components/sign-in-outcome.tsx';
 
 const headingClass = 'font-serif text-[34px] leading-[1.12] font-medium tracking-[-0.01em]';
 
